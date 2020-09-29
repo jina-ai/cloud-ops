@@ -1,0 +1,132 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: API Gateway for Hub
+
+Parameters:
+  HubListLambdaArn:
+    Type: String
+    Default: arn:aws:lambda:us-east-2:416454113568:function:mongoatlas-reader
+    Description: Enter Lambda ARN for Hub List function
+  HubPushLambdaArn:
+    Type: String
+    Default: arn:aws:lambda:us-east-2:416454113568:function:mongoatlas-writer
+    Description: Enter Lambda ARN for Hub Push function
+  DeploymentStage:
+    Type: String
+    Default: dev
+    Description: Enter API Gateway stage for deployment
+
+Resources:
+  HubAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      ApiKeySourceType: HEADER
+      Description: Jina Hub API for bookkeeping
+      EndpointConfiguration:
+        Types:
+          - EDGE
+      Name: jina-hub-api
+  HubAPIList:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HubAPI.RootResourceId
+      PathPart: 'list'
+      RestApiId: 
+        Ref: HubAPI
+  HubAPIListMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt HubAPIIAMRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubListLambdaArn}/invocations'
+      OperationName: 'HubList'
+      ResourceId: 
+        Ref: HubAPIList
+      RestApiId: 
+        Ref: HubAPI
+  HubAPIPush:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HubAPI.RootResourceId
+      PathPart: 'push'
+      RestApiId: 
+        Ref: HubAPI
+  HubAPIPushMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt HubAPIIAMRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubPushLambdaArn}/invocations'
+      OperationName: 'HubPush'
+      ResourceId: 
+        Ref: HubAPIPush
+      RestApiId: 
+        Ref: HubAPI
+  HubAPIModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: 'application/json'
+      RestApiId: 
+        Ref: HubAPI
+      Schema: {}
+  HubAPIStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: 
+        Ref: HubAPIDeployment
+      Description: HubAPI Stage v0
+      RestApiId: 
+        Ref: HubAPI
+      StageName: 
+        Ref: DeploymentStage
+  HubAPIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn: HubAPIListMethod
+    Properties:
+      Description: Lambda API Deployment
+      RestApiId: 
+        Ref: HubAPI
+  HubAPIIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - 'apigateway.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+        - PolicyName: LambdaAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: 
+                  Ref: HubListLambdaArn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: 
+                  Ref: HubPushLambdaArn

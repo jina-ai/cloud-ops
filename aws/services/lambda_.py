@@ -10,7 +10,7 @@ from ..helper import TimeContext, file_exists, waiter
 class Lambda:
     """Wrapper around boto3 to create/update Lambda functions
     """
-    def __init__(self, name: str, zip_location: str, handler: str = 'lambda_function', 
+    def __init__(self, name: str, zip_location: str, handler: str = 'lambda_handler', 
                  role='arn:aws:iam::416454113568:role/lambda-role', description: str = ''):
         self.logger = get_logger(context=self.__class__.__name__)
         self._client_wrapper = AWSClientWrapper(service='lambda')
@@ -86,6 +86,7 @@ class Lambda:
     
     @property
     def arn(self):
+        self.get()
         if hasattr(self, '_function_arn'):
             return self._function_arn
     
