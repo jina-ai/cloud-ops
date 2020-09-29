@@ -1,0 +1,60 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to run stress-test for Jina on AWS
+Parameters:
+  EC2ImageIdParam:
+    Type: String
+    Default: ami-07efac79022b86107
+    Description: Enter Image ID. Default is for Ubuntu 20.04
+  EC2InstanceTypeParam:
+    Type: String
+    Default: t2.micro
+    Description: Enter instance type. Default is t2.micro.
+  VolumeSizeParam:
+    Type: Number
+    Default: 20
+    Description: Enter EBS volume size (type gp2). Default is 20GB.
+  AvailabilityZoneParam:
+    Type: String
+    Default: us-east-2a
+    Description: Enter Availability Zone for EC2. Default is us-east-2a
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      AvailabilityZone:
+        Ref: AvailabilityZoneParam
+      Monitoring: 'true'
+      IamInstanceProfile:
+        Ref: IAMInstanceProfile
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId:
+        Ref: EC2Instance
+  Volume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Size:
+        Ref: VolumeSizeParam
+      AvailabilityZone:
+        Ref: AvailabilityZoneParam
+      VolumeType: gp2
+  MountPoint:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId:
+        Ref: EC2Instance
+      VolumeId:
+        Ref: Volume
+      Device: "/dev/sdh"
+  IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - AmazonSSMRoleForInstancesQuickSetup
