@@ -1,11 +1,13 @@
 import os
-import sys
 import time
 import click
 
-from aws.helper import file_exists, random_text, is_aws_cred_set
+import sys
+sys.path.append('..')
+
+from aws.helper import file_exists, read_file_content, random_text, is_aws_cred_set
 from aws.logger import get_logger
-from aws.excepts import StackCreationFailed, SSMDocumentCreationFailed
+from aws.excepts import StackCreationFailed, StackUpdateFailed, SSMDocumentCreationFailed
 
 from aws.services.cloudformation import CFNStack
 from aws.services.ssm import SSMDocument
@@ -29,11 +31,8 @@ def trigger(cfn, ssm):
         logger.error('Invalid cfn yaml or ssm yaml. Exiting!')
         sys.exit(1)
         
-    with open(cfn) as f:
-        cfn_yml = f.read()
-
-    with open(ssm) as f:
-        ssm_yml = f.read()
+    cfn_yml = read_file_content(filepath=cfn)
+    ssm_yml = read_file_content(filepath=ssm)
     
     _random_text = random_text(7)
     s3_bucket_name = 'stress-test-jina'
@@ -41,11 +40,12 @@ def trigger(cfn, ssm):
     ssm_doc_name = f'stress-test-ssm-{_random_text}'
     
     try:
-        with CFNStack(name=stack_name, template=cfn_yml) as cfn_stack:
-            
-            if cfn_stack.created:
-                ec2_instance_id = cfn_stack.resources['EC2Instance']
-                logger.info(f'CFNStack: Name: `{cfn_stack.name}` ID:`{cfn_stack.id}`')
+        with CFNStack(name=stack_name, template=cfn_yml, delete_at_exit=True) as st_cfn_stack:
+            if st_cfn_stack.exists:
+                _resources_dict = {resource['LogicalResourceId']: resource['PhysicalResourceId'] 
+                                   for resource in st_cfn_stack.resources}
+                ec2_instance_id = _resources_dict['EC2Instance']
+                logger.info(f'CFNStack: Name: `{st_cfn_stack.name}` ID:`{st_cfn_stack.id}`')
                 logger.info(f'EC2 Instance: `{ec2_instance_id}`')
                 
                 try:
@@ -67,10 +67,10 @@ def trigger(cfn, ssm):
                     logger.exception(f'SSM Doc creation failed. Exiting context \n{ssm_exp}')
                     
                 if not ssm_document.is_deleted:
-                    logger.error(f'SSM Document couldn\'t get deleted. Please check in AWS console')
+                    logger.error(f'SSM Doc couldn\'t get deleted. Please check in AWS console')
                            
-    except StackCreationFailed as cfn_exp:
-        logger.exception(f'SSM Doc creation failed. Exiting context \n{cfn_exp}')
+    except (StackCreationFailed, StackUpdateFailed) as cfn_exp:
+        logger.exception(f'Stack create/update failed. Exiting context \n{cfn_exp}')
         sys.exit(1)
 
 
