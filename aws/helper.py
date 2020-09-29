@@ -22,6 +22,13 @@ def random_text(length):
     return "".join([choice(ascii_lowercase) for i in range(length)])
 
 
+def read_file_content(filepath):
+    if not file_exists(filepath):
+        return 
+    with open(filepath) as f:
+        content = f.read()
+    return content
+
 class TimeContext:
     def __init__(self, msg: str):
         self.logger = get_logger(self.__class__.__name__)
