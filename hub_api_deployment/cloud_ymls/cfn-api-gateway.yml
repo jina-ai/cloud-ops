@@ -38,7 +38,20 @@ Resources:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
-      AuthorizationType: NONE
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JWTAuthorizer
+      JWTAuthorizer:
+        Type: AWS::ApiGatewayV2::Authorizer
+        Properties:
+          ApiId: !Ref HubAPIListMethod
+          AuthorizerType: JWT
+          IdentitySource:
+            - '$request.querystring.access_token'
+          JwtConfiguration:
+            Audience:
+            - !Ref AppClient
+            Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+          Name: test-jwt-authorizer
       HttpMethod: GET
       Integration:
         ConnectionType: INTERNET
@@ -64,7 +77,20 @@ Resources:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
-      AuthorizationType: NONE
+      AuthorizationType: JWT
+      AuthorizerId: !Ref JWTAuthorizer
+      JWTAuthorizer:
+        Type: AWS::ApiGatewayV2::Authorizer
+        Properties:
+          ApiId: !Ref HubAPIPushMethod
+          AuthorizerType: JWT
+          IdentitySource:
+            - '$request.querystring.access_token'
+          JwtConfiguration:
+            Audience:
+            - !Ref AppClient
+            Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+          Name: test-jwt-authorizer
       HttpMethod: POST
       Integration:
         ConnectionType: INTERNET
