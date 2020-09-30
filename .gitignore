@@ -147,3 +147,6 @@ _logs/
 
 # Package folder created for Lambda deployment packages
 _package/
+
+# Zip files created for Lambda deployment package
+*.zip

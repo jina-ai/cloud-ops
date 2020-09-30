@@ -5,6 +5,9 @@ class StackCreationFailed(Exception):
 class StackDeletionFailed(Exception):
     """ Exception to denote failure during `cloudformation.delete()` """
     
+class StackUpdateFailed(Exception):
+    """ Exception to denote failure during `cloudformation.update()` """
+
 class SSMDocumentCreationFailed(Exception):
     """ Exception to denote failure during `ssm.create()` """
 

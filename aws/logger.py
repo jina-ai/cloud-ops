@@ -10,7 +10,7 @@ class LengthFilter(logging.Filter):
         return True
 
 def default_formatter():
-    _fmt = '%(asctime)s | %(levelname)6s | %(file_func_lineno)40s | %(message)s'
+    _fmt = '%(asctime)s | %(levelname)8s | %(file_func_lineno)42s | %(message)s'
     _datefmt = '%b %d %H:%M:%S'
     return logging.Formatter(fmt=_fmt, datefmt=_datefmt)
 
@@ -21,7 +21,7 @@ def _console_handler():
 
 def _file_handler():
     file_handler = logging.FileHandler(
-        filename=datetime.now().strftime('logs/cloud_trigger_%b_%d_%m_%Y.log'))
+        filename=datetime.now().strftime('_logs/cloud_trigger_%b_%d_%m_%Y.log'))
     file_handler.setFormatter(default_formatter())
     return file_handler
 
