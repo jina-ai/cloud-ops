@@ -27,13 +27,13 @@ jobs:
         run: |
           echo $PWD
           chmod +x prepare_lambda.sh
-          bash prepare_lambda.sh --function mongoatlas_reader.py
+          bash prepare_lambda.sh --function mongoatlas_reader
           
       - name: Prepare Hub Push Lambda Deployment Package
         working-directory: ./hub_api_deployment
         run: |
           chmod +x prepare_lambda.sh
-          bash prepare_lambda.sh --function mongoatlas_writer.py
+          bash prepare_lambda.sh --function mongoatlas_writer
       
       - name: Setup Python
         uses: actions/setup-python@v1
