@@ -8,60 +8,64 @@ sys.path.append('..')
 from aws.helper import file_exists, read_file_content, random_text, is_aws_cred_set
 from aws.logger import get_logger
 from aws.excepts import LambdaCreateFailed, LambdaUpdateFailed, StackCreationFailed, StackUpdateFailed
-from aws.services.lambda_ import Lambda
+from aws.services.s3 import S3
 from aws.services.cloudformation import CFNStack
 
 
 @click.command()
-@click.option('--lambda-name', 
-              help='Name of the Lambda function')
-@click.option('--lambda-description', 
-              default='',
-              help='Description of the Lambda function')
-@click.option('--deployment-zip', 
-              default='.',
-              help='Deployment package zip to be used with Lambda function')
-@click.option('--stack_name',
-              default='jinahub-api-stack',
-              help='Name of the CFN Stack')
+@click.option('--list-deployment-zip', 
+              help='Deployment package zip to be used with HubList Lambda function')
+@click.option('--push-deployment-zip', 
+              help='Deployment package zip to be used with HubPush Lambda function')
+@click.option('--key-id',
+              help='Enter folder to be created in S3 (will take PR# in GH Action)')
+@click.option('--stack-name',
+              default='jinahub-api-stack2',
+              help='Name of the CFN Stack (Defaults to jinahub-api-stack2)')
 @click.option('--template',
               default='cloud_ymls/cfn-api-gateway.yml',
               help='CFN Template to be used for deployment (Default - cloud_ymls/cfn-api-gateway.yml)')
-@click.option('--stage',
+@click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
-def trigger(lambda_name, lambda_description, deployment_zip, stack_name, template, stage):
+def trigger(list_deployment_zip, push_deployment_zip, key_id, stack_name, template, deployment_stage):
     logger = get_logger(__name__)
     
     if not is_aws_cred_set():
         logger.error('AWS Creds are not set! Exiting!')
         sys.exit(1)
     
-    if not file_exists(filepath=deployment_zip):
-        logger.error('Invalid zip file location. Exiting!')
+    if not file_exists(filepath=list_deployment_zip) and not file_exists(filepath=push_deployment_zip):
+        logger.error('Both zip file locations are invalid. Exiting!')
         sys.exit(1)
     
     if not file_exists(filepath=template):
         logger.error('Invalid cfn yaml. Exiting!')
         sys.exit(1)
-        
+    
+    S3_DEFAULT_BUCKET = 'lambda-handlers-jina'
+    s3 = S3(bucket=S3_DEFAULT_BUCKET)
+    
+    if list_deployment_zip is not None:
+        zip_filename = os.path.basename(list_deployment_zip)
+        s3_list_key = f'mongoatlas_reader/{key_id}/{zip_filename}'
+        s3.put(filepath=list_deployment_zip,
+               key=s3_list_key)
+    
+    if push_deployment_zip is not None:
+        zip_filename = os.path.basename(list_deployment_zip)
+        s3_push_key = f'mongoatlas_writer/{key_id}/{zip_filename}'
+        s3.put(filepath=push_deployment_zip,
+               key=s3_push_key)
+    
     cfn_yml = read_file_content(filepath=template)
-        
-    try:
-        with Lambda(name=lambda_name, zip_location=deployment_zip, 
-                    handler='lambda_function.lambda_handler', description=lambda_description) as _lambda:
-            logger.info(f'Lambda function ARN: `{_lambda.arn}`')
-    except LambdaCreateFailed:
-        logger.exception(f'Lambda function creation failed!')
-        sys.exit(1)
-    except LambdaUpdateFailed:
-        logger.exception(f'Lambda function update failed!')
-        sys.exit(1)
     
     parameters = [
-        {'ParameterKey': 'DeploymentStage', 'ParameterValue': stage},
-        {'ParameterKey': 'HubListLambdaArn', 'ParameterValue': _lambda.arn},
-        {'ParameterKey': 'HubPushLambdaArn', 'ParameterValue': _lambda.arn}
+        {'ParameterKey': 'DefS3Bucket', 'ParameterValue': S3_DEFAULT_BUCKET},
+        {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
+        {'ParameterKey': 'HubPushLambdaFnS3Key', 'ParameterValue': s3_push_key},
+        {'ParameterKey': 'DefLambdaRole', 'ParameterValue': 'arn:aws:iam::416454113568:role/lambda-role'},
+        {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage}
     ]
     
     try:
