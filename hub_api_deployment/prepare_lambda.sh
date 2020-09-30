@@ -6,7 +6,7 @@ function usage() {
     
     -f|--function               Name of Lambda Function (to be picked from `lambda_handlers` directory)
     -p|--package-dir            Directory package
-                                Default - package
+                                Default - _package
     
     This script helps create a deployment package for different Lambda functions!
 EOF
@@ -59,7 +59,7 @@ DEFAULT_FILENAME="lambda_function.py"
 LAMBDA_HANDLERS_DIR="../lambda_handlers"
 mkdir -p ${PACKAGE_DIR}
 pip install --target ./${PACKAGE_DIR} -r ${LAMBDA_HANDLERS_DIR}/req_${FUNCTION_NAME}.txt
-cd package && zip -r9 ${OLDPWD}/${FUNCTION_NAME}.zip . && cd -
+cd ${PACKAGE_DIR} && zip -r9 ${OLDPWD}/${FUNCTION_NAME}.zip . && cd -
 
 cp ${LAMBDA_HANDLERS_DIR}/${FUNCTION_NAME}.py /tmp/${DEFAULT_FILENAME}
 cd /tmp && zip -g ${OLDPWD}/${FUNCTION_NAME}.zip ${DEFAULT_FILENAME} && cd -
