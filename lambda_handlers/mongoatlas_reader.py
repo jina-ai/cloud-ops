@@ -9,6 +9,7 @@ import pymongo
 def lambda_handler(event, context):
     """Lambda handler to read data from Mongodb Atlas (Used to perform `jina hub list`)
     """
+    
     def get_logger(context='generic', file=True):
         logger = logging.getLogger(context)
         logger.setLevel(logging.DEBUG)
