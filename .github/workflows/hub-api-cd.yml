@@ -15,6 +15,9 @@ env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  HUB_LIST_LAMBDA: mongoatlas_reader
+  HUB_PUSH_LAMBDA: mongoatlas_writer
+  CFN_STACK_NAME: jinahub-api-stack
 
 jobs:
   hub-api-deploy:
@@ -37,16 +40,16 @@ jobs:
         working-directory: ./hub_api_deployment
         run: |
           chmod +x prepare_lambda.sh
-          bash prepare_lambda.sh --function mongoatlas_reader
+          bash prepare_lambda.sh --function ${HUB_LIST_LAMBDA}
           
       - name: Prepare Hub Push Lambda Deployment Package
         working-directory: ./hub_api_deployment
         run: |
           chmod +x prepare_lambda.sh
-          bash prepare_lambda.sh --function mongoatlas_writer
+          bash prepare_lambda.sh --function ${HUB_PUSH_LAMBDA}
         
       - name: Deploy CFN Stack with Lambda functions & API Gateway 
         working-directory: ./hub_api_deployment
         run: |
-          python deployment.py --list-deployment-zip mongoatlas_reader.zip --push-deployment-zip mongoatlas_reader.zip --key-id ${GITHUB_PR_NUMBER} --stack-name jinahub-api-stack
+          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
           
