@@ -46,10 +46,11 @@ Resources:
           ApiId: !Ref HubAPIListMethod
           AuthorizerType: JWT
           IdentitySource:
-            - '$request.querystring.access_token'
+            - - '$request.querystring.access_token'
+              - '$request.header.Authorization'
           JwtConfiguration:
             Audience:
-            - !Ref AppClient
+            - !Ref HubAuthClient
             Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
           Name: test-jwt-authorizer
       HttpMethod: GET
@@ -85,10 +86,11 @@ Resources:
           ApiId: !Ref HubAPIPushMethod
           AuthorizerType: JWT
           IdentitySource:
-            - '$request.querystring.access_token'
+            - - '$request.querystring.access_token'
+              - '$request.header.Authorization'
           JwtConfiguration:
             Audience:
-            - !Ref AppClient
+            - !Ref HubAuthClient
             Issuer: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
           Name: test-jwt-authorizer
       HttpMethod: POST
@@ -156,3 +158,46 @@ Resources:
                 Action: 'lambda:*'
                 Resource: 
                   Ref: HubPushLambdaArn
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: http-api-user-pool # change
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: name
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+  HubAuthClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      AllowedOAuthFlows: 
+        - implicit
+      AllowedOAuthScopes: 
+        - aws.cognito.signin.user.admin
+        - email
+        - openid
+        - profile
+      AllowedOAuthFlowsUserPoolClient: true
+      ClientName: api-app-client
+      CallbackURLs:
+        - !Sub https://${MyAPI}.execute-api.${AWS::Region}.amazonaws.com #change
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      UserPoolId: !Ref UserPool
+      SupportedIdentityProviders:
+        - COGNITO 
+  HostedUI:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties: 
+      Domain: !Join
+        - '-'
+        - - !Ref HubAPI
+          - !Ref HubAuthClient
+      UserPoolId: !Ref UserPool
