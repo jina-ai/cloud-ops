@@ -71,6 +71,9 @@ def trigger(list_deployment_zip, push_deployment_zip, key_id, stack_name, templa
     try:
         with CFNStack(name=stack_name, template=cfn_yml, 
                       parameters=parameters, delete_at_exit=False) as api_cfn_stack:
+            if not api_cfn_stack.exists:
+                logger.error(f'Stack creation/update failed. Exiting context \n')
+                sys.exit(1)
             logger.info('Resources description --')
             for resource in api_cfn_stack.resources:
                 logger.info(f'Name: `{resource["LogicalResourceId"]}`\t\tType: `{resource["ResourceType"]}`\t'

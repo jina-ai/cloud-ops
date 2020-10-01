@@ -24,6 +24,10 @@ Parameters:
     Type: String
     Default: dev
     Description: Enter API Gateway stage for deployment
+  HubDomain:
+    Type: String
+    Default: hubapi.jina.ai
+    Description: Hub API Endpoint
 
 Resources:
   HubAPI:
@@ -34,7 +38,7 @@ Resources:
       EndpointConfiguration:
         Types:
           - EDGE
-      Name: jina-hub-api2
+      Name: jina-hub-api
   HubAPIList:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -111,6 +115,19 @@ Resources:
       Description: Lambda API Deployment
       RestApiId: 
         Ref: HubAPI
+  HubAPIPathMapping:
+    DependsOn:
+    - HubAPIDeployment
+    - HubAPIStage
+    Type: AWS::ApiGateway::BasePathMapping
+    Properties:
+      BasePath: ""
+      DomainName:
+        Ref: HubDomain
+      RestApiId:
+        Ref: HubAPI
+      Stage:
+        Ref: DeploymentStage
   HubAPIIAMRole:
     Type: AWS::IAM::Role
     Properties:
