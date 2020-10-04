@@ -8,6 +8,12 @@ from string import ascii_lowercase
 from .logger import get_logger
 
 
+def is_db_envs_set():
+    """ Checks if any of the db env variables are not set """
+    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_DB_COLLECTION']
+    return all(len(os.environ.get(k, '')) > 0 for k in keys)
+
+
 def is_aws_cred_set():
     """ Checks if access key id & secret access key env variables set """
     keys = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']

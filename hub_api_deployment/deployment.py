@@ -5,7 +5,7 @@ import click
 import sys
 sys.path.append('..')
 
-from aws.helper import file_exists, read_file_content, random_text, is_aws_cred_set
+from aws.helper import file_exists, read_file_content, random_text, is_aws_cred_set, is_db_envs_set
 from aws.logger import get_logger
 from aws.excepts import LambdaCreateFailed, LambdaUpdateFailed, StackCreationFailed, StackUpdateFailed
 from aws.services.s3 import S3
@@ -16,6 +16,8 @@ from aws.services.cloudformation import CFNStack
 @click.option('--list-deployment-zip', 
               help='Deployment package zip to be used with HubList Lambda function')
 @click.option('--push-deployment-zip', 
+              help='Deployment package zip to be used with HubPush Lambda function')
+@click.option('--authorize-deployment-zip', 
               help='Deployment package zip to be used with HubPush Lambda function')
 @click.option('--key-id',
               help='Enter folder to be created in S3 (will take PR# in GH Action)')
@@ -28,13 +30,18 @@ from aws.services.cloudformation import CFNStack
 @click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
-def trigger(list_deployment_zip, push_deployment_zip, key_id, stack_name, template, deployment_stage):
+def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, key_id, 
+            stack_name, template, deployment_stage):
     logger = get_logger(__name__)
     
     if not is_aws_cred_set():
         logger.error('AWS Creds are not set! Exiting!')
         sys.exit(1)
     
+    if not is_db_envs_set():
+        logger.error('MongoDB environment vars needed for lambda functions are not set! Exiting!')
+        sys.exit(1)
+        
     if not file_exists(filepath=list_deployment_zip) and not file_exists(filepath=push_deployment_zip):
         logger.error('Both zip file locations are invalid. Exiting!')
         sys.exit(1)
@@ -48,15 +55,21 @@ def trigger(list_deployment_zip, push_deployment_zip, key_id, stack_name, templa
     
     if list_deployment_zip is not None:
         zip_filename = os.path.basename(list_deployment_zip)
-        s3_list_key = f'mongoatlas_reader/{key_id}/{zip_filename}'
+        s3_list_key = f'hubapi_list/{key_id}/{zip_filename}'
         s3.put(filepath=list_deployment_zip,
                key=s3_list_key)
     
     if push_deployment_zip is not None:
         zip_filename = os.path.basename(list_deployment_zip)
-        s3_push_key = f'mongoatlas_writer/{key_id}/{zip_filename}'
+        s3_push_key = f'hubapi_push/{key_id}/{zip_filename}'
         s3.put(filepath=push_deployment_zip,
                key=s3_push_key)
+    
+    if push_deployment_zip is not None:
+        zip_filename = os.path.basename(list_deployment_zip)
+        s3_authorize_key = f'hubapi_authorize/{key_id}/{zip_filename}'
+        s3.put(filepath=authorize_deployment_zip,
+               key=s3_authorize_key)
     
     cfn_yml = read_file_content(filepath=template)
     
@@ -64,8 +77,14 @@ def trigger(list_deployment_zip, push_deployment_zip, key_id, stack_name, templa
         {'ParameterKey': 'DefS3Bucket', 'ParameterValue': S3_DEFAULT_BUCKET},
         {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
         {'ParameterKey': 'HubPushLambdaFnS3Key', 'ParameterValue': s3_push_key},
+        {'ParameterKey': 'HubAPIAuthorizeLambdaFnS3Key', 'ParameterValue': s3_authorize_key},
         {'ParameterKey': 'DefLambdaRole', 'ParameterValue': 'arn:aws:iam::416454113568:role/lambda-role'},
-        {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage}
+        {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage},
+        {'ParameterKey': 'JinaDBHostname', 'ParameterValue': os.environ['JINA_DB_HOSTNAME']},
+        {'ParameterKey': 'JinaDBCollection', 'ParameterValue': os.environ['JINA_DB_COLLECTION']},
+        {'ParameterKey': 'JinaDBName', 'ParameterValue': os.environ['JINA_DB_NAME']},
+        {'ParameterKey': 'JinaDBUsername', 'ParameterValue': os.environ['JINA_DB_USERNAME']},
+        {'ParameterKey': 'JinaDBPassword', 'ParameterValue': os.environ['JINA_DB_PASSWORD']}
     ]
     
     try:

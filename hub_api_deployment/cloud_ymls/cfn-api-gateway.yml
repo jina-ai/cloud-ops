@@ -10,11 +10,15 @@ Parameters:
     Description: Enter S3 Bucket where Lambda function code is uploaded
   HubListLambdaFnS3Key:
     Type: String
-    Default: mongoatlas_reader/1/mongoatlas_reader.zip
+    Default: hubapi_list/1/mongoatlas_reader.zip
     Description: Enter S3 Key where Hub List Lambda function code is uploaded
   HubPushLambdaFnS3Key:
     Type: String
-    Default: mongoatlas_reader/1/mongoatlas_reader.zip
+    Default: hubapi_push/1/mongoatlas_reader.zip
+    Description: Enter S3 Key where Hub List Lambda function code is uploaded
+  HubAPIAuthorizeLambdaFnS3Key:
+    Type: String
+    Default: hubapi_authorize/1/mongoatlas_reader.zip
     Description: Enter S3 Key where Hub List Lambda function code is uploaded
   DefLambdaRole:
     Type: String
@@ -28,6 +32,16 @@ Parameters:
     Type: String
     Default: hubapi.jina.ai
     Description: Hub API Endpoint
+  JinaDBHostname:
+    Type: String
+  JinaDBCollection:
+    Type: String
+  JinaDBName:
+    Type: String
+  JinaDBUsername:
+    Type: String
+  JinaDBPassword:
+    Type: String
 
 Resources:
   HubAPI:
@@ -76,7 +90,8 @@ Resources:
     Type: AWS::ApiGateway::Method
     Properties:
       ApiKeyRequired: false
-      AuthorizationType: NONE
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref HubAPIAuthorizer
       HttpMethod: POST
       Integration:
         ConnectionType: INTERNET
@@ -128,6 +143,16 @@ Resources:
         Ref: HubAPI
       Stage:
         Ref: DeploymentStage
+  HubAPIAuthorizer:
+    Type: AWS::ApiGateway::Authorizer
+    Properties:
+      Name: HubAuthorizer
+      RestApiId: !Ref HubAPI
+      Type: TOKEN
+      IdentitySource: method.request.header.authorizationToken
+      AuthorizerResultTtlInSeconds: 0
+      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubAPIAuthorizeLambdaFn.Arn}/invocations
+      AuthorizerCredentials: !GetAtt HubAPIIAMRole.Arn
   HubAPIIAMRole:
     Type: AWS::IAM::Role
     Properties:
@@ -153,6 +178,9 @@ Resources:
               - Effect: 'Allow'
                 Action: 'lambda:*'
                 Resource: !GetAtt HubPushLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt HubAPIAuthorizeLambdaFn.Arn
   HubListLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
@@ -167,6 +195,18 @@ Resources:
       Runtime: python3.8
       Role: 
         Ref: DefLambdaRole
+      Environment:
+        Variables:
+          JINA_DB_HOSTNAME:
+            Ref: JinaDBHostname
+          JINA_DB_COLLECTION:
+            Ref: JinaDBCollection
+          JINA_DB_NAME:
+            Ref: JinaDBName
+          JINA_DB_USERNAME:
+            Ref: JinaDBUsername
+          JINA_DB_PASSWORD:
+            Ref: JinaDBPassword
   HubPushLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
@@ -177,6 +217,32 @@ Resources:
           Ref: DefS3Bucket
         S3Key: 
           Ref: HubPushLambdaFnS3Key
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Role: 
+        Ref: DefLambdaRole
+      Environment:
+        Variables:
+          JINA_DB_HOSTNAME:
+            Ref: JinaDBHostname
+          JINA_DB_COLLECTION:
+            Ref: JinaDBCollection
+          JINA_DB_NAME:
+            Ref: JinaDBName
+          JINA_DB_USERNAME:
+            Ref: JinaDBUsername
+          JINA_DB_PASSWORD:
+            Ref: JinaDBPassword
+  HubAPIAuthorizeLambdaFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: HubAPIAuthorizer
+      Description: Hub API Authorize Lambda function
+      Code:
+        S3Bucket: 
+          Ref: DefS3Bucket
+        S3Key: 
+          Ref: HubAPIAuthorizeLambdaFnS3Key
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
       Role: 
