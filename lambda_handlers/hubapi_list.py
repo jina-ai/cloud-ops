@@ -110,11 +110,11 @@ def _query_builder(params):
         sub_query.append(name_query)
     if 'keywords' in params:
         keywords_list = params['keywords'].split(',')
-        keyword_query = {'manifest_info.keywords': {'$all': keywords_list}}
+        keyword_query = {'manifest_info.keywords': {'$in': keywords_list}}
         sub_query.append(keyword_query)
 
     _executor_query = {'$and': sub_query}
-    logging.info(f'Query to search in mongodb: {_executor_query}')
+    logger.info(f'Query to search in mongodb: {_executor_query}')
     return _executor_query
 
 
