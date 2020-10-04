@@ -13,6 +13,7 @@ def validate_github_token(token):
     logger = get_logger(context='validate_github_token')
     http = urllib3.PoolManager()
     if not token:
+        logging.warning(f'No tokens passed to validate_github_token')
         return False
     headers = {
         'Authorization': f'token {token}', 
