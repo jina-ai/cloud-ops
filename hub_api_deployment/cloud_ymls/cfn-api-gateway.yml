@@ -125,7 +125,9 @@ Resources:
         Ref: DeploymentStage
   HubAPIDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: HubAPIListMethod
+    DependsOn: 
+    - HubAPIListMethod
+    - HubAPIPushMethod
     Properties:
       Description: Lambda API Deployment
       RestApiId: 
