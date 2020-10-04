@@ -15,8 +15,14 @@ env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  HUB_LIST_LAMBDA: mongoatlas_reader
-  HUB_PUSH_LAMBDA: mongoatlas_writer
+  JINA_DB_HOSTNAME: ${{ secrets.JINA_DB_HOSTNAME }}
+  JINA_DB_COLLECTION: ${{ secrets.JINA_DB_COLLECTION }}
+  JINA_DB_NAME: ${{ secrets.JINA_DB_NAME }}
+  JINA_DB_USERNAME: ${{ secrets.JINA_DB_USERNAME }}
+  JINA_DB_PASSWORD: ${{ secrets.JINA_DB_PASSWORD }}
+  HUB_LIST_LAMBDA: hubapi_list
+  HUB_PUSH_LAMBDA: hubapi_push
+  HUB_AUTHORIZE_LAMBDA: hubapi_authorizer
   CFN_STACK_NAME: jinahub-api-stack
 
 jobs:
@@ -51,5 +57,5 @@ jobs:
       - name: Deploy CFN Stack with Lambda functions & API Gateway 
         working-directory: ./hub_api_deployment
         run: |
-          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
+          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
           
