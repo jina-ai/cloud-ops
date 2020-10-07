@@ -87,7 +87,6 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         {'ParameterKey': 'JinaDBPassword', 'ParameterValue': os.environ['JINA_DB_PASSWORD']}
     ]
     
-    
     try:
         with CFNStack(name=stack_name, template=cfn_yml, 
                       parameters=parameters, delete_at_exit=False) as api_cfn_stack:
