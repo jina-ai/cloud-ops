@@ -1,13 +1,14 @@
 name: CD
 
 on:
-  pull_request:
+  push:
     branches:
-      - master
+      - test-login
       
 
 jobs:
   test-login:
+    runs-on: ubuntu-latest
     steps:
       - name: Jina Hub Login
         run: |
