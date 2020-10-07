@@ -1,0 +1,20 @@
+name: CD
+
+on:
+  pull_request:
+    branches:
+      - master
+      
+
+jobs:
+  test-login:
+    steps:
+      - name: Jina Hub Login
+        run: |
+          mkdir -p ${ACCESS_DIRECTORY}
+          if [ ! -f ${ACCESS_FILE} ]; then touch ${ACCESS_FILE}; echo "access_token: ${GITHUB_TOKEN}" >> ${ACCESS_FILE}; fi
+          cat $ACCESS_FILE
+        env:
+          ACCESS_DIRECTORY: ~/.jina
+          ACCESS_FILE: ~/.jina/access.yml
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
