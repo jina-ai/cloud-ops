@@ -8,6 +8,7 @@ import re
 import logging
 import json
 import urllib3
+import docker
 
 
 def get_logger(context='generic', file=True):
@@ -24,6 +25,28 @@ def _return_json_builder(body, status):
         "statusCode": int(status),
         "body": body
     }
+
+def _docker_login():
+    """A wrapper of docker login """
+    logger = get_logger(context='fetch_docker_token')
+    client = docker.from_env()
+    from docker.errors import APIError
+    username = 'jinacommunity'
+    password = 'ba2bf491-1420-4629-b315-dccc6c1aa13d'
+    registry = 'https://registry.docker.io/v2/jina-ai/jina'
+    if username and password:
+        try:
+            client.login(username=username, password=password,
+                                registry=registry)
+            logger.info(f'successfully logged in to docker hub')
+            return _return_json_builder(body='docker login successful', status=200)
+
+        except APIError:
+            return _return_json_builder(body='invalid credentials passed. docker login failed',
+                                    status=401)
+    else:
+        return _return_json_builder(body='no username/password specified, docker login failed',
+                                    status=401)
 
 def fetch_docker_token():
     logger = get_logger(context='fetch_docker_token')
@@ -95,10 +118,11 @@ def lambda_handler(event, context):
     # if 'methodArn' in event:
     #     method_arn = event['methodArn']
     #     logger.info(f'Current Method ARN: {method_arn}')
-    
-    token = fetch_docker_token()
-    logger.info('Fetched token: ' + str(token))
-    if DockerRegistry.VALIDATE_TOKEN:
-        logger.info('Validating docker token')
-        validate_docker_token(token)
 
+    login_response = _docker_login()
+    if login_response['statusCode'] == 200:
+        token = fetch_docker_token()
+        logger.info('Fetched token: ' + str(token))
+        if DockerRegistry.VALIDATE_TOKEN:
+            logger.info('Validating docker token')
+            validate_docker_token(token)
