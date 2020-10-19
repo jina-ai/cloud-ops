@@ -30,5 +30,6 @@ The main.tf will follow the next steps:
 10. Create Ubunbut server and install apace<br/>
 
 # Run it
-To run this you can use the 
-`terraform apply` command or `terraform plan` to update the state or check it before running it
+To run this, initialize with `terraform init`
+This will create the .terraform and you can run it now wih the command `terraform apply`.
+Also you can run `terraform plan` first to see what the changes will be as well as to update the state.
