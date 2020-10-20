@@ -1,8 +1,8 @@
 provider "aws" {
   version = "~> 2.0"
   region  = "us-east-2"
-  access_key = "AKIAWB5UZPEQKC6SHRMS"
-  secret_key = "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"
+  access_key = AWS_ACCESS_KEY_ID
+  secret_key = AWS_SECRET_ACCESS_KEY
 }
 
 #Create first service
