@@ -12,12 +12,15 @@ resource "aws_ecr_repository" "southpark_repo" {
 }
 
 # Providing a reference to our default VPC
-data "aws_vpc" "default" {
-  default = true
+#data "aws_vpc" "default" {
+#  default = true
+#}
+
+resource "aws_default_vpc" "default_vpc" {
 }
 
 data "aws_subnet_ids" "default" {
-  vpc_id = "${data.aws_vpc.default.id}"
+  vpc_id = "${aws_default_vpc.default_vpc.id}"
 }
 
 resource "aws_ecs_cluster" "southpark_cluster" {
@@ -58,8 +61,8 @@ resource "aws_ecs_task_definition" "southpark_task" {
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 4000,
-          "hostPort": 4000
+          "containerPort": 3000,
+          "hostPort": 3000
         }
       ],
       "memory": 512,
@@ -100,17 +103,17 @@ resource "aws_lb_target_group" "target_group" {
   protocol    = "HTTP"
   target_type = "ip"
   deregistration_delay = 0
-  vpc_id      = "${data.aws_vpc.default.id}" # Referencing the default VPC
-
+  vpc_id      = "${aws_default_vpc.default_vpc.id}" # Referencing the default VPC
   health_check {
     healthy_threshold   = "3"
     interval            = "90"
     protocol            = "HTTP"
-    matcher             = "200-299"
     timeout             = "20"
-    path                = "/"
     unhealthy_threshold = "2"
+    matcher = "200,301,302"
+    path = "/"
   }
+
 }
 
 
@@ -158,12 +161,12 @@ resource "aws_ecs_service" "southpark_service" {
   cluster         = "${aws_ecs_cluster.southpark_cluster.id}"             # Referencing our created Cluster
   task_definition = "${aws_ecs_task_definition.southpark_task.arn}" # Referencing the task our service will spin up
   launch_type     = "FARGATE"
-  desired_count   = 1
+  desired_count   = 2
 
   load_balancer {
     target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
     container_name   = "${aws_ecs_task_definition.southpark_task.family}"
-    container_port   = 4000 # Specifying the container port
+    container_port   = 3000 # Specifying the container port
   }
 
   network_configuration {
