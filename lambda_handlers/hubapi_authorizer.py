@@ -1,5 +1,6 @@
-import re
 import logging
+import re
+
 import urllib3
 
 
@@ -16,12 +17,12 @@ def validate_github_token(token):
         logging.warning(f'No tokens passed to validate_github_token')
         return False
     headers = {
-        'Authorization': f'token {token}', 
+        'Authorization': f'token {token}',
         'User-Agent': GitHub.APP
     }
     # TODO: Check & implement if email id needs to be stored
-    response = http.request(method=GitHub.METHOD, 
-                            url=GitHub.URL, 
+    response = http.request(method=GitHub.METHOD,
+                            url=GitHub.URL,
                             headers=headers)
     logger.info(f'Got the following response status from Github: {response.status}')
     if response.status == 200:
@@ -173,7 +174,7 @@ class AuthPolicy:
         conditions. This will generate a policy with two main statements for the effect:
         one statement for Allow and one statement for Deny.
         Methods that includes conditions will have their own statement in the policy.'''
-        if ((self.allow_methods is None or len(self.allow_methods) == 0) and 
+        if ((self.allow_methods is None or len(self.allow_methods) == 0) and
                 (self.deny_methods is None or len(self.deny_methods) == 0)):
             raise NameError('No statements defined for the policy')
 
@@ -193,18 +194,18 @@ class AuthPolicy:
 
 def lambda_handler(event, context):
     logger = get_logger(context='hub_authorizer')
-    
+
     if 'authorizationToken' in event:
         github_token = event['authorizationToken']
         logger.info(f'Got an authorization token in the request!')
     else:
         github_token = ''
         logger.info(f'No authorization token in the request!')
-    
+
     if 'methodArn' in event:
         method_arn = event['methodArn']
         logger.info(f'Current Method ARN: {method_arn}')
-    
+
     principal_id = 'user|a1b2c3d4'
     tmp = event['methodArn'].split(':')
     apiGatewayArnTmp = tmp[5].split('/')
@@ -214,7 +215,7 @@ def lambda_handler(event, context):
     policy.rest_api_id = apiGatewayArnTmp[0]
     policy.region = tmp[3]
     policy.stage = apiGatewayArnTmp[1]
-    
+
     if validate_github_token(token=github_token):
         policy.allow_all_methods()
     else:

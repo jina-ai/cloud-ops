@@ -1,7 +1,6 @@
 import os
-import time
-from enum import Enum
 import signal
+import time
 from random import choice
 from string import ascii_lowercase
 
@@ -17,7 +16,7 @@ def is_db_envs_set():
 def is_aws_cred_set():
     """ Checks if access key id & secret access key env variables set """
     keys = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY']
-    return all(len(os.environ.get(k, '')) > 0 for k in keys) 
+    return all(len(os.environ.get(k, '')) > 0 for k in keys)
 
 
 def file_exists(filepath):
@@ -30,10 +29,11 @@ def random_text(length):
 
 def read_file_content(filepath):
     if not file_exists(filepath):
-        return 
+        return
     with open(filepath) as f:
         content = f.read()
     return content
+
 
 class TimeContext:
     def __init__(self, msg: str):
@@ -55,20 +55,21 @@ class TimeOut:
     """
     Class to handle timeout operations (works on Linux only)
     """
+
     def __init__(self, seconds=1, message='Timeout'):
         self._seconds = seconds
         self._message = message
-        
+
     def handle(self, signum, frame):
         raise TimeoutError(self._message)
-    
+
     def __enter__(self):
         signal.signal(signal.SIGALRM, self.handle)
         signal.alarm(self._seconds)
- 
+
     def __exit__(self, type, value, traceback):
         signal.alarm(0)
-        
+
 
 def waiter(func: callable, logger, success_status: list, wait_status: list, failure_status: list,
            time_to_wait: int, time_to_sleep: int = 5, *args, **kwargs):
@@ -83,9 +84,9 @@ def waiter(func: callable, logger, success_status: list, wait_status: list, fail
         time_to_wait (int): total wait time for the operation (seconds)
         time_to_sleep (int): sleep time for the operation (seconds)
     """
-    logger.info(f'Success status: {success_status}, Wait status: {wait_status}, ' 
+    logger.info(f'Success status: {success_status}, Wait status: {wait_status}, '
                 f'Failure status: {failure_status}')
-    with TimeOut(seconds=time_to_wait, 
+    with TimeOut(seconds=time_to_wait,
                  message=f'Waited for {time_to_wait} seconds before timing out!'):
         try:
             while True:
@@ -102,10 +103,10 @@ def waiter(func: callable, logger, success_status: list, wait_status: list, fail
                 else:
                     logger.info(f'Current status: `{status}`. Sleeping for {time_to_sleep} seconds!')
                     time.sleep(time_to_sleep)
-        
+
         except TimeoutError:
             logger.error(f'Timeout after waiting for {time_to_wait} seconds! Nothing to do!')
             return False
-            
+
         except Exception as exp:
             logger.exception(f'Got the following exception - `{exp}`')

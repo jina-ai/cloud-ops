@@ -1,15 +1,15 @@
-import boto3
 import botocore
 
-from ..logger import get_logger
 from ..client import AWSClientWrapper
 from ..excepts import StackCreationFailed, StackUpdateFailed, StackDeletionFailed
-from ..helper import TimeContext, waiter
+from ..helper import TimeContext
+from ..logger import get_logger
 
 
 class CFNStack:
     """Wrapper around boto3 to create/delete/update Cloudformation stacks
     """
+
     def __init__(self, name, template, parameters=None, delete_at_exit=False):
         self.logger = get_logger(context=self.__class__.__name__)
         self._client_wrapper = AWSClientWrapper(service='cloudformation')
@@ -19,7 +19,7 @@ class CFNStack:
         self._parameters = parameters
         self._delete_at_exit = delete_at_exit
         self._exists = False
-        
+
     def __enter__(self):
         self.logger.info('Entering CFNStack context')
         self.logger.info(f'Checking if stack with name `{self._name}` exists!')
@@ -31,7 +31,7 @@ class CFNStack:
             self.logger.info(f'Stack already exists. Updating it!')
             self.update()
         return self
-        
+
     def create(self):
         try:
             # Find a better way of doing this.
@@ -51,7 +51,7 @@ class CFNStack:
             raise StackCreationFailed(f'Stack creation failed with exception. Exiting! \n{exp}')
         except Exception as exp:
             raise StackCreationFailed(f'Stack creation failed with exception. Exiting! \n{exp}')
-    
+
     def update(self):
         try:
             if self._parameters:
@@ -70,32 +70,32 @@ class CFNStack:
             self.logger.warning(f'Stack update failed with ValidationError as template hasn\'t changed!')
         except Exception as exp:
             raise StackUpdateFailed(f'Stack update failed with exception {exp}')
-    
+
     @property
     def name(self):
         return self._name
-    
+
     @property
     def id(self):
         if hasattr(self, '_stack_id'):
             return self._stack_id
-    
+
     @property
     def exists(self):
         if hasattr(self, '_exists'):
             return self._exists
-    
+
     @property
     def status(self):
         self._describe_stack()
         if hasattr(self, '_status'):
             return self._status
-        
+
     @property
     def resources(self):
         self._stack_resources()
         return self._resources
-        
+
     def _describe_stack(self):
         try:
             self.logger.info(f'Describing stack with name `{self._name}`')
@@ -109,7 +109,7 @@ class CFNStack:
             self.logger.warning(f'Stack with name {self._name} doesn\'t exist! Please create one!')
         except Exception as exp:
             self.logger.error(f'Got following error while triggering describe_stacks {exp}')
-    
+
     def _stack_resources(self):
         try:
             self.logger.info(f'Describing all resources under stack with name `{self._name}`')
@@ -127,7 +127,7 @@ class CFNStack:
             except botocore.exceptions.WaiterError:
                 self.logger.error(f'Operation failed after waiting!')
                 return False
-    
+
     def delete(self):
         try:
             self._client.delete_stack(StackName=self._name)
@@ -137,11 +137,11 @@ class CFNStack:
             raise StackDeletionFailed(f'Stack deletion failed with exception {exp}')
         except Exception as exp:
             raise StackDeletionFailed(f'Stack deletion failed with exception {exp}')
-            
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
-            self.logger.info(f'Exiting CFNStack context.') 
-            
+            self.logger.info(f'Exiting CFNStack context.')
+
             if not self.status:
                 self.logger.info(f'Nothing to do, as stack doesn\'t exist.')
                 return

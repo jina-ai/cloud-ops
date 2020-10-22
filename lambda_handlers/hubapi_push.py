@@ -1,6 +1,6 @@
-import os
 import json
 import logging
+import os
 from typing import Optional, Dict, List, Union
 
 import pymongo
@@ -15,7 +15,7 @@ def get_logger(context='generic', file=True):
 class MongoDBException(Exception):
     """ Any errors raised by MongoDb """
 
-    
+
 class MongoDBHandler:
     """
     Mongodb Handler to connect to the database & insert documents in the collection
@@ -31,10 +31,10 @@ class MongoDBHandler:
         self.collection_name = collection_name
         self.connection_string = \
             f'mongodb+srv://{self.username}:{self.password}@{self.hostname}'
-        
+
     def __enter__(self):
         return self.connect()
-    
+
     def connect(self) -> 'MongoDBHandler':
         try:
             self.client = pymongo.MongoClient(self.connection_string)
@@ -49,27 +49,27 @@ class MongoDBHandler:
         except Exception as exp:
             raise MongoDBException(exp)
         return self
-        
+
     @property
     def database(self):
         return self.client[self.database_name]
-    
+
     @property
     def collection(self):
         return self.database[self.collection_name]
-    
+
     def find(self, query: Dict[str, Union[Dict, List]]) -> None:
         try:
             return self.collection.find_one(query)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
-    
+
     def find_many(self, query: Dict[str, Union[Dict, List]]) -> None:
         try:
             return self.collection.find(query, limit=10)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
-        
+
     def insert(self, document: str) -> Optional[str]:
         try:
             result = self.collection.insert_one(document)
@@ -77,7 +77,7 @@ class MongoDBHandler:
             return result.inserted_id
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while inserting a document in the db {exp}')
-    
+
     def replace(self, document: Dict, query: Dict):
         try:
             result = self.collection.replace_one(query, document)
@@ -124,25 +124,25 @@ def lambda_handler(event, context):
     """Lambda handler to write data into Mongodb Atlas (Used to perform `jina hub push`)
     """
     logger = get_logger(context='hub_push')
-        
+
     if not is_db_envs_set():
         logger.warning('MongoDB environment vars are not set! bookkeeping skipped.')
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
-    
+
     try:
         if 'body' not in event or event['body'] is None:
             return _return_json_builder(body='Invalid body passed in event',
                                         status=500)
-        
+
         summary = json.loads(event['body'])
         build_summary = _handle_dot_in_keys(document=summary)
         _build_query = {
-            'name': build_summary['name'], 
+            'name': build_summary['name'],
             'version': build_summary['version']
         }
         _current_build_history = build_summary['build_history']
-        
+
         with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
                             username=os.environ['JINA_DB_USERNAME'],
                             password=os.environ['JINA_DB_PASSWORD'],
