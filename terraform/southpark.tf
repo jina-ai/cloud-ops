@@ -3,27 +3,21 @@ provider "aws" {
   region  = "us-east-2"
 }
 
-
 #Create repo
 resource "aws_ecr_repository" "southpark_repo" {
   name = "southpark_repo" # Naming my repository
+  tags = {
+    Name = "Southpark-repo"
+  }
 }
 
 # Providing a reference to our default VPC
-resource "aws_default_vpc" "default_vpc" {
+data "aws_vpc" "default" {
+  default = true
 }
 
-# Providing a reference to our default subnets
-resource "aws_default_subnet" "default_subnet_a" {
-  availability_zone = "us-east-2a"
-}
-
-resource "aws_default_subnet" "default_subnet_b" {
-  availability_zone = "us-east-2b"
-}
-
-resource "aws_default_subnet" "default_subnet_c" {
-  availability_zone = "us-east-2c"
+data "aws_subnet_ids" "default" {
+  vpc_id = "${data.aws_vpc.default.id}"
 }
 
 resource "aws_ecs_cluster" "southpark_cluster" {
@@ -41,10 +35,21 @@ resource "aws_iam_role" "ecsExecutionRole" {
   assume_role_policy = "${data.aws_iam_policy_document.assume_role_policy.json}"
 }
 
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    effect = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+}
 
 #Create task
 resource "aws_ecs_task_definition" "southpark_task" {
-  family                   = "southpark_task" # Naming our first task
+  family                   = "southpark_task" 
   container_definitions    = <<DEFINITION
   [
     {
@@ -53,8 +58,8 @@ resource "aws_ecs_task_definition" "southpark_task" {
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 3000,
-          "hostPort": 3000
+          "containerPort": 4000,
+          "hostPort": 4000
         }
       ],
       "memory": 512,
@@ -69,32 +74,50 @@ resource "aws_ecs_task_definition" "southpark_task" {
   execution_role_arn       = "${aws_iam_role.ecsExecutionRole.arn}"
 }
 
-data "aws_iam_policy_document" "assume_role_policy" {
-  statement {
-    actions = ["sts:AssumeRole"]
 
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-  }
-}
-
+#create load balancer
 resource "aws_alb" "application_load_balancer" {
   name               = "test-lb-tf" # Naming our load balancer
   load_balancer_type = "application"
-  subnets = [ # Referencing the default subnets
-    "${aws_default_subnet.default_subnet_a.id}",
-    "${aws_default_subnet.default_subnet_b.id}",
-    "${aws_default_subnet.default_subnet_c.id}"
-  ]
+  subnets            = "${data.aws_subnet_ids.default.ids}" 
   # Referencing the security group
   security_groups = ["${aws_security_group.load_balancer_security_group.id}"]
 }
 
+resource "aws_lb_listener" "listener" {
+  load_balancer_arn = "${aws_alb.application_load_balancer.arn}" # Referencing our load balancer
+  port              = "80"
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our tagrte group
+  }
+}
+
+resource "aws_lb_target_group" "target_group" {
+  name        = "target-group"
+  port        = 80
+  protocol    = "HTTP"
+  target_type = "ip"
+  deregistration_delay = 0
+  vpc_id      = "${data.aws_vpc.default.id}" # Referencing the default VPC
+
+  health_check {
+    healthy_threshold   = "3"
+    interval            = "90"
+    protocol            = "HTTP"
+    matcher             = "200-299"
+    timeout             = "20"
+    path                = "/"
+    unhealthy_threshold = "2"
+  }
+}
+
 
 # Creating a security group for the load balancer:
+# This is the one that will receive traffic from internet
 resource "aws_security_group" "load_balancer_security_group" {
+  description = "control access to the ALB"
   ingress {
     from_port   = 80
     to_port     = 80
@@ -110,47 +133,9 @@ resource "aws_security_group" "load_balancer_security_group" {
   }
 }
 
-resource "aws_lb_target_group" "target_group" {
-  name        = "target-group"
-  port        = 80
-  protocol    = "HTTP"
-  target_type = "ip"
-  vpc_id      = "${aws_default_vpc.default_vpc.id}" # Referencing the default VPC
-}
-
-resource "aws_lb_listener" "listener" {
-  load_balancer_arn = "${aws_alb.application_load_balancer.arn}" # Referencing our load balancer
-  port              = "80"
-  protocol          = "HTTP"
-  default_action {
-    type             = "forward"
-    target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our tagrte group
-  }
-}
-
-
-resource "aws_ecs_service" "southpark_service" {
-  name            = "southpark_service"                             # Naming our first service
-  cluster         = "${aws_ecs_cluster.southpark_cluster.id}"             # Referencing our created Cluster
-  task_definition = "${aws_ecs_task_definition.southpark_task.arn}" # Referencing the task our service will spin up
-  launch_type     = "FARGATE"
-  desired_count   = 3 # Setting the number of containers to 3
-
-  load_balancer {
-    target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
-    container_name   = "${aws_ecs_task_definition.southpark_task.family}"
-    container_port   = 3000 # Specifying the container port
-  }
-
-  network_configuration {
-    subnets          = ["${aws_default_subnet.default_subnet_a.id}", "${aws_default_subnet.default_subnet_b.id}", "${aws_default_subnet.default_subnet_c.id}"]
-    assign_public_ip = true                                                # Providing our containers with public IPs
-    security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
-  }
-}
-
-
+#ECS will receive traffic from the ALB
 resource "aws_security_group" "service_security_group" {
+  description = "Allow acces only from the ALB"
   ingress {
     from_port = 0
     to_port   = 0
@@ -166,5 +151,29 @@ resource "aws_security_group" "service_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+#create service
+resource "aws_ecs_service" "southpark_service" {
+  name            = "southpark_service"                             # Naming our first service
+  cluster         = "${aws_ecs_cluster.southpark_cluster.id}"             # Referencing our created Cluster
+  task_definition = "${aws_ecs_task_definition.southpark_task.arn}" # Referencing the task our service will spin up
+  launch_type     = "FARGATE"
+  desired_count   = 1
+
+  load_balancer {
+    target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
+    container_name   = "${aws_ecs_task_definition.southpark_task.family}"
+    container_port   = 4000 # Specifying the container port
+  }
+
+  network_configuration {
+    subnets          = data.aws_subnet_ids.default.ids
+    assign_public_ip = true                                                # Providing our containers with public IPs
+    security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
+  }
+  depends_on = [aws_lb_listener.listener, aws_iam_role_policy_attachment.ecsTaskExecutionRole_policy]
+}
+
+
 
 
