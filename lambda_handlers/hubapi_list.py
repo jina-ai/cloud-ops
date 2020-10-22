@@ -66,7 +66,7 @@ class MongoDBHandler:
 
     def find_many(self, query: Dict[str, Union[Dict, List]], limit: int = 0) -> None:
         try:
-            return self.collection.find(query, limit)
+            return self.collection.find(filter=query, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
@@ -101,7 +101,10 @@ def is_db_envs_set():
 def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
     logger.info(f'Got the following parans: {params}')
-
+    
+    if not params:
+        return {}, 0
+    
     sub_query = []
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
