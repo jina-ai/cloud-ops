@@ -98,7 +98,7 @@ def is_db_envs_set():
     return all(len(os.environ.get(k, '')) > 0 for k in keys)
 
 
-def _query_builder(params):
+def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
     logger.info(f'Got the following parans: {params}')
 
@@ -151,21 +151,20 @@ def lambda_handler(event, context):
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
-    if 'queryStringParameters' in event:
-        _executor_query = _query_builder(params=event['queryStringParameters'])
-        with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
-                            username=os.environ['JINA_DB_USERNAME'],
-                            password=os.environ['JINA_DB_PASSWORD'],
-                            database_name=os.environ['JINA_DB_NAME'],
-                            collection_name=os.environ['JINA_DB_COLLECTION']) as db:
-            existing_docs = db.find_many(*_executor_query)
-            if existing_docs:
-                all_manifests = [doc['manifest_info'] for doc in existing_docs]
-                if all_manifests:
-                    return _return_json_builder(body=json.dumps({"manifest": all_manifests}),
-                                                status=200)
-                return _return_json_builder(body="No docs found",
-                                            status=400)
+    _executor_query = _query_builder(params=event.get('queryStringParameters', {}))
+    with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
+                        username=os.environ['JINA_DB_USERNAME'],
+                        password=os.environ['JINA_DB_PASSWORD'],
+                        database_name=os.environ['JINA_DB_NAME'],
+                        collection_name=os.environ['JINA_DB_COLLECTION']) as db:
+        existing_docs = db.find_many(*_executor_query)
+        if existing_docs:
+            all_manifests = [doc['manifest_info'] for doc in existing_docs]
+            if all_manifests:
+                return _return_json_builder(body=json.dumps({"manifest": all_manifests}),
+                                            status=200)
+            return _return_json_builder(body="No docs found",
+                                        status=400)
 
     return _return_json_builder(body='Invalid filters passed',
                                 status=400)
