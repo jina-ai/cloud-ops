@@ -8,12 +8,12 @@ class SSMCreationStatus(Enum):
     SUCCESS = ['Active']
     WAIT = ['Creating', 'Updating', 'Pending']
     FAILURE = ['Failed']
-    
+
 
 class SSMCreationTime(Enum):
     TIMEOUT = 120
     SLEEP = 5
-    
+
 
 class SSMAssociationStatus(Enum):
     """
@@ -22,13 +22,13 @@ class SSMAssociationStatus(Enum):
     SUCCESS = ['Active']
     WAIT = ['Creating', 'Updating', 'Pending']
     FAILURE = ['Failed']
-    
-    
+
+
 class SSMAssociationTime(Enum):
     TIMEOUT = 120
     SLEEP = 5
-    
-    
+
+
 class SSMDeletionStatus(Enum):
     """
     Status list to be used by `waiter` before timing out during SSM Deletion

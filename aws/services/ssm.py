@@ -1,18 +1,17 @@
-import sys
-import boto3
 import botocore
 
-from ..logger import get_logger
 from ..client import AWSClientWrapper
-from ..helper import TimeContext, waiter
-from ..excepts import SSMDocumentCreationFailed, SSMDocumentDeletionFailed
 from ..enums import SSMCreationStatus, SSMAssociationStatus, SSMDeletionStatus, \
     SSMCreationTime, SSMAssociationTime, SSMDeletionTime
-    
+from ..excepts import SSMDocumentCreationFailed, SSMDocumentDeletionFailed
+from ..helper import TimeContext, waiter
+from ..logger import get_logger
+
 
 class SSMDocument:
     """Wrapper around boto3 to create/delete/execute long-running service manager documents
     """
+
     def __init__(self, name, template, plugin='runStressTest'):
         self.logger = get_logger(self.__class__.__name__)
         self._client_wrapper = AWSClientWrapper(service='ssm')
@@ -20,7 +19,7 @@ class SSMDocument:
         self._name = name
         self._template = template
         self._plugin = plugin
-    
+
     def __enter__(self):
         self.logger.info(f'Entering SSMDocument context. Creating the document with name `{self._name}`')
         self.create()
@@ -28,7 +27,7 @@ class SSMDocument:
 
     def create(self):
         try:
-            response = self._client.create_document(Content=self._template, 
+            response = self._client.create_document(Content=self._template,
                                                     Name=self._name,
                                                     DocumentType='Command',
                                                     DocumentFormat='YAML')
@@ -43,12 +42,12 @@ class SSMDocument:
                                       time_to_sleep=SSMCreationTime.SLEEP.value)
         except botocore.exceptions.ClientError as exp:
             raise SSMDocumentCreationFailed(f'Document creation failed with folliwng exception. Exiting! \n{exp}')
-        except (self._client.exceptions.InvalidDocument, 
+        except (self._client.exceptions.InvalidDocument,
                 self._client.exceptions.InvalidDocumentSchemaVersion) as exp:
             raise SSMDocumentCreationFailed(f'Document schema is not correct! Please check AWS Docs. Exiting! \n{exp}')
         except Exception as exp:
             raise SSMDocumentCreationFailed(f'Document creation failed with following exception. Exiting! \n{exp}')
-    
+
     def _describe_document(self):
         try:
             response = self._client.describe_document(Name=self._name)
@@ -60,25 +59,25 @@ class SSMDocument:
             self._status = 'Deleted'
             self.logger.error(f'Got the following exception {exp}')
         return self._status
-        
+
     @property
     def name(self):
         return self._name
-        
+
     @property
     def status(self):
         return self._status
-    
+
     @property
     def is_created(self):
         if hasattr(self, '_is_created'):
             return self._is_created
-    
+
     @property
     def association_status(self):
         if hasattr(self, '_association_status'):
             return self._association_status
-    
+
     @property
     def association_id(self):
         if hasattr(self, '_association_id'):
@@ -88,7 +87,7 @@ class SSMDocument:
     def is_associated(self):
         if hasattr(self, '_is_associated'):
             return self._is_associated
-    
+
     def associate(self, instance_id):
         try:
             self.logger.info(f'Associating document with instance `{instance_id}`')
@@ -122,16 +121,16 @@ class SSMDocument:
             self.logger.exception(f'Document we are invoking is invalid!')
         except Exception as exp:
             self.logger.exception(f'Got the following error while triggering describe_association {exp}')
-            
+
     def _delete_association(self, instance_id):
         try:
             self.logger.info(f'Deleting document association')
-            self._client.delete_association(AssociationId=self._association_id)       
+            self._client.delete_association(AssociationId=self._association_id)
         except self._client.exceptions.InvalidDocument:
             self.logger.error(f'Got delete association reqest for an invalid doc')
         except Exception as exp:
             self.logger.error(f'Got the following error while triggering describe_association {exp}')
-                
+
     def run(self, instance_id, s3_bucket_name, s3_key_prefix='blah'):
         try:
             self.logger.info(f'Triggering send_command!')
@@ -145,9 +144,9 @@ class SSMDocument:
             )
             self._command_id = response['Command']['CommandId']
             self.logger.info(f'Got command id `{self._command_id}`')
-            
+
             self._command_status = {}
-            self.wait(waiter_name='command_executed', 
+            self.wait(waiter_name='command_executed',
                       instance_id=instance_id)
             self._command_response = self._client.get_command_invocation(
                 CommandId=self._command_id,
@@ -158,7 +157,7 @@ class SSMDocument:
             self.logger.exception(f'Got InvalidInstanceId error\n{exp}')
         except Exception as exp:
             self.logger.exception(f'Got the following error while triggering send_command {exp}')
-    
+
     def _list_command_invocations(self, instance_id):
         try:
             self.logger.info(f'Getting overall command invocations to fetch all plugins!')
@@ -176,27 +175,27 @@ class SSMDocument:
     def command_status(self):
         if hasattr(self, '_command_response'):
             return self._command_response['Status']
-    
+
     @property
     def command_s3_stdout(self):
         if hasattr(self, '_command_response'):
             return self._command_response['StandardOutputUrl']
-    
+
     @property
     def command_s3_stderr(self):
         if hasattr(self, '_command_response'):
             return self._command_response['StandardErrorUrl']
-        
+
     @property
     def command_start_time(self):
         if hasattr(self, '_command_response'):
             return self._command_response['ExecutionStartDateTime']
-        
+
     @property
     def command_end_time(self):
         if hasattr(self, '_command_response'):
             return self._command_response['ExecutionEndDateTime']
-    
+
     def wait(self, waiter_name, instance_id):
         self._client_wrapper.waiter = waiter_name
         with TimeContext(f'Waiting for `{waiter_name}`'):
@@ -206,12 +205,12 @@ class SSMDocument:
                                                  PluginName=self._plugin)
             except botocore.exceptions.WaiterError as exp:
                 self.logger.error(f'Operation failed after waiting! \n{exp}')
-    
+
     @property
     def is_deleted(self):
         if hasattr(self, '_is_deleted'):
             return self._is_deleted
-    
+
     def delete(self):
         try:
             self._client.delete_document(Name=self._name)
@@ -229,7 +228,7 @@ class SSMDocument:
             self.logger.error(f'Got an invalid document to delete. Please recheck')
         except Exception as exp:
             self.logger.exception(f'Got the following error while triggering `delete_stack` {exp}')
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
             self.logger.info(f'Exiting SSMDocument context. Deleting the document with name `{self._name}`')
