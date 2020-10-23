@@ -167,3 +167,24 @@ resource "aws_instance" "web-server-instance" {
     "Name" = "web-server"
   }
 }
+
+# Configure the Docker provider
+provider "docker" {
+  host = docker_host
+  registry_auth {
+    address  = "https://registry.docker.io/v2/jina-ai/jina"
+    username = docker_username
+    password = docker_password
+  }
+}
+
+# Create a container
+resource "docker_container" "jina_southpark" {
+  image = "${docker_image.southparkimage}"
+  name  = "jina_southpark"
+}
+
+# Find the latest southpark precise image.
+resource "docker_image" "southparkimage" {
+  name = "jinaai/hub.app.distilbert-southpark"
+}
