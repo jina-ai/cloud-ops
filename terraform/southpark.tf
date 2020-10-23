@@ -4,17 +4,12 @@ provider "aws" {
 }
 
 #Create repo
-resource "aws_ecr_repository" "southpark_repo" {
-  name = "southpark_repo" # Naming my repository
+resource "aws_ecr_repository" "southpark" {
+  name = "southpark" # Naming my repository
   tags = {
-    Name = "Southpark-repo"
+    Name = "southpark_repo"
   }
 }
-
-# Providing a reference to our default VPC
-#data "aws_vpc" "default" {
-#  default = true
-#}
 
 resource "aws_default_vpc" "default_vpc" {
 }
@@ -22,6 +17,7 @@ resource "aws_default_vpc" "default_vpc" {
 data "aws_subnet_ids" "default" {
   vpc_id = "${aws_default_vpc.default_vpc.id}"
 }
+
 
 resource "aws_ecs_cluster" "southpark_cluster" {
   name = "southpark_cluster" # Naming the cluster
@@ -57,12 +53,12 @@ resource "aws_ecs_task_definition" "southpark_task" {
   [
     {
       "name": "southpark_task",
-      "image": "${aws_ecr_repository.southpark_repo.repository_url}",
+      "image": "${aws_ecr_repository.southpark.repository_url}",
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 3000,
-          "hostPort": 3000
+          "containerPort": 80,
+          "hostPort": 80
         }
       ],
       "memory": 512,
@@ -80,7 +76,7 @@ resource "aws_ecs_task_definition" "southpark_task" {
 
 #create load balancer
 resource "aws_alb" "application_load_balancer" {
-  name               = "test-lb-tf" # Naming our load balancer
+  name               = "southpark-lb-tf" # Naming our load balancer
   load_balancer_type = "application"
   subnets            = "${data.aws_subnet_ids.default.ids}" 
   # Referencing the security group
@@ -102,18 +98,17 @@ resource "aws_lb_target_group" "target_group" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  deregistration_delay = 0
+  deregistration_delay = 30
   vpc_id      = "${aws_default_vpc.default_vpc.id}" # Referencing the default VPC
   health_check {
     healthy_threshold   = "3"
     interval            = "90"
     protocol            = "HTTP"
-    timeout             = "20"
+    timeout             = "60"
     unhealthy_threshold = "2"
-    matcher = "200,301,302"
-    path = "/"
+    matcher             = "200-303"
+    path                = "/"
   }
-
 }
 
 
@@ -161,12 +156,12 @@ resource "aws_ecs_service" "southpark_service" {
   cluster         = "${aws_ecs_cluster.southpark_cluster.id}"             # Referencing our created Cluster
   task_definition = "${aws_ecs_task_definition.southpark_task.arn}" # Referencing the task our service will spin up
   launch_type     = "FARGATE"
-  desired_count   = 2
+  desired_count   = 1
 
   load_balancer {
     target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
     container_name   = "${aws_ecs_task_definition.southpark_task.family}"
-    container_port   = 3000 # Specifying the container port
+    container_port   = 80 # Specifying the container port
   }
 
   network_configuration {
@@ -175,6 +170,10 @@ resource "aws_ecs_service" "southpark_service" {
     security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
   }
   depends_on = [aws_lb_listener.listener, aws_iam_role_policy_attachment.ecsTaskExecutionRole_policy]
+}
+
+output "alb_url" {
+  value = "http://${aws_alb.application_load_balancer.dns_name}"
 }
 
 
