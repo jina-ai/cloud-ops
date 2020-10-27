@@ -141,6 +141,11 @@ def lambda_handler(event, context):
             'name': build_summary['name'],
             'version': build_summary['version']
         }
+
+        # this ensure _current_build_history is always a list
+        if not isinstance(build_summary['build_history'], list):
+            build_summary['build_history'] = list(build_summary['build_history'])
+
         _current_build_history = build_summary['build_history']
 
         with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
