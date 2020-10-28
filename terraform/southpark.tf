@@ -5,7 +5,7 @@ provider "aws" {
 
 #Create repo
 resource "aws_ecr_repository" "southpark" {
-  name = "southpark" # Naming my repository
+  name = "sp-repo" # Naming my repository
   tags = {
     Name = "southpark_repo"
   }
@@ -57,8 +57,8 @@ resource "aws_ecs_task_definition" "southpark_task" {
       "essential": true,
       "portMappings": [
         {
-          "containerPort": 80,
-          "hostPort": 80
+          "containerPort": 45678,
+          "hostPort": 45678
         }
       ],
       "memory": 512,
@@ -83,9 +83,9 @@ resource "aws_alb" "application_load_balancer" {
   security_groups = ["${aws_security_group.load_balancer_security_group.id}"]
 }
 
-resource "aws_lb_listener" "listener" {
+resource "aws_lb_listener" "lsr" {
   load_balancer_arn = "${aws_alb.application_load_balancer.arn}" # Referencing our load balancer
-  port              = "80"
+  port              = "45678"
   protocol          = "HTTP"
   default_action {
     type             = "forward"
@@ -94,19 +94,19 @@ resource "aws_lb_listener" "listener" {
 }
 
 resource "aws_lb_target_group" "target_group" {
-  name        = "target-group"
-  port        = 80
+  name        = "target-gp"
+  port        = 45678
   protocol    = "HTTP"
   target_type = "ip"
-  deregistration_delay = 30
+  deregistration_delay = 90
   vpc_id      = "${aws_default_vpc.default_vpc.id}" # Referencing the default VPC
   health_check {
     healthy_threshold   = "3"
-    interval            = "90"
+    interval            = "80"
     protocol            = "HTTP"
     timeout             = "60"
     unhealthy_threshold = "2"
-    matcher             = "200-303"
+    matcher             = "200-405"
     path                = "/"
   }
 }
@@ -117,8 +117,8 @@ resource "aws_lb_target_group" "target_group" {
 resource "aws_security_group" "load_balancer_security_group" {
   description = "control access to the ALB"
   ingress {
-    from_port   = 80
-    to_port     = 80
+    from_port   = 45678
+    to_port     = 45678
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"] # Allowing traffic in from all sources
   }
@@ -161,7 +161,7 @@ resource "aws_ecs_service" "southpark_service" {
   load_balancer {
     target_group_arn = "${aws_lb_target_group.target_group.arn}" # Referencing our target group
     container_name   = "${aws_ecs_task_definition.southpark_task.family}"
-    container_port   = 80 # Specifying the container port
+    container_port   = 45678 # Specifying the container port
   }
 
   network_configuration {
@@ -169,7 +169,7 @@ resource "aws_ecs_service" "southpark_service" {
     assign_public_ip = true                                                # Providing our containers with public IPs
     security_groups  = ["${aws_security_group.service_security_group.id}"] # Setting the security group
   }
-  depends_on = [aws_lb_listener.listener, aws_iam_role_policy_attachment.ecsTaskExecutionRole_policy]
+  depends_on = [aws_lb_listener.lsr, aws_iam_role_policy_attachment.ecsTaskExecutionRole_policy]
 }
 
 output "alb_url" {
