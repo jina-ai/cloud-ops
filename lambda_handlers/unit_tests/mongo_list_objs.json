@@ -1,0 +1,70 @@
+{
+    "collection" : [
+        {
+            "_id": {
+                "id": "5f60529aeb8374c52d5e9fca"
+            },
+            "name": "jinahub/pod.encoder.randomsparseencoder",
+            "version": "0.0.2",
+            "path": "jina/hub/encoders/numeric/RandomSparseEncoder",
+            "manifest_info": {
+                "description": "RandomSparseEncoder encodes data from an ndarray in size `B x T` into an ndarray in size `B x D`",
+                "kind": "encoder",
+                "type": "pod",
+                "keywords": [
+                "numeric",
+                "sklearn"
+                ],
+                "author": "Jina AI Dev-Team (dev-team@jina.ai)",
+                "license": "apache-2.0",
+                "url": "https://jina.ai",
+                "vendor": "Jina AI Limited",
+                "documentation": "https://github.com/jina-ai/jina-hub"
+            }
+        },
+        {
+            "_id": {
+                "id": "6f60529aeb8374c52d5e9fca"
+            },
+            "name": "jinahub/pod.encoder.dummyencoder",
+            "version": "0.0.2",
+            "path": "jina/hub/encoders/numeric/DummyEncoder",
+            "manifest_info": {
+                "description": "DummyEncoder encodes data from an ndarray in size `B x T` into an ndarray in size `B x D`",
+                "kind": "encoder",
+                "type": "pod",
+                "keywords": [
+                "numeric",
+                "sklearn"
+                ],
+                "author": "Jina AI Dev-Team (dev-team@jina.ai)",
+                "license": "apache-2.0",
+                "url": "https://jina.ai",
+                "vendor": "Jina AI Limited",
+                "documentation": "https://github.com/jina-ai/jina-hub"
+            }
+        },
+        {
+            "_id": {
+                "id": "7f60529aeb8374c52d5e9fca"
+            },
+            "name": "jinahub/pod.crafter.deepsegmenter:0.0.2",
+            "version": "0.0.2",
+            "path": "jina/hub/crafters/nlp/DeepSegmenter",
+            "manifest_info": {
+                "description": "DeepSegmenter encodes data from an ndarray in size `B x T` into an ndarray in size `B x D`",
+                "kind": "encoder",
+                "type": "pod",
+                "keywords": [
+                "numeric",
+                "sklearn"
+                ],
+                "author": "Jina AI Dev-Team (dev-team@jina.ai)",
+                "license": "apache-2.0",
+                "url": "https://jina.ai",
+                "vendor": "Jina AI Limited",
+                "documentation": "https://github.com/jina-ai/jina-hub"
+            }
+        }
+    ]
+}

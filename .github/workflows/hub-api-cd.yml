@@ -10,6 +10,8 @@ on:
       - closed
     paths: 
       - 'lambda_handlers/*.py'
+    paths-ignore:
+      - 'lambda_handlers/unit_tests/*.py''
 
 env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
