@@ -24,6 +24,7 @@ class MongoDBHandler:
     def __init__(self, hostname: str, username: str, password: str,
                  database_name: str, collection_name: str):
         self.logger = get_logger(self.__class__.__name__)
+        self.client = pymongo.MongoClient('')
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -70,20 +71,20 @@ class MongoDBHandler:
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    def insert(self, document: str) -> Optional[str]:
-        try:
-            result = self.collection.insert_one(document)
-            self.logger.info(f'Pushed current summary to the database')
-            return result.inserted_id
-        except pymongo.errors.PyMongoError as exp:
-            self.logger.error(f'got an error while inserting a document in the db {exp}')
+    # def insert(self, document: str) -> Optional[str]:
+    #     try:
+    #         result = self.collection.insert_one(document)
+    #         self.logger.info(f'Pushed current summary to the database')
+    #         return result.inserted_id
+    #     except pymongo.errors.PyMongoError as exp:
+    #         self.logger.error(f'got an error while inserting a document in the db {exp}')
 
-    def replace(self, document: Dict, query: Dict):
-        try:
-            result = self.collection.replace_one(query, document)
-            return result.modified_count
-        except pymongo.errors.PyMongoError as exp:
-            self.logger.error(f'got an error while replacing a document in the db {exp}')
+    # def replace(self, document: Dict, query: Dict):
+    #     try:
+    #         result = self.collection.replace_one(query, document)
+    #         return result.modified_count
+    #     except pymongo.errors.PyMongoError as exp:
+    #         self.logger.error(f'got an error while replacing a document in the db {exp}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
@@ -106,6 +107,10 @@ def _query_builder(params: Dict):
         return {}, 0
     
     sub_query = []
+    params = {
+        'kind': 'encoder',
+        'type': 'pod'
+    }
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
         sub_query.append(kind_query)
