@@ -24,15 +24,14 @@ This spots any errors before actually applying changes
 
 Following terraform script spins up:
 1. Configure the AWS Provider
-2. Creates VPC (3 VPC)
+2. Creates VPC 
 3. Creates a Gateway
 4. Creates Route table
-5. Creates Subnet
-6. Associate subnet with Route table 
-7. Create security group to allow ports 443, 80 and 22<br/>
-8. Create network interface with an IP from subnet <br/>
-9. Create elastic IP addres<br/>
-10. Create Ubunbut server and install apace<br/>
+5. Associate subnet with Route table 
+6. Create security group to allow all ports<br/>
+7. Create network interface with an IP from subnet <br/>
+8. Create elastic IP addres<br/>
+9. Create Ubunbut server and install apache<br/>
 
 ### Run it
 To run this, initialize with `terraform init`
