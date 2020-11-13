@@ -108,7 +108,7 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
             if not api_cfn_stack.exists:
                 logger.error(f'Stack creation/update failed. Exiting context \n')
                 sys.exit(1)
-            logger.info('Resources description --')
+            logger.info('Resources description -- ')
             for resource in api_cfn_stack.resources:
                 logger.info(f'Name: `{resource["LogicalResourceId"]}`\t\tType: `{resource["ResourceType"]}`\t'
                             f'ID: `{resource["PhysicalResourceId"]}`')
