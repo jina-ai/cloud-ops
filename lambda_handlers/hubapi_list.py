@@ -1,6 +1,7 @@
-import json
-import logging
 import os
+import json
+import base64
+import logging
 from typing import Optional, Dict, List, Union
 
 import pymongo
@@ -101,10 +102,10 @@ def is_db_envs_set():
 def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
     logger.info(f'Got the following parans: {params}')
-    
+
     if not params:
         return {}, 0
-    
+
     sub_query = []
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
@@ -144,6 +145,19 @@ def _return_json_builder(body, status):
     }
 
 
+def str_to_ascii_to_base64_to_str(text):
+    return base64.b64decode(text.encode('ascii')).decode('ascii')
+
+
+def read_environment():
+    hostname = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_HOSTNAME'))
+    username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
+    password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
+    database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
+    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
+    return hostname, username, password, database_name, collection_name
+
+
 def lambda_handler(event, context):
     """Lambda handler to read data from Mongodb Atlas (Used to perform `jina hub list`)
     """
@@ -155,11 +169,10 @@ def lambda_handler(event, context):
                                     status=500)
 
     _executor_query = _query_builder(params=event.get('queryStringParameters', {}))
-    with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
-                        username=os.environ['JINA_DB_USERNAME'],
-                        password=os.environ['JINA_DB_PASSWORD'],
-                        database_name=os.environ['JINA_DB_NAME'],
-                        collection_name=os.environ['JINA_DB_COLLECTION']) as db:
+
+    hostname, username, password, database_name, collection_name = read_environment()
+    with MongoDBHandler(hostname=hostname, username=username, password=password,
+                        database_name=database_name, collection_name=collection_name) as db:
         existing_docs = db.find_many(*_executor_query)
         if existing_docs:
             all_manifests = [doc['manifest_info'] for doc in existing_docs]

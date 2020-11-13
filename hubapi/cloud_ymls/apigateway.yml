@@ -34,13 +34,13 @@ Parameters:
     Description: Hub API Endpoint
   JinaDBHostname:
     Type: String
-  JinaDBCollection:
-    Type: String
-  JinaDBName:
-    Type: String
   JinaDBUsername:
     Type: String
   JinaDBPassword:
+    Type: String
+  JinaDBCollection:
+    Type: String
+  JinaDBName:
     Type: String
 
 Resources:
@@ -58,7 +58,7 @@ Resources:
     Properties:
       ParentId: !GetAtt HubAPI.RootResourceId
       PathPart: 'list'
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
   HubAPIListMethod:
     Type: AWS::ApiGateway::Method
@@ -75,16 +75,16 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubListLambdaFn.Arn}/invocations'
       OperationName: 'HubList'
-      ResourceId: 
+      ResourceId:
         Ref: HubAPIList
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
   HubAPIPush:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt HubAPI.RootResourceId
       PathPart: 'push'
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
   HubAPIPushMethod:
     Type: AWS::ApiGateway::Method
@@ -102,35 +102,35 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubPushLambdaFn.Arn}/invocations'
       OperationName: 'HubPush'
-      ResourceId: 
+      ResourceId:
         Ref: HubAPIPush
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
   HubAPIModel:
     Type: AWS::ApiGateway::Model
     Properties:
       ContentType: 'application/json'
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
       Schema: {}
   HubAPIStage:
     Type: AWS::ApiGateway::Stage
     Properties:
-      DeploymentId: 
+      DeploymentId:
         Ref: HubAPIDeployment
       Description: HubAPI Stage v0
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
-      StageName: 
+      StageName:
         Ref: DeploymentStage
   HubAPIDeployment:
     Type: AWS::ApiGateway::Deployment
-    DependsOn: 
+    DependsOn:
     - HubAPIListMethod
     - HubAPIPushMethod
     Properties:
       Description: Lambda API Deployment
-      RestApiId: 
+      RestApiId:
         Ref: HubAPI
   HubAPIPathMapping:
     DependsOn:
@@ -189,63 +189,63 @@ Resources:
       FunctionName: HubListMongoAtlas
       Description: Hub List Lambda function
       Code:
-        S3Bucket: 
+        S3Bucket:
           Ref: DefS3Bucket
-        S3Key: 
+        S3Key:
           Ref: HubListLambdaFnS3Key
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
-      Role: 
+      Role:
         Ref: DefLambdaRole
       Environment:
         Variables:
           JINA_DB_HOSTNAME:
             Ref: JinaDBHostname
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
-          JINA_DB_NAME:
-            Ref: JinaDBName
           JINA_DB_USERNAME:
             Ref: JinaDBUsername
           JINA_DB_PASSWORD:
             Ref: JinaDBPassword
+          JINA_DB_COLLECTION:
+            Ref: JinaDBCollection
+          JINA_DB_NAME:
+            Ref: JinaDBName
   HubPushLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: HubPushMongoAtlas
       Description: Hub Push Lambda function
       Code:
-        S3Bucket: 
+        S3Bucket:
           Ref: DefS3Bucket
-        S3Key: 
+        S3Key:
           Ref: HubPushLambdaFnS3Key
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
-      Role: 
+      Role:
         Ref: DefLambdaRole
       Environment:
         Variables:
           JINA_DB_HOSTNAME:
             Ref: JinaDBHostname
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
-          JINA_DB_NAME:
-            Ref: JinaDBName
           JINA_DB_USERNAME:
             Ref: JinaDBUsername
           JINA_DB_PASSWORD:
             Ref: JinaDBPassword
+          JINA_DB_COLLECTION:
+            Ref: JinaDBCollection
+          JINA_DB_NAME:
+            Ref: JinaDBName
   HubAPIAuthorizeLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: HubAPIAuthorizer
       Description: Hub API Authorize Lambda function
       Code:
-        S3Bucket: 
+        S3Bucket:
           Ref: DefS3Bucket
-        S3Key: 
+        S3Key:
           Ref: HubAPIAuthorizeLambdaFnS3Key
       Handler: lambda_function.lambda_handler
       Runtime: python3.8
-      Role: 
+      Role:
         Ref: DefLambdaRole

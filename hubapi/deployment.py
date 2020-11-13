@@ -1,5 +1,6 @@
 import os
 import sys
+import base64
 
 import click
 
@@ -10,6 +11,19 @@ from aws.logger import get_logger
 from aws.excepts import StackCreationFailed, StackUpdateFailed
 from aws.services.s3 import S3
 from aws.services.cloudformation import CFNStack
+
+
+def str_to_ascii_to_base64_to_str(text):
+    return base64.b64encode(text.encode('ascii')).decode('ascii')
+
+
+def read_environment():
+    hostname = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_HOSTNAME'))
+    username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
+    password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
+    database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
+    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
+    return hostname, username, password, database_name, collection_name
 
 
 @click.command()
@@ -25,8 +39,8 @@ from aws.services.cloudformation import CFNStack
               default='jinahub-api-stack2',
               help='Name of the CFN Stack (Defaults to jinahub-api-stack2)')
 @click.option('--template',
-              default='cloud_ymls/cfn-api-gateway.yml',
-              help='CFN Template to be used for deployment (Default - cloud_ymls/cfn-api-gateway.yml)')
+              default='cloud_ymls/apigateway.yml',
+              help='CFN Template to be used for deployment (Default - cloud_ymls/apigateway.yml)')
 @click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
@@ -73,6 +87,7 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
 
     cfn_yml = read_file_content(filepath=template)
 
+    hostname, username, password, database_name, collection_name = read_environment()
     parameters = [
         {'ParameterKey': 'DefS3Bucket', 'ParameterValue': S3_DEFAULT_BUCKET},
         {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
@@ -80,11 +95,11 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         {'ParameterKey': 'HubAPIAuthorizeLambdaFnS3Key', 'ParameterValue': s3_authorize_key},
         {'ParameterKey': 'DefLambdaRole', 'ParameterValue': 'arn:aws:iam::416454113568:role/lambda-role'},
         {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage},
-        {'ParameterKey': 'JinaDBHostname', 'ParameterValue': os.environ['JINA_DB_HOSTNAME']},
-        {'ParameterKey': 'JinaDBCollection', 'ParameterValue': os.environ['JINA_DB_COLLECTION']},
-        {'ParameterKey': 'JinaDBName', 'ParameterValue': os.environ['JINA_DB_NAME']},
-        {'ParameterKey': 'JinaDBUsername', 'ParameterValue': os.environ['JINA_DB_USERNAME']},
-        {'ParameterKey': 'JinaDBPassword', 'ParameterValue': os.environ['JINA_DB_PASSWORD']}
+        {'ParameterKey': 'JinaDBHostname', 'ParameterValue': hostname},
+        {'ParameterKey': 'JinaDBUsername', 'ParameterValue': username},
+        {'ParameterKey': 'JinaDBPassword', 'ParameterValue': password},
+        {'ParameterKey': 'JinaDBCollection', 'ParameterValue': collection_name},
+        {'ParameterKey': 'JinaDBName', 'ParameterValue': database_name}
     ]
 
     try:
