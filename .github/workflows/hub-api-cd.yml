@@ -43,25 +43,25 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Prepare Hub List Lambda Deployment Package
-        working-directory: ./${HUBAPI_DIRECTORY}
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_LIST_LAMBDA}
 
       - name: Prepare Hub Push Lambda Deployment Package
-        working-directory: ./${HUBAPI_DIRECTORY}
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_PUSH_LAMBDA}
 
       - name: Prepare Hub Authorize Lambda Deployment Package
-        working-directory: ./${HUBAPI_DIRECTORY}
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_AUTHORIZE_LAMBDA}
 
       - name: Deploy CFN Stack with Lambda functions & API Gateway
-        working-directory: ./${HUBAPI_DIRECTORY}
+        working-directory: ./hubapi
         run: |
           python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
 
