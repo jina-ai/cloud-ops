@@ -20,15 +20,17 @@ def get_logger(context='generic', file=True):
     return logger
 
 @mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.connect")
-@mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.find")
-@mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.find_many")
-def test_list(mock_find_many, mock_find, mock_connect, monkeypatch):
+# @mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.find")
+# @mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.find_many")
+@mock.patch("lambda_handlers.hubapi_list.MongoDBHandler.collection")
+def test_list(mock_collection, mock_connect, monkeypatch):
+# def test_list(mock_collection, mock_find_many, mock_find, mock_connect, monkeypatch):
 
-    mock_find_many.return_value = {}
-    mock_find.return_value = {}
+    # mock_find_many.return_value = {}
+    # mock_find.return_value = {}
     mock_connect.return_value = MongoDBHandler #mongomock.MongoClient
     setattr(mongomock.database.Database, "address", ("localhost", 27017))
-    monkeypatch.setattr(pymongo.collection, "Collection", mongomock.collection.Collection)
+    # monkeypatch.setattr(pymongo.collection, "Collection", mongomock.collection.Collection)
     monkeypatch.setattr(pymongo, "MongoClient", mongomock.MongoClient)
     monkeypatch.setenv('JINA_DB_HOSTNAME', "TestingHost")
     monkeypatch.setenv('JINA_DB_USERNAME', "TestingUser")
@@ -44,8 +46,14 @@ def test_list(mock_find_many, mock_find, mock_connect, monkeypatch):
     mongo_objs = json.load(read_file)
     objs = mongo_objs["collection"]
    
-    collection.insert(objs)
+    mock_collection.return_value = mongo_objs
+    monkeypatch.setattr(pymongo.collection, "Collection", mongo_objs)
 
+    #collection.insert(objs)
+
+    print('****')
+    print(mongo_objs)
+    # print(str(objs[0]))
     event = None
     with open('event.json', "r") as read_file:
         event = json.load(read_file)
