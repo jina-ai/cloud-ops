@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jina-stateless-deployment
+  labels:
+    app: jina-stateless
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: jina-stateless
+  template:
+    metadata:
+      labels:
+        app: jina-stateless
+    spec:
+      containers:
+      - name: mwu-encoder
+        image: jinaai/hub.examples.mwu_encoder:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 256Mi
+          requests:
+            cpu: 500m
+            memory: 128Mi
+        ports:
+          - containerPort: 5000
+        env:
+          - name: port-in
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-in
+          - name: port-out
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-out

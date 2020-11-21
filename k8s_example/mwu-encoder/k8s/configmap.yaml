@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jina-stateless-configmap
+  labels:
+    app: jina-stateless
+data:
+  port-in:  "55555"
+  port-out: "55556"
