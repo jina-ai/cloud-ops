@@ -38,4 +38,3 @@ brew install helm
 # verify
 helm version
 ```
-

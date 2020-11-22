@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jina-stateless-deployment
+  labels:
+    app: jina-stateless
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: jina-stateless
+  template:
+    metadata:
+      labels:
+        app: jina-stateless
+    spec:
+      containers:
+      - name: mwu-encoder
+        image: mwu_encoder
+        imagePullPolicy: Never
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 512Mi
+          requests:
+            cpu: 1000m
+            memory: 256Mi
+        env:
+          - name: PORT_IN
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-in
+          - name: PORT_OUT
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-out
+          - name: PORT_CTRL
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-ctrl
+        command: ["jina", "pod"]
+        args: ["--uses", "mwu_encoder.yml", "--port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)", "--port-ctrl", "$(PORT_CTRL)"]
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - jina ping 0.0.0.0 $PORT_CTRL
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - jina ping 0.0.0.0 $PORT_CTRL
+          initialDelaySeconds: 30
+          periodSeconds: 30

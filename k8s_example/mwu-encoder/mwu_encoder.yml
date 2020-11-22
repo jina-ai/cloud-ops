@@ -1,0 +1,5 @@
+!MWUEncoder
+metas:
+  name: mwu-encoder
+  py_modules: mwu_encoder.py
+  workspace: ./
