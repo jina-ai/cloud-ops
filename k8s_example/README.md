@@ -38,21 +38,3 @@ brew install helm
 # verify
 helm version
 ```
-
-## 🚀 Stateless example
-
-Visualize the flow:
-
-![flow-stateless](imgs/flow.svg)
-
-
-
-
-
-
-
-
-
-
-
-

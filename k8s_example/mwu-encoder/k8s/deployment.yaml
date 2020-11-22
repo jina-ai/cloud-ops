@@ -38,5 +38,5 @@ spec:
               configMapKeyRef:
                 name: jina-stateless-configmap
                 key: port-out
-        command: ["jina", "pod", "--uses", "mwu_encoder.yml"]
-        args: ["--port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)"]
+        command: ["jina", "pod"]
+        args: ["--uses", "mwu_encoder.yml", --port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)"]
