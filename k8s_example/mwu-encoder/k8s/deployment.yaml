@@ -25,8 +25,6 @@ spec:
           requests:
             cpu: 1000m
             memory: 256Mi
-        ports:
-          - containerPort: 5000
         env:
           - name: PORT_IN
             valueFrom:
@@ -38,5 +36,18 @@ spec:
               configMapKeyRef:
                 name: jina-stateless-configmap
                 key: port-out
+          - name: PORT_CTRL
+            valueFrom:
+              configMapKeyRef:
+                name: jina-stateless-configmap
+                key: port-ctrl
         command: ["jina", "pod"]
-        args: ["--uses", "mwu_encoder.yml", --port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)"]
+        args: ["--uses", "mwu_encoder.yml", "--port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)", "--port-ctrl", "$(PORT_CTRL)"]
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - jina ping 0.0.0.0 $PORT_CTRL
+          initialDelaySeconds: 30
+          periodSeconds: 30
