@@ -16,15 +16,15 @@ spec:
     spec:
       containers:
       - name: mwu-encoder
-        image: jinaai/hub.examples.mwu_encoder:latest
-        imagePullPolicy: Always
+        image: mwu_encoder
+        imagePullPolicy: Never
         resources:
           limits:
+            cpu: 2000m
+            memory: 512Mi
+          requests:
             cpu: 1000m
             memory: 256Mi
-          requests:
-            cpu: 500m
-            memory: 128Mi
         ports:
           - containerPort: 5000
         env:

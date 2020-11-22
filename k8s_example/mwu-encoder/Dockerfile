@@ -1,5 +1,5 @@
 FROM jinaai/jina
 
-ADD *.py mwu_encoder.yml ./
+ADD mwu_encoder.py mwu_encoder.yml ./
 
-ENTRYPOINT ["jina", "pod", "--yaml-path", "mwu_encoder.yml"]
+ENTRYPOINT ["jina", "pod", "--uses", "mwu_encoder.yml"]
