@@ -67,24 +67,28 @@ class MongoDBHandler:
 
     def find_many(self, query: Dict[str, Union[Dict, List]], limit: int = 0) -> None:
         try:
+            print('###### inside find_many ######')
+            #print(str(self.collection.find(filter=query, limit=limit)))
+            print('value of collection is : ' + str(self.collection))
+            print('**** finished printing collection ****')
             return self.collection.find(filter=query, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    # def insert(self, document: str) -> Optional[str]:
-    #     try:
-    #         result = self.collection.insert_one(document)
-    #         self.logger.info(f'Pushed current summary to the database')
-    #         return result.inserted_id
-    #     except pymongo.errors.PyMongoError as exp:
-    #         self.logger.error(f'got an error while inserting a document in the db {exp}')
+    def insert(self, document: str) -> Optional[str]:
+        try:
+            result = self.collection.insert_one(document)
+            self.logger.info(f'Pushed current summary to the database')
+            return result.inserted_id
+        except pymongo.errors.PyMongoError as exp:
+            self.logger.error(f'got an error while inserting a document in the db {exp}')
 
-    # def replace(self, document: Dict, query: Dict):
-    #     try:
-    #         result = self.collection.replace_one(query, document)
-    #         return result.modified_count
-    #     except pymongo.errors.PyMongoError as exp:
-    #         self.logger.error(f'got an error while replacing a document in the db {exp}')
+    def replace(self, document: Dict, query: Dict):
+        try:
+            result = self.collection.replace_one(query, document)
+            return result.modified_count
+        except pymongo.errors.PyMongoError as exp:
+            self.logger.error(f'got an error while replacing a document in the db {exp}')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         try:
