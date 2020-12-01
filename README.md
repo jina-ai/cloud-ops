@@ -1,17 +1,37 @@
 # cloud-ops
 
 ## 🚀 Terraform 
-It uses a terraform script to spin up:
+
+### Getting started with setting up AWS resources with Terraform
+
+To use terraform scripts, users could firstly initialise via `aws configure`:
+- Run terraform init this will download the aws plugin
+- Run sudo apt install awscli to install awscli
+- Run aws configure to configure with access keys, secret key:
+`aws configure`
+```
+AWS Access Key ID [None]:
+AWS Secret Access Key [None]:
+Default region name [None]: us-east-2
+Default output format [None]:
+```
+- Run `terraform plan` for dry-run of the script
+Advantages of this approach is it avoids exposing of any secret keys in the script
+This spots any errors before actually applying changes
+- Run `terraform apply` to actually apply these changes
+- Run `terraform apply --target=<resource-name>` to spin up a particular resource only
+- Run `terraform destroy` to release all the spinned up resources. Likewise use `--target` flag for destroying a particular resource
+
+Following terraform script spins up:
 1. Configure the AWS Provider
-2. Creates VPC (3 VPC)
+2. Creates VPC 
 3. Creates a Gateway
 4. Creates Route table
-5. Creates Subnet
-6. Associate subnet with Route table 
-7. Create security group to allow ports 443, 80 and 22<br/>
-8. Create network interface with an IP from subnet <br/>
-9. Create elastic IP addres<br/>
-10. Create Ubunbut server and install apace<br/>
+5. Associate subnet with Route table 
+6. Create security group to allow all ports<br/>
+7. Create network interface with an IP from subnet <br/>
+8. Create elastic IP addres<br/>
+9. Create Ubunbut server and install apache<br/>
 
 ### Run it
 To run this, initialize with `terraform init`

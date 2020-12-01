@@ -1,17 +1,13 @@
-# This is a basic workflow to help you get started with Actions
-
 name: Hub API CD
 
 on:
   pull_request:
-    branches: 
+    branches:
       - master
-    types: 
+    types:
       - closed
-    paths: 
+    paths:
       - 'lambda_handlers/*.py'
-    paths-ignore:
-      - 'lambda_handlers/unit_tests/*.py''
 
 env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
@@ -22,6 +18,7 @@ env:
   JINA_DB_NAME: ${{ secrets.JINA_DB_NAME }}
   JINA_DB_USERNAME: ${{ secrets.JINA_DB_USERNAME }}
   JINA_DB_PASSWORD: ${{ secrets.JINA_DB_PASSWORD }}
+  HUBAPI_DIRECTORY: hubapi
   HUB_LIST_LAMBDA: hubapi_list
   HUB_PUSH_LAMBDA: hubapi_push
   HUB_AUTHORIZE_LAMBDA: hubapi_authorizer
@@ -33,12 +30,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
-      
+
       - name: Install dependencies
         working-directory: .
         run : |
@@ -46,25 +43,25 @@ jobs:
           python -m pip install --upgrade pip
 
       - name: Prepare Hub List Lambda Deployment Package
-        working-directory: ./hub_api_deployment
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_LIST_LAMBDA}
-          
+
       - name: Prepare Hub Push Lambda Deployment Package
-        working-directory: ./hub_api_deployment
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_PUSH_LAMBDA}
 
       - name: Prepare Hub Authorize Lambda Deployment Package
-        working-directory: ./hub_api_deployment
+        working-directory: ./hubapi
         run: |
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_AUTHORIZE_LAMBDA}
-        
-      - name: Deploy CFN Stack with Lambda functions & API Gateway 
-        working-directory: ./hub_api_deployment
+
+      - name: Deploy CFN Stack with Lambda functions & API Gateway
+        working-directory: ./hubapi
         run: |
           python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
-          
+

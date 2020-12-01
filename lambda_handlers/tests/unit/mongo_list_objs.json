@@ -9,7 +9,7 @@
             "path": "jina/hub/encoders/numeric/RandomSparseEncoder",
             "manifest_info": {
                 "description": "RandomSparseEncoder encodes data from an ndarray in size `B x T` into an ndarray in size `B x D`",
-                "kind": "encoder",
+                "kind": "indexer",
                 "type": "pod",
                 "keywords": [
                 "numeric",

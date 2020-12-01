@@ -1,6 +1,7 @@
-import json
-import logging
 import os
+import json
+import base64
+import logging
 from typing import Optional, Dict, List, Union
 
 import pymongo
@@ -120,6 +121,19 @@ def _return_json_builder(body, status):
     }
 
 
+def str_to_ascii_to_base64_to_str(text):
+    return base64.b64decode(text.encode('ascii')).decode('ascii')
+
+
+def read_environment():
+    hostname = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_HOSTNAME'))
+    username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
+    password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
+    database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
+    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
+    return hostname, username, password, database_name, collection_name
+
+
 def lambda_handler(event, context):
     """Lambda handler to write data into Mongodb Atlas (Used to perform `jina hub push`)
     """
@@ -148,11 +162,9 @@ def lambda_handler(event, context):
 
         _current_build_history = build_summary['build_history']
 
-        with MongoDBHandler(hostname=os.environ['JINA_DB_HOSTNAME'],
-                            username=os.environ['JINA_DB_USERNAME'],
-                            password=os.environ['JINA_DB_PASSWORD'],
-                            database_name=os.environ['JINA_DB_NAME'],
-                            collection_name=os.environ['JINA_DB_COLLECTION']) as db:
+        hostname, username, password, database_name, collection_name = read_environment()
+        with MongoDBHandler(hostname=hostname, username=username, password=password,
+                            database_name=database_name, collection_name=collection_name) as db:
             existing_doc = db.find(query=_build_query)
             if existing_doc:
                 build_summary['build_history'] = existing_doc['build_history'] + _current_build_history

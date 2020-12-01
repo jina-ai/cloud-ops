@@ -19,21 +19,27 @@ def get_logger(context='generic', file=True):
     logger.setLevel(logging.DEBUG)
     return logger
 
-
-
-
-
-
-
-
-
-
-
+@pytest.fixture
+def mock_pymongo_mongoclient():
+    #return pymongo.MongoClient
+    return mongomock.MongoClient  #('fake-connection-string')
 
 @pytest.fixture
-def test_list(mocker, monkeypatch):
+def mock_mongohandler():
+    return MongoDBHandler 
 
-    monkeypatch.setattr(pymongo, "MongoClient", mongomock.MongoClient)
+#@pytest.fixture
+def test_list(monkeypatch, mock_pymongo_mongoclient, mock_mongohandler):
+
+    # monkeypatch.setattr(flow.flow_store, '_create', mock_pymongo_mongohandler)
+
+
+    monkeypatch.setattr(pymongo, "MongoClient", mock_pymongo_mongoclient)
+    #monkeypatch.setattr(pymongo.MongoClient, "admin", None)
+
+
+    mock_mongohandler.connect.return_value = mock_mongohandler
+
     monkeypatch.setenv('JINA_DB_HOSTNAME', "TestingHost")
     monkeypatch.setenv('JINA_DB_USERNAME', "TestingUser")
     monkeypatch.setenv('JINA_DB_PASSWORD', "TestingPassword")
@@ -44,11 +50,15 @@ def test_list(mocker, monkeypatch):
     read_file = open('mongo_list_objs.json', "r")
     mongo_objs = json.load(read_file)
     objs = mongo_objs["collection"]
+    #mock_pymongo_mongoclient.collection = objs
+    mock_mongohandler.collection = objs
+
 
     print(str(objs))
-    mocker.patch('MongoDBHandler.connect', return_value=MongoDBHandler)
-    mocker.patch('MongoDBHandler.collection', return_value=mongo_objs)
+    # mocker.patch('MongoDBHandler.connect', return_value=MongoDBHandler)
+    # mocker.patch('MongoDBHandler.collection', return_value=mongo_objs)
    
+
     print('****')
     print(mongo_objs)
     # print(str(objs[0]))
