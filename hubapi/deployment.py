@@ -23,7 +23,9 @@ def read_environment():
     password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
     database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
     collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
-    return hostname, username, password, database_name, collection_name
+    docker_username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DOCKER_USERNAME'))
+    docker_password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DOCKER_PASSWORD'))
+    return hostname, username, password, database_name, collection_name, docker_username, docker_password
 
 
 @click.command()
@@ -44,7 +46,9 @@ def read_environment():
 @click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
-def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, key_id,
+@click.option('--docker-cred-deployment-zip',
+              help='Deployment package zip to be used with DockerCredFetcher Lambda function')
+def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, docker_cred_deployment_zip, key_id,
             stack_name, template, deployment_stage):
     logger = get_logger(__name__)
 
@@ -85,21 +89,30 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         s3.put(filepath=authorize_deployment_zip,
                key=s3_authorize_key)
 
+    if docker_cred_deployment_zip is not None:
+        zip_filename = os.path.basename(list_deployment_zip)
+        s3_docker_cred_key = f'docker_auth/{key_id}/{zip_filename}'
+        s3.put(filepath=authorize_deployment_zip,
+               key=s3_docker_cred_key)
+
     cfn_yml = read_file_content(filepath=template)
 
-    hostname, username, password, database_name, collection_name = read_environment()
+    hostname, username, password, database_name, collection_name, docker_username, docker_password = read_environment()
     parameters = [
         {'ParameterKey': 'DefS3Bucket', 'ParameterValue': S3_DEFAULT_BUCKET},
         {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
         {'ParameterKey': 'HubPushLambdaFnS3Key', 'ParameterValue': s3_push_key},
         {'ParameterKey': 'HubAPIAuthorizeLambdaFnS3Key', 'ParameterValue': s3_authorize_key},
+        {'ParameterKey': 'DockerCredFetcherLambdaFnS3Key', 'ParameterValue': s3_docker_cred_key},
         {'ParameterKey': 'DefLambdaRole', 'ParameterValue': 'arn:aws:iam::416454113568:role/lambda-role'},
         {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage},
         {'ParameterKey': 'JinaDBHostname', 'ParameterValue': hostname},
         {'ParameterKey': 'JinaDBUsername', 'ParameterValue': username},
         {'ParameterKey': 'JinaDBPassword', 'ParameterValue': password},
         {'ParameterKey': 'JinaDBCollection', 'ParameterValue': collection_name},
-        {'ParameterKey': 'JinaDBName', 'ParameterValue': database_name}
+        {'ParameterKey': 'JinaDBName', 'ParameterValue': database_name},
+        {'ParameterKey': 'JinaDockerUsername', 'ParameterValue': docker_username},
+        {'ParameterKey': 'JinaDockerPassword', 'ParameterValue': docker_password}
     ]
 
     try:

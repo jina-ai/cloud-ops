@@ -23,7 +23,7 @@ def _return_json_builder(body, status):
 def lambda_handler(event, context):
     logger = get_logger(context='docker_auth')
 
-    docker_username = os.environ['docker_username']
-    docker_password = os.environ['docker_password']
+    docker_username = os.environ['JINA_DOCKER_USERNAME']
+    docker_password = os.environ['JINA_DOCKER_PASSWORD']
 
     return _return_json_builder(body=json.dumps({"docker_username": docker_username, "docker_password": docker_password}), status=200)

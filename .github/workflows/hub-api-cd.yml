@@ -8,6 +8,8 @@ on:
       - closed
     paths:
       - 'lambda_handlers/*.py'
+    paths-ignore:
+      - 'lambda_handlers/tests/unit/*.py'
 
 env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
@@ -22,6 +24,7 @@ env:
   HUB_LIST_LAMBDA: hubapi_list
   HUB_PUSH_LAMBDA: hubapi_push
   HUB_AUTHORIZE_LAMBDA: hubapi_authorizer
+  DOCKER_AUTH_LAMBDA: docker_auth
   CFN_STACK_NAME: jinahub-api-stack
 
 jobs:
@@ -60,8 +63,14 @@ jobs:
           chmod +x prepare_lambda.sh
           bash prepare_lambda.sh --function ${HUB_AUTHORIZE_LAMBDA}
 
+      - name: Prepare Docker Cred Fetch Lambda Deployment Package
+          working-directory: ./hubapi
+          run: |
+            chmod +x prepare_lambda.sh
+            bash prepare_lambda.sh --function ${DOCKER_AUTH_LAMBDA}
+
       - name: Deploy CFN Stack with Lambda functions & API Gateway
         working-directory: ./hubapi
         run: |
-          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
+          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --docker-cred-deployment-zip ${DOCKER_AUTH_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
 

@@ -15,8 +15,8 @@ def get_logger(context='generic', file=True):
 
 def test_docker_auth(monkeypatch):
 
-    monkeypatch.setenv('docker_username', 'test_username')
-    monkeypatch.setenv('docker_password', 'test_password')
+    monkeypatch.setenv('JINA_DOCKER_USERNAME', 'test_username')
+    monkeypatch.setenv('JINA_DOCKER_PASSWORD', 'test_password')
    
     returned_body = lambda_handler(None, None)
     docker_creds =  json.loads(returned_body['body'])
