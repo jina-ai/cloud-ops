@@ -8,8 +8,6 @@ on:
       - closed
     paths:
       - 'lambda_handlers/*.py'
-    paths-ignore:
-      - 'lambda_handlers/tests/unit/*.py'
 
 env:
   GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
@@ -20,6 +18,8 @@ env:
   JINA_DB_NAME: ${{ secrets.JINA_DB_NAME }}
   JINA_DB_USERNAME: ${{ secrets.JINA_DB_USERNAME }}
   JINA_DB_PASSWORD: ${{ secrets.JINA_DB_PASSWORD }}
+  JINA_DOCKER_USERNAME: ${{ secrets.JINA_DOCKER_USERNAME }}
+  JINA_DOCKER_PASSWORD: ${{ secrets.JINA_DOCKER_PASSWORD }}
   HUBAPI_DIRECTORY: hubapi
   HUB_LIST_LAMBDA: hubapi_list
   HUB_PUSH_LAMBDA: hubapi_push

@@ -35,6 +35,8 @@ def read_environment():
               help='Deployment package zip to be used with HubPush Lambda function')
 @click.option('--authorize-deployment-zip',
               help='Deployment package zip to be used with HubPush Lambda function')
+@click.option('--docker-cred-deployment-zip',
+              help='Deployment package zip to be used with DockerCredFetcher Lambda function')
 @click.option('--key-id',
               help='Enter folder to be created in S3 (will take PR# in GH Action)')
 @click.option('--stack-name',
@@ -46,8 +48,6 @@ def read_environment():
 @click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
-@click.option('--docker-cred-deployment-zip',
-              help='Deployment package zip to be used with DockerCredFetcher Lambda function')
 def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, docker_cred_deployment_zip, key_id,
             stack_name, template, deployment_stage):
     logger = get_logger(__name__)
