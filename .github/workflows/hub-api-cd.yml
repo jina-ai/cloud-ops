@@ -64,10 +64,10 @@ jobs:
           bash prepare_lambda.sh --function ${HUB_AUTHORIZE_LAMBDA}
 
       - name: Prepare Docker Cred Fetch Lambda Deployment Package
-          working-directory: ./hubapi
-          run: |
-            chmod +x prepare_lambda.sh
-            bash prepare_lambda.sh --function ${DOCKER_AUTH_LAMBDA}
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${DOCKER_AUTH_LAMBDA}
 
       - name: Deploy CFN Stack with Lambda functions & API Gateway
         working-directory: ./hubapi

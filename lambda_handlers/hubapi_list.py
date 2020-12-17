@@ -135,6 +135,7 @@ def _query_builder(params: Dict):
 
 
 def _return_json_builder(body, status):
+
     return {
         "isBase64Encoded": False,
         "headers": {
