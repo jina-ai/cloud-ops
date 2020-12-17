@@ -114,6 +114,33 @@ Resources:
         Ref: HubAPIPush
       RestApiId:
         Ref: HubAPI
+  HubAPIDockerAuth:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HubAPI.RootResourceId
+      PathPart: 'docker_auth'
+      RestApiId:
+        Ref: HubAPI
+  HubAPIDockerAuthMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref HubAPIAuthorizer
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt HubAPIIAMRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DockerCredFetcherLambdaFn.Arn}/invocations'
+      OperationName: 'HubDockerAuth'
+      ResourceId:
+        Ref: HubAPIDockerAuth
+      RestApiId:
+        Ref: HubAPI
   HubAPIModel:
     Type: AWS::ApiGateway::Model
     Properties:
