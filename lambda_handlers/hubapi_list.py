@@ -165,7 +165,7 @@ def lambda_handler(event, context):
     logger = get_logger(context='hub_list')
 
     if not is_db_envs_set():
-        logger.warning('MongoDB environment vars are not set! bookkeeping skipped.')
+        logger.warning('MongoDB environment vars are not set! book-keeping skipped.')
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
