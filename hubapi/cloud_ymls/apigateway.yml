@@ -127,7 +127,7 @@ Resources:
       ApiKeyRequired: false
       AuthorizationType: CUSTOM
       AuthorizerId: !Ref HubAPIAuthorizer
-      HttpMethod: POST
+      HttpMethod: GET
       Integration:
         ConnectionType: INTERNET
         Credentials: !GetAtt HubAPIIAMRole.Arn
