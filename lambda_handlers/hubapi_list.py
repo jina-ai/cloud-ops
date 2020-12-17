@@ -122,6 +122,7 @@ def _query_builder(params: Dict):
         sub_query.append(keyword_query)
 
     # A limit() value of 0 (i.e. .limit(0)) is equivalent to setting no limit.
+    # Retrieves all matched documents.
     limit = params.get('limit', 0)
 
     if sub_query:
