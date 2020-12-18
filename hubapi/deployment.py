@@ -78,21 +78,21 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
                key=s3_list_key)
 
     if push_deployment_zip is not None:
-        zip_filename = os.path.basename(list_deployment_zip)
+        zip_filename = os.path.basename(push_deployment_zip)
         s3_push_key = f'hubapi_push/{key_id}/{zip_filename}'
         s3.put(filepath=push_deployment_zip,
                key=s3_push_key)
 
-    if push_deployment_zip is not None:
-        zip_filename = os.path.basename(list_deployment_zip)
+    if authorize_deployment_zip is not None:
+        zip_filename = os.path.basename(authorize_deployment_zip)
         s3_authorize_key = f'hubapi_authorize/{key_id}/{zip_filename}'
         s3.put(filepath=authorize_deployment_zip,
                key=s3_authorize_key)
 
     if docker_cred_deployment_zip is not None:
-        zip_filename = os.path.basename(list_deployment_zip)
+        zip_filename = os.path.basename(docker_cred_deployment_zip)
         s3_docker_cred_key = f'docker_auth/{key_id}/{zip_filename}'
-        s3.put(filepath=authorize_deployment_zip,
+        s3.put(filepath=docker_cred_deployment_zip,
                key=s3_docker_cred_key)
 
     cfn_yml = read_file_content(filepath=template)
