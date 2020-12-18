@@ -114,7 +114,8 @@ def _return_json_builder(body, status):
     return {
         "isBase64Encoded": False,
         "headers": {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin":"*"
         },
         "statusCode": int(status),
         "body": body
