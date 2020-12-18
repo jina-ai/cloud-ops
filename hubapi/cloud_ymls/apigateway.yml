@@ -163,6 +163,7 @@ Resources:
     DependsOn:
     - HubAPIListMethod
     - HubAPIPushMethod
+    - HubAPIDockerAuthMethod
     Properties:
       Description: Lambda API Deployment
       RestApiId:
