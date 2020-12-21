@@ -1,0 +1,25 @@
+name: hublist-cache
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+
+jobs:
+  persist-json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/api
+          path: api
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: fetch-hublist-json
+        run: |
+          apt-get update && apt-get install curl
+          curl -s https://hubapi.jina.ai/list >> hublist.json
+      - name: push-to-api-repo
+        run: |
+          cd api/hub
+          git config --local user.email "dev-bot@jina.ai"
+          git config --local user.name "Jina Dev Bot"
+          git add hublist.json && git commit -m "hublist cache from hubapi" && git push
