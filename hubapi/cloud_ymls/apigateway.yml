@@ -20,6 +20,10 @@ Parameters:
     Type: String
     Default: hubapi_authorize/1/mongoatlas_reader.zip
     Description: Enter S3 Key where Hub List Lambda function code is uploaded
+  DockerCredFetcherLambdaFnS3Key:
+    Type: String
+    Default: docker_auth/1/mongoatlas_reader.zip
+    Description: Enter S3 Key where Docker auth Lambda function code is uploaded
   DefLambdaRole:
     Type: String
     Default: 'arn:aws:iam::416454113568:role/lambda-role'
@@ -42,6 +46,10 @@ Parameters:
     Type: String
   JinaDBName:
     Type: String
+  JinaDockerUsername:
+      Type: String
+  JinaDockerPassword:
+      Type: String
 
 Resources:
   HubAPI:
@@ -106,6 +114,33 @@ Resources:
         Ref: HubAPIPush
       RestApiId:
         Ref: HubAPI
+  HubAPIDockerAuth:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HubAPI.RootResourceId
+      PathPart: 'docker_auth'
+      RestApiId:
+        Ref: HubAPI
+  HubAPIDockerAuthMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref HubAPIAuthorizer
+      HttpMethod: GET
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt HubAPIIAMRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DockerCredFetcherLambdaFn.Arn}/invocations'
+      OperationName: 'HubDockerAuth'
+      ResourceId:
+        Ref: HubAPIDockerAuth
+      RestApiId:
+        Ref: HubAPI
   HubAPIModel:
     Type: AWS::ApiGateway::Model
     Properties:
@@ -128,6 +163,7 @@ Resources:
     DependsOn:
     - HubAPIListMethod
     - HubAPIPushMethod
+    - HubAPIDockerAuthMethod
     Properties:
       Description: Lambda API Deployment
       RestApiId:
@@ -183,6 +219,9 @@ Resources:
               - Effect: 'Allow'
                 Action: 'lambda:*'
                 Resource: !GetAtt HubAPIAuthorizeLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt DockerCredFetcherLambdaFn.Arn
   HubListLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
@@ -249,3 +288,23 @@ Resources:
       Runtime: python3.8
       Role:
         Ref: DefLambdaRole
+  DockerCredFetcherLambdaFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: DockerCredFetcher
+      Description: Docker Cred fetcher Lambda function
+      Code:
+        S3Bucket:
+          Ref: DefS3Bucket
+        S3Key:
+          Ref: DockerCredFetcherLambdaFnS3Key
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Role:
+        Ref: DefLambdaRole
+      Environment:
+        Variables:
+          JINA_DOCKER_USERNAME:
+            Ref: JinaDockerUsername
+          JINA_DOCKER_PASSWORD:
+            Ref: JinaDockerPassword

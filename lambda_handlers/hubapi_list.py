@@ -137,7 +137,8 @@ def _query_builder(params: Dict):
         keyword_query = {'manifest_info.keywords': {'$in': keywords_list}}
         sub_query.append(keyword_query)
 
-    # A limit() value of 0 (i.e. .limit(0)) is equivalent to setting no limit.
+    # A limit() value of 0 (i.e. limit(0)) is equivalent to setting no limit.
+    # Retrieves all matched documents.
     limit = params.get('limit', 0)
 
     if sub_query:
@@ -180,7 +181,7 @@ def lambda_handler(event, context):
     logger = get_logger(context='hub_list')
 
     if not is_db_envs_set():
-        logger.warning('MongoDB environment vars are not set! bookkeeping skipped.')
+        logger.warning('MongoDB environment vars are not set! book-keeping skipped.')
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
