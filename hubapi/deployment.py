@@ -35,6 +35,8 @@ def read_environment():
               help='Deployment package zip to be used with HubPush Lambda function')
 @click.option('--authorize-deployment-zip',
               help='Deployment package zip to be used with HubPush Lambda function')
+@click.option('--delete-deployment-zip',
+              help='Deployment package zip to be used with HubDelete Lambda function')
 @click.option('--docker-cred-deployment-zip',
               help='Deployment package zip to be used with DockerCredFetcher Lambda function')
 @click.option('--key-id',
@@ -48,7 +50,7 @@ def read_environment():
 @click.option('--deployment-stage',
               default='dev',
               help='Deployment stage for API Gateway (Default - dev)')
-def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, docker_cred_deployment_zip, key_id,
+def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, delete_deployment_zip, docker_cred_deployment_zip, key_id,
             stack_name, template, deployment_stage):
     logger = get_logger(__name__)
 
@@ -89,6 +91,12 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         s3.put(filepath=authorize_deployment_zip,
                key=s3_authorize_key)
 
+    if delete_deployment_zip is not None:
+        zip_filename = os.path.basename(delete_deployment_zip)
+        s3_delete_key = f'hubapi_delete/{key_id}/{zip_filename}'
+        s3.put(filepath=delete_deployment_zip,
+               key=s3_delete_key)
+
     if docker_cred_deployment_zip is not None:
         zip_filename = os.path.basename(docker_cred_deployment_zip)
         s3_docker_cred_key = f'docker_auth/{key_id}/{zip_filename}'
@@ -103,6 +111,7 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
         {'ParameterKey': 'HubPushLambdaFnS3Key', 'ParameterValue': s3_push_key},
         {'ParameterKey': 'HubAPIAuthorizeLambdaFnS3Key', 'ParameterValue': s3_authorize_key},
+        {'ParameterKey': 'HubDeleteFnS3Key', 'ParameterValue': s3_delete_key},
         {'ParameterKey': 'DockerCredFetcherLambdaFnS3Key', 'ParameterValue': s3_docker_cred_key},
         {'ParameterKey': 'DefLambdaRole', 'ParameterValue': 'arn:aws:iam::416454113568:role/lambda-role'},
         {'ParameterKey': 'DeploymentStage', 'ParameterValue': deployment_stage},
