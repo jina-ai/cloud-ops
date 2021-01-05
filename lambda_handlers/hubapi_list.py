@@ -25,9 +25,6 @@ class MongoDBHandler:
     def __init__(self, hostname: str, username: str, password: str,
                  database_name: str, collection_name: str):
         self.logger = get_logger(self.__class__.__name__)
-        self.logger.info('*** Trying to inittttt ***')
-        self.client = pymongo.MongoClient('')
-        self.logger.info('****  init successful *****')
         self.hostname = hostname
         self.username = username
         self.password = password
@@ -75,10 +72,6 @@ class MongoDBHandler:
 
     def find_many(self, query: Dict[str, Union[Dict, List]], limit: int = 0) -> None:
         try:
-            print('###### inside find_many ######')
-            #print(str(self.collection.find(filter=query, limit=limit)))
-            print('value of collection is : ' + str(self.collection))
-            print('**** finished printing collection ****')
             return self.collection.find(filter=query, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
