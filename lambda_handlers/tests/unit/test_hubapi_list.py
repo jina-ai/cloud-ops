@@ -33,6 +33,15 @@ def test_list(mocker, monkeypatch, mock_pymongo_mongoclient):
 
     mock_client = mocker.patch.object(MongoDBHandler, 'client', autospec=True)
     mock_client.return_value = mock_pymongo_mongoclient
+    mock_client.return_value.find_many = MongoDBHandler.find_many #todo trick make this point to mongo mock's find method - for mongomock's dbs
+    #mock_client.return_value.find = MongoDBHandler.find
+
+    sample_collection_objects = [{'_id':1, 'name': 'first', 'manifest_info':{'kind': 'encoder', 'type': 'pod'}}, {'_id':2, 'name': 'second', 'manifest_info':{'kind': 'encoder', 'type': 'pod'}}]
+    mock_collection = mongomock.MongoClient().db.collection #mongomock.Collection
+    for obj in sample_collection_objects:
+        obj['_id'] = mock_collection.insert_one(obj).inserted_id
+    mock_client.return_value.collection = mock_collection #mongomock.Collection
+
 
     mock_connect = mocker.patch.object(MongoDBHandler, 'connect', autospec=True)
     mock_connect.return_value = mock_pymongo_mongoclient
