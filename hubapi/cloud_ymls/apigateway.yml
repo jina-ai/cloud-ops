@@ -248,6 +248,7 @@ Resources:
             Ref: JinaDBCollection
           JINA_DB_NAME:
             Ref: JinaDBName
+      Timeout: 10
   HubPushLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
@@ -274,6 +275,7 @@ Resources:
             Ref: JinaDBCollection
           JINA_DB_NAME:
             Ref: JinaDBName
+      Timeout: 10
   HubAPIAuthorizeLambdaFn:
     Type: AWS::Lambda::Function
     Properties:
