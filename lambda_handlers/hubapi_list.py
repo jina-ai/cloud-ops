@@ -101,7 +101,7 @@ def is_db_envs_set():
 
 def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
-    logger.info(f'Got the following parans: {params}')
+    logger.info(f'Got the following params: {params}')
 
     if not params:
         return {}, 0
