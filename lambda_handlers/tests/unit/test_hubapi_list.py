@@ -16,12 +16,6 @@ from ...hubapi_list import _query_builder
 from jina.docker.hubapi import JAML
 from pymongo import MongoClient
 
-
-def get_logger(context='generic', file=True):
-    logger = logging.getLogger(context)
-    logger.setLevel(logging.DEBUG)
-    return logger
-
 @pytest.fixture
 def mock_pymongo_mongoclient():
     client = mongomock.MongoClient()
@@ -59,9 +53,9 @@ def test_list(mocker, monkeypatch, mock_pymongo_mongoclient):
     mock_connect.return_value.close = None
   
     objs = []
-    read_file = open('mongo_list_objs.json', "r")
-    mongo_objs = json.load(read_file)
-    objs = mongo_objs["collection"]
+    with open('mongo_list_objs.json', "r") as read_file:
+        mongo_objs = json.load(read_file)
+        objs = mongo_objs["collection"]
     # mock_pymongo_mongoclient.collection = objs
     # mock_client.return_value.collection = objs #mongomock.Collection
 

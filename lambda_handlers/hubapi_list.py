@@ -38,7 +38,6 @@ class MongoDBHandler:
 
     def connect(self) -> 'MongoDBHandler':
         try:
-            self.logger.info('** trying to conectt ***')
             self.client = pymongo.MongoClient(self.connection_string)
             self.client.admin.command('ismaster')
             self.logger.info('Successfully connected to the database')
@@ -112,10 +111,7 @@ def _query_builder(params: Dict):
         return {}, 0
 
     sub_query = []
-    params = {
-        'kind': 'encoder',
-        'type': 'pod'
-    }
+
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
         sub_query.append(kind_query)
