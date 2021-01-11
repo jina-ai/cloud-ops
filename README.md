@@ -1,4 +1,4 @@
-# cloud-ops
+# cloud ops
 
 ## 🚀 Terraform 
 
