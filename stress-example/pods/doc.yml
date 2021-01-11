@@ -1,0 +1,27 @@
+!BinaryPbIndexer
+with:
+  index_filename: doc.gz
+metas:
+  name: doc_idx
+  workspace: $JINA_WORKSPACE
+requests:
+  on:
+    ControlRequest:
+      - !ControlReqDriver {}
+    SearchRequest:
+      - !KVSearchDriver
+        with:
+          traversal_paths: ['r']
+      - !ExcludeQL
+        with:
+          traversal_paths: ['r']
+          fields:
+            - embedding
+    IndexRequest:
+      - !Buffer2URI {}
+      - !ExcludeQL
+        with:
+          fields:
+            - chunks  # we don't want to save nested structure
+            - buffer
+      - !KVIndexDriver {}
