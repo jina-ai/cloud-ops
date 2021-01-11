@@ -50,7 +50,7 @@
         "X-Forwarded-Port": ["443"],
         "X-Forwarded-Proto": ["https"]
     },
-    "queryStringParameters": "type=pod&kind=encoder",
+    "queryStringParameters": {"kind": "encoder", "type": "pod"},
     "multiValueQueryStringParameters": "",
     "pathParameters": "",
     "stageVariables": "",
