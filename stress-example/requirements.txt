@@ -1,2 +1,0 @@
-torch
-jina[cv,http]==0.9.12
