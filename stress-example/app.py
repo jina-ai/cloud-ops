@@ -4,10 +4,25 @@ __license__ = "Apache-2.0"
 import os
 import sys
 
+from jina import Document
 from jina.flow import Flow
 
-num_docs = int(os.environ.get('JINA_MAX_DOCS', 500))
-image_src = 'data/**/*.png'
+num_docs = 500
+
+
+def create_random_img_array(img_height, img_width):
+    import numpy as np
+    return np.random.randint(0, 256, (img_height, img_width, 3))
+
+def random_docs():
+    for idx in range(0, num_docs):
+        with Document() as doc:
+            doc.id = idx
+            doc.blob = create_random_img_array(3, 3)
+            doc.mime_type = 'image/png'
+            #print('#################################################shape ', doc.blob.shape)
+        yield doc
+
 
 
 def config():
@@ -24,7 +39,7 @@ def config():
 def index():
     f = Flow.load_config('flows/index.yml')
     with f:
-        f.index_files(image_src, batch_size=8, read_mode='rb', size=num_docs)
+        f.index(input_fn=random_docs())
 
 
 # for search; annoy, faiss, scann with refIndexer

@@ -1,6 +1,7 @@
 !BinaryPbIndexer
 with:
   index_filename: doc.gz
+  show_exc_info: true
 metas:
   name: doc_idx
   workspace: $JINA_WORKSPACE
@@ -23,5 +24,4 @@ requests:
         with:
           fields:
             - chunks  # we don't want to save nested structure
-            - buffer
       - !KVIndexDriver {}
