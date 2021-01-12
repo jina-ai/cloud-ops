@@ -3,9 +3,6 @@ with:
   logserver: false
   show_exc_info: true
 pods:
-  #crafter:
-  #  uses: pods/craft.yml
-  #  read_only: true
   encoder:
     uses: pods/encoder.yml
     parallel: $JINA_PARALLEL

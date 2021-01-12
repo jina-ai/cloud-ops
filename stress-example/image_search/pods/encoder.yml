@@ -4,3 +4,4 @@ with:
   model_name: mobilenet_v2
   img_shape: 96
   show_exc_info: true
+  channel_axis: -1
