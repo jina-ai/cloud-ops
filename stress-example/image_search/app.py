@@ -19,7 +19,7 @@ def random_docs():
     for idx in range(0, num_docs):
         with Document() as doc:
             doc.id = idx
-            doc.blob = create_random_img_array(25, 25)
+            doc.blob = create_random_img_array(224, 224)
             doc.mime_type = 'image/png'
         yield doc
 
