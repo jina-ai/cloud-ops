@@ -7,7 +7,12 @@ import sys
 from jina import Document
 from jina.flow import Flow
 
-num_docs = 50
+NUM_DOCS = 50
+QUERY_NUM_DOCS = 1
+TOP_K = 3
+BATCH_SIZE = 4
+IMG_HEIGHT = 224
+IMG_WIDTH = 224
 
 
 def create_random_img_array(img_height, img_width):
@@ -15,18 +20,23 @@ def create_random_img_array(img_height, img_width):
     return np.random.randint(0, 256, (img_height, img_width, 3))
 
 
-def random_docs():
-    for idx in range(0, num_docs):
+def validate_img(resp):
+    for d in resp.search.docs:
+        print(f'Number of actual matches:  {len(d.matches)} vs expected number: {TOP_K}')
+
+
+def random_docs(start, end):
+    for idx in range(start, end):
         with Document() as doc:
             doc.id = idx
-            doc.blob = create_random_img_array(224, 224)
+            doc.content = create_random_img_array(IMG_HEIGHT, IMG_WIDTH)
             doc.mime_type = 'image/png'
         yield doc
 
 
 def config():
     parallel = 1 if sys.argv[1] == 'index' else 1
-    shards = 1
+    shards = 2
 
     os.environ.setdefault('JINA_PARALLEL', str(parallel))
     os.environ.setdefault('JINA_SHARDS', str(shards))
@@ -34,16 +44,19 @@ def config():
     os.environ.setdefault('JINA_PORT', str(45678))
 
 
+original_docs = random_docs(0, NUM_DOCS)
+
+
 # for index
 def index():
     with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=random_docs())
+        index_flow.index(input_fn=random_docs(0, NUM_DOCS), batch_size=BATCH_SIZE)
 
 
 # for search; annoy, faiss, scann with refIndexer
 def query():
     with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.block()
+        search_flow.search(input_fn=random_docs(0, QUERY_NUM_DOCS), output_fn=validate_img, top_k=TOP_K)
 
 
 if __name__ == '__main__':
