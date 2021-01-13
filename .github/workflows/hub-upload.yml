@@ -3,10 +3,10 @@ on: [repository_dispatch]
 jobs:
   build:
     name: Dockerize pod and upload with repo dispatch
+    if: github.event.action == 'pod-upload'
     runs-on: ubuntu-latest
     steps:
       - name: 'Cloning user repo'
-        if: github.event.action == 'pod-upload'
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.JINA_DEV_BOT }}
@@ -15,7 +15,6 @@ jobs:
           repository: ${{ github.event.client_payload.repository }}
           path: jinaai-jina
       - name: Jina Hub Image Builder and Push to docker hub
-        if: github.event.action == 'pod-upload'
         uses: jina-ai/hub-builder@master        
         with:
           push: false
