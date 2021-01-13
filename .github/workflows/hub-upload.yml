@@ -10,10 +10,8 @@ jobs:
         uses: actions/checkout@v2
         with:
           token: ${{ secrets.JINA_DEV_BOT }}
-      - env:	
           GITHUB_TOKEN: ${{ secrets.JINA_DEV_BOT }}
           repository: ${{ github.event.client_payload.repository }}
-          path: jinaai-jina
       - name: Jina Hub Image Builder and Push to docker hub
         uses: jina-ai/hub-builder@master        
         with:
