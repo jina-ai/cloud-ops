@@ -59,16 +59,16 @@ class MongoDBHandler:
     def collection(self):
         return self.database[self.collection_name]
 
-    def find(self, query: Dict[str, Union[Dict, List]]) -> None:
+    def find_one(self, query: Dict[str, Union[Dict, List]]) -> None:
         try:
             return self.collection.find_one(query)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    def find_many(self,
-                  query: Dict[str, Union[Dict, List]],
-                  projection: Dict[str, Union[Dict, List]],
-                  limit: int = 0) -> None:
+    def find(self,
+             query: Dict[str, Union[Dict, List]],
+             projection: Dict[str, Union[Dict, List]],
+             limit: int = 0) -> None:
         try:
             return self.collection.find(filter=query, projection=projection, limit=limit)
         except pymongo.errors.PyMongoError as exp:
@@ -106,9 +106,6 @@ def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
     logger.info(f'Got the following params: {params}')
 
-    if not params:
-        return {}, 0
-
     sub_query = []
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
@@ -125,7 +122,6 @@ def _query_builder(params: Dict):
         sub_query.append(keyword_query)
 
     # A limit() value of 0 (i.e. limit(0)) is equivalent to setting no limit.
-    # Retrieves all matched documents.
     limit = params.get('limit', 0)
 
     if sub_query:
@@ -158,8 +154,9 @@ def read_environment():
     username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
     password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
     database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
-    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
-    return hostname, username, password, database_name, collection_name
+    hubpod_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_HUBPOD_COLLECTION'))
+    metadata_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_METADATA_COLLECTION'))
+    return hostname, username, password, database_name, hubpod_collection, metadata_collection
 
 
 def lambda_handler(event, context):
@@ -172,14 +169,25 @@ def lambda_handler(event, context):
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
-    projection = {'manifest_info': 1, '_id': 0}
-    _executor_query, limit = _query_builder(params=event.get('queryStringParameters', {}))
+    # what all fields to be fetched from the collection
+    projection = {
+        '_id': 0,
+        'name': 1,
+        'version': 1,
+        'jina_version': 1,
+        'manifest_info': 1
+    }
 
-    hostname, username, password, database_name, collection_name = read_environment()
+    if event.get('queryStringParameters', {}):
+        _executor_query, limit = _query_builder(params=event['queryStringParameters'])
+    else:
+        _executor_query, limit = {}, 0
+
+    hostname, username, password, database_name, hubpod_collection, metadata_collection = read_environment()
     try:
         with MongoDBHandler(hostname=hostname, username=username, password=password,
-                            database_name=database_name, collection_name=collection_name) as db:
-            cursor = db.find_many(query=_executor_query, projection=projection, limit=limit)
+                            database_name=database_name, collection_name=hubpod_collection) as db:
+            cursor = db.find(query=_executor_query, projection=projection, limit=limit)
             all_manifests = list(cursor)
             if all_manifests:
                 return _return_json_builder(body=json.dumps({"manifest": all_manifests}),

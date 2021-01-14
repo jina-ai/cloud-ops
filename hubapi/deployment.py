@@ -22,10 +22,12 @@ def read_environment():
     username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
     password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
     database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
-    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
+    hubpod_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_HUBPOD_COLLECTION'))
+    metadata_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_METADATA_COLLECTION'))
     docker_username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DOCKER_USERNAME'))
     docker_password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DOCKER_PASSWORD'))
-    return hostname, username, password, database_name, collection_name, docker_username, docker_password
+    return hostname, username, password, database_name, hubpod_collection, \
+        metadata_collection, docker_username, docker_password
 
 
 @click.command()
@@ -97,7 +99,9 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
 
     cfn_yml = read_file_content(filepath=template)
 
-    hostname, username, password, database_name, collection_name, docker_username, docker_password = read_environment()
+    hostname, username, password, database_name, hubpod_collection, metadata_collection, \
+        docker_username, docker_password = read_environment()
+
     parameters = [
         {'ParameterKey': 'DefS3Bucket', 'ParameterValue': S3_DEFAULT_BUCKET},
         {'ParameterKey': 'HubListLambdaFnS3Key', 'ParameterValue': s3_list_key},
@@ -109,7 +113,8 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         {'ParameterKey': 'JinaDBHostname', 'ParameterValue': hostname},
         {'ParameterKey': 'JinaDBUsername', 'ParameterValue': username},
         {'ParameterKey': 'JinaDBPassword', 'ParameterValue': password},
-        {'ParameterKey': 'JinaDBCollection', 'ParameterValue': collection_name},
+        {'ParameterKey': 'JinaHubpodCollection', 'ParameterValue': hubpod_collection},
+        {'ParameterKey': 'JinaMetadataCollection', 'ParameterValue': metadata_collection},
         {'ParameterKey': 'JinaDBName', 'ParameterValue': database_name},
         {'ParameterKey': 'JinaDockerUsername', 'ParameterValue': docker_username},
         {'ParameterKey': 'JinaDockerPassword', 'ParameterValue': docker_password}

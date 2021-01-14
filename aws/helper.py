@@ -83,6 +83,7 @@ def waiter(func: callable, logger, success_status: list, wait_status: list, fail
         failure_status (list): status which will make the waiter exit
         time_to_wait (int): total wait time for the operation (seconds)
         time_to_sleep (int): sleep time for the operation (seconds)
+
     """
     logger.info(f'Success status: {success_status}, Wait status: {wait_status}, '
                 f'Failure status: {failure_status}')

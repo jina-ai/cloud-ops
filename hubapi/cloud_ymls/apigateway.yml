@@ -42,7 +42,9 @@ Parameters:
     Type: String
   JinaDBPassword:
     Type: String
-  JinaDBCollection:
+  JinaHubpodCollection:
+    Type: String
+  JinaMetadataCollection:
     Type: String
   JinaDBName:
     Type: String
@@ -244,10 +246,12 @@ Resources:
             Ref: JinaDBUsername
           JINA_DB_PASSWORD:
             Ref: JinaDBPassword
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
           JINA_DB_NAME:
             Ref: JinaDBName
+          JINA_HUBPOD_COLLECTION:
+            Ref: JinaHubpodCollection
+          JINA_METADATA_COLLECTION:
+            Ref: JinaMetadataCollection
       Timeout: 10
   HubPushLambdaFn:
     Type: AWS::Lambda::Function
@@ -271,10 +275,12 @@ Resources:
             Ref: JinaDBUsername
           JINA_DB_PASSWORD:
             Ref: JinaDBPassword
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
           JINA_DB_NAME:
             Ref: JinaDBName
+          JINA_HUBPOD_COLLECTION:
+            Ref: JinaHubpodCollection
+          JINA_METADATA_COLLECTION:
+            Ref: JinaMetadataCollection
       Timeout: 10
   HubAPIAuthorizeLambdaFn:
     Type: AWS::Lambda::Function
