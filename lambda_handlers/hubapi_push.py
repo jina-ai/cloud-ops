@@ -98,7 +98,7 @@ class MongoDBHandler:
 
 def is_db_envs_set():
     """ Checks if any of the db env variables are not set """
-    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_DB_COLLECTION']
+    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_HUBPOD_COLLECTION', 'JINA_METADATA_COLLECTION']
     return all(len(os.environ.get(k, '')) > 0 for k in keys)
 
 
