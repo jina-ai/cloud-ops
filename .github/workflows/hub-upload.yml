@@ -1,5 +1,7 @@
-Name: Upload pod
+name: Upload pod
+
 on: [repository_dispatch]
+
 jobs:
   build:
     name: Dockerize pod and upload with repo dispatch
