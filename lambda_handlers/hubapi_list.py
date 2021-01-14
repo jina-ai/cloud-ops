@@ -184,6 +184,7 @@ def lambda_handler(event, context):
         _executor_query, limit = {}, 0
 
     hostname, username, password, database_name, hubpod_collection, metadata_collection = read_environment()
+
     try:
         with MongoDBHandler(hostname=hostname, username=username, password=password,
                             database_name=database_name, collection_name=hubpod_collection) as db:
