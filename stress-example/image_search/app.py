@@ -22,7 +22,7 @@ def create_random_img_array(img_height, img_width):
 
 def validate_img(resp):
     for d in resp.search.docs:
-        print(f'Number of actual matches:  {len(d.matches)} vs expected number: {TOP_K}')
+        print(f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}')
 
 
 def random_docs(start, end):
@@ -36,15 +36,12 @@ def random_docs(start, end):
 
 def config():
     parallel = 1 if sys.argv[1] == 'index' else 1
-    shards = 2
+    shards = 1
 
     os.environ.setdefault('JINA_PARALLEL', str(parallel))
     os.environ.setdefault('JINA_SHARDS', str(shards))
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
-
-
-original_docs = random_docs(0, NUM_DOCS)
 
 
 # for index
