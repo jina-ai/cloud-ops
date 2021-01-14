@@ -25,11 +25,7 @@ def validate_github_token(token):
                             url=GitHub.URL,
                             headers=headers)
     logger.info(f'Got the following response status from Github: {response.status}')
-    if response.status == 200:
-        return True
-    else:
-        return False
-
+    return response.status == 200
 
 class GitHub:
     URL = 'https://api.github.com'
