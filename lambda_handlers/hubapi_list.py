@@ -138,6 +138,9 @@ def _return_json_builder(body, status):
     return {
         "isBase64Encoded": False,
         "headers": {
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
             "Content-Type": "application/json"
         },
         "statusCode": int(status),
