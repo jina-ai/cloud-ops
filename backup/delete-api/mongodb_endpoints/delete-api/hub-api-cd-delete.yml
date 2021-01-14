@@ -1,0 +1,83 @@
+name: Hub API CD
+
+on:
+  pull_request:
+    branches:
+      - master
+    types:
+      - closed
+    paths:
+      - 'lambda_handlers/*.py'
+
+env:
+  GITHUB_PR_NUMBER: ${{github.event.pull_request.number}}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  JINA_DB_HOSTNAME: ${{ secrets.JINA_DB_HOSTNAME }}
+  JINA_DB_COLLECTION: ${{ secrets.JINA_DB_COLLECTION }}
+  JINA_DB_NAME: ${{ secrets.JINA_DB_NAME }}
+  JINA_DB_USERNAME: ${{ secrets.JINA_DB_USERNAME }}
+  JINA_DB_PASSWORD: ${{ secrets.JINA_DB_PASSWORD }}
+  JINA_DOCKER_USERNAME: ${{ secrets.JINA_DOCKER_USERNAME }}
+  JINA_DOCKER_PASSWORD: ${{ secrets.JINA_DOCKER_PASSWORD }}
+  HUBAPI_DIRECTORY: hubapi
+  HUB_LIST_LAMBDA: hubapi_list
+  HUB_PUSH_LAMBDA: hubapi_push
+  HUB_AUTHORIZE_LAMBDA: hubapi_authorizer
+  HUB_DELETE_LAMBDA: hubapi_delete
+  DOCKER_AUTH_LAMBDA: docker_auth
+  CFN_STACK_NAME: jinahub-api-stack
+
+jobs:
+  hub-api-deploy:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Install dependencies
+        working-directory: .
+        run : |
+          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+
+      - name: Prepare Hub List Lambda Deployment Package
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${HUB_LIST_LAMBDA}
+
+      - name: Prepare Hub Push Lambda Deployment Package
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${HUB_PUSH_LAMBDA}
+
+      - name: Prepare Hub Authorize Lambda Deployment Package
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${HUB_AUTHORIZE_LAMBDA}
+
+      - name: Prepare Hub Delete Lambda Deployment Package
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${HUB_DELETE_LAMBDA}
+
+      - name: Prepare Docker Cred Fetch Lambda Deployment Package
+        working-directory: ./hubapi
+        run: |
+          chmod +x prepare_lambda.sh
+          bash prepare_lambda.sh --function ${DOCKER_AUTH_LAMBDA}
+
+      - name: Deploy CFN Stack with Lambda functions & API Gateway
+        working-directory: ./hubapi
+        run: |
+          python deployment.py --list-deployment-zip ${HUB_LIST_LAMBDA}.zip --push-deployment-zip ${HUB_PUSH_LAMBDA}.zip --authorize-deployment-zip ${HUB_AUTHORIZE_LAMBDA}.zip --delete-deployment-zip ${HUB_DELETE_LAMBDA}.zip --docker-cred-deployment-zip ${DOCKER_AUTH_LAMBDA}.zip --key-id ${GITHUB_PR_NUMBER} --stack-name ${CFN_STACK_NAME}
+
