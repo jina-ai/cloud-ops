@@ -71,9 +71,6 @@ class MongoDBHandler:
 
     def find_many(self, query: Dict[str, Union[Dict, List]], limit: int = 0) -> None:
         try:
-            print('*** inside find many *** ')
-            print('*** collection count inside find many is *** '+ str(self.collection.count()))
-            print('*** printing collection contents *** '+ str(self.collection.find()))
             return self.collection.find(filter=query, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
@@ -114,7 +111,6 @@ def _query_builder(params: Dict):
         return {}, 0
 
     sub_query = []
-
     if 'kind' in params:
         kind_query = {'manifest_info.kind': params['kind']}
         sub_query.append(kind_query)
@@ -159,11 +155,11 @@ def str_to_ascii_to_base64_to_str(text):
 
 
 def read_environment():
-    hostname = (os.environ.get('JINA_DB_HOSTNAME'))
-    username = (os.environ.get('JINA_DB_USERNAME'))
-    password = (os.environ.get('JINA_DB_PASSWORD'))
-    database_name = (os.environ.get('JINA_DB_NAME'))
-    collection_name = (os.environ.get('JINA_DB_COLLECTION'))
+    hostname = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_HOSTNAME'))
+    username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
+    password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
+    database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
+    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
     return hostname, username, password, database_name, collection_name
 
 
@@ -172,21 +168,16 @@ def lambda_handler(event, context):
     """
     logger = get_logger(context='hub_list')
 
-
     if not is_db_envs_set():
         logger.warning('MongoDB environment vars are not set! book-keeping skipped.')
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
     _executor_query = _query_builder(params=event.get('queryStringParameters', {}))
-    
-    print('*** executor query iss *** '+ str(_executor_query))
+
     hostname, username, password, database_name, collection_name = read_environment()
     with MongoDBHandler(hostname=hostname, username=username, password=password,
                         database_name=database_name, collection_name=collection_name) as db:
-        print('***** inspecting collection *** ')
-        print(str(type(db.collection)))
-        #print(str(db.collection.find()))
         existing_docs = db.find_many(*_executor_query)
         if existing_docs:
             all_manifests = [doc['manifest_info'] for doc in existing_docs]
