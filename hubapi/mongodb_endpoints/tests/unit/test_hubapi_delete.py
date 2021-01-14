@@ -9,8 +9,8 @@ import mock
 
 from jina.docker.hubio import HubIO
 
-from ...hubapi_delete import MongoDBHandler
-from ...hubapi_delete import lambda_handler
+from ....delete-api.hubapi_delete import MongoDBHandler
+from ....delete-api.hubapi_delete import lambda_handler
 from jina.docker.hubapi import JAML
 
 

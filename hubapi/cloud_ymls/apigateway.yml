@@ -1,370 +1,312 @@
 ---
-AWSTemplateFormatVersion: '2010-09-09'
-
-Description: API Gateway and Lambda Functions for Hub
-
-Parameters:
-  DefS3Bucket:
-    Type: String
-    Default: lambda-handlers-jina
-    Description: Enter S3 Bucket where Lambda function code is uploaded
-  HubListLambdaFnS3Key:
-    Type: String
-    Default: hubapi_list/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub List Lambda function code is uploaded
-  HubPushLambdaFnS3Key:
-    Type: String
-    Default: hubapi_push/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub List Lambda function code is uploaded
-  HubAPIAuthorizeLambdaFnS3Key:
-    Type: String
-    Default: hubapi_authorize/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub List Lambda function code is uploaded
-  HubDeleteLambdaFnS3Key:
-    Type: String
-    Default: hubapi_delete/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub API Delete Lambda function code is uploaded
-  DockerCredFetcherLambdaFnS3Key:
-    Type: String
-    Default: docker_auth/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Docker auth Lambda function code is uploaded
-  DefLambdaRole:
-    Type: String
-    Default: 'arn:aws:iam::416454113568:role/lambda-role'
-    Description: Enter IAM role with LambdaAccess
-  DeploymentStage:
-    Type: String
-    Default: dev
-    Description: Enter API Gateway stage for deployment
-  HubDomain:
-    Type: String
-    Default: hubapi.jina.ai
-    Description: Hub API Endpoint
-  JinaDBHostname:
-    Type: String
-  JinaDBUsername:
-    Type: String
-  JinaDBPassword:
-    Type: String
-  JinaDBCollection:
-    Type: String
-  JinaDBName:
-    Type: String
-  JinaDockerUsername:
+  AWSTemplateFormatVersion: '2010-09-09'
+  
+  Description: API Gateway and Lambda Functions for Hub
+  
+  Parameters:
+    DefS3Bucket:
       Type: String
-  JinaDockerPassword:
+      Default: lambda-handlers-jina
+      Description: Enter S3 Bucket where Lambda function code is uploaded
+    HubListLambdaFnS3Key:
       Type: String
-
-Resources:
-  HubAPI:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      ApiKeySourceType: HEADER
-      Description: Jina Hub API for bookkeeping
-      EndpointConfiguration:
-        Types:
-          - EDGE
-      Name: jina-hub-api
-  HubAPIList:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt HubAPI.RootResourceId
-      PathPart: 'list'
-      RestApiId:
-        Ref: HubAPI
-  HubAPIListMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ApiKeyRequired: false
-      AuthorizationType: NONE
-      HttpMethod: GET
-      Integration:
-        ConnectionType: INTERNET
-        Credentials: !GetAtt HubAPIIAMRole.Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubListLambdaFn.Arn}/invocations'
-      OperationName: 'HubList'
-      ResourceId:
-        Ref: HubAPIList
-      RestApiId:
-        Ref: HubAPI
-  HubAPIPush:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt HubAPI.RootResourceId
-      PathPart: 'push'
-      RestApiId:
-        Ref: HubAPI
-  HubAPIPushMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ApiKeyRequired: false
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref HubAPIAuthorizer
-      HttpMethod: POST
-      Integration:
-        ConnectionType: INTERNET
-        Credentials: !GetAtt HubAPIIAMRole.Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubPushLambdaFn.Arn}/invocations'
-      OperationName: 'HubPush'
-      ResourceId:
-        Ref: HubAPIPush
-      RestApiId:
-        Ref: HubAPI
-  HubAPIDelete:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt HubAPI.RootResourceId
-      PathPart: 'hubapi_delete'
-      RestApiId:
-        Ref: HubAPI
-  HubAPIDeleteMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ApiKeyRequired: false
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref HubAPIAuthorizer
-      HttpMethod: POST
-      Integration:
-        ConnectionType: INTERNET
-        Credentials: !GetAtt HubAPIIAMRole.Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubDeleteLambdaFn.Arn}/invocations'
-      OperationName: 'HubDelete'
-      ResourceId:
-        Ref: HubAPIDelete
-      RestApiId:
-        Ref: HubAPI
-  HubAPIDockerAuth:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      ParentId: !GetAtt HubAPI.RootResourceId
-      PathPart: 'docker_auth'
-      RestApiId:
-        Ref: HubAPI
-  HubAPIDockerAuthMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      ApiKeyRequired: false
-      AuthorizationType: CUSTOM
-      AuthorizerId: !Ref HubAPIAuthorizer
-      HttpMethod: GET
-      Integration:
-        ConnectionType: INTERNET
-        Credentials: !GetAtt HubAPIIAMRole.Arn
-        IntegrationHttpMethod: POST
-        PassthroughBehavior: WHEN_NO_MATCH
-        TimeoutInMillis: 29000
-        Type: AWS_PROXY
-        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DockerCredFetcherLambdaFn.Arn}/invocations'
-      OperationName: 'HubDockerAuth'
-      ResourceId:
-        Ref: HubAPIDockerAuth
-      RestApiId:
-        Ref: HubAPI
-  HubAPIModel:
-    Type: AWS::ApiGateway::Model
-    Properties:
-      ContentType: 'application/json'
-      RestApiId:
-        Ref: HubAPI
-      Schema: {}
-  HubAPIStage:
-    Type: AWS::ApiGateway::Stage
-    Properties:
-      DeploymentId:
-        Ref: HubAPIDeployment
-      Description: HubAPI Stage v0
-      RestApiId:
-        Ref: HubAPI
-      StageName:
-        Ref: DeploymentStage
-  HubAPIDeployment:
-    Type: AWS::ApiGateway::Deployment
-    DependsOn:
-    - HubAPIListMethod
-    - HubAPIPushMethod
-    - HubAPIDockerAuthMethod
-    Properties:
-      Description: Lambda API Deployment
-      RestApiId:
-        Ref: HubAPI
-  HubAPIPathMapping:
-    DependsOn:
-    - HubAPIDeployment
-    - HubAPIStage
-    Type: AWS::ApiGateway::BasePathMapping
-    Properties:
-      BasePath: ""
-      DomainName:
-        Ref: HubDomain
-      RestApiId:
-        Ref: HubAPI
-      Stage:
-        Ref: DeploymentStage
-  HubAPIAuthorizer:
-    Type: AWS::ApiGateway::Authorizer
-    Properties:
-      Name: HubAuthorizer
-      RestApiId: !Ref HubAPI
-      Type: TOKEN
-      IdentitySource: method.request.header.authorizationToken
-      AuthorizerResultTtlInSeconds: 0
-      AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubAPIAuthorizeLambdaFn.Arn}/invocations
-      AuthorizerCredentials: !GetAtt HubAPIIAMRole.Arn
-  HubAPIIAMRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: ''
-            Effect: 'Allow'
-            Principal:
-              Service:
-                - 'apigateway.amazonaws.com'
-            Action:
-              - 'sts:AssumeRole'
-      Path: '/'
-      Policies:
-        - PolicyName: LambdaAccess
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: 'Allow'
-                Action: 'lambda:*'
-                Resource: !GetAtt HubListLambdaFn.Arn
-              - Effect: 'Allow'
-                Action: 'lambda:*'
-                Resource: !GetAtt HubPushLambdaFn.Arn
-              - Effect: 'Allow'
-                Action: 'lambda:*'
-                Resource: !GetAtt HubAPIAuthorizeLambdaFn.Arn
-              - Effect: 'Allow'
-                Action: 'lambda:*'
-                Resource: !GetAtt HubDeleteLambdaFn.Arn
-              - Effect: 'Allow'
-                Action: 'lambda:*'
-                Resource: !GetAtt DockerCredFetcherLambdaFn.Arn
-  HubListLambdaFn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: HubListMongoAtlas
-      Description: Hub List Lambda function
-      Code:
-        S3Bucket:
-          Ref: DefS3Bucket
-        S3Key:
-          Ref: HubListLambdaFnS3Key
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      Role:
-        Ref: DefLambdaRole
-      Environment:
-        Variables:
-          JINA_DB_HOSTNAME:
-            Ref: JinaDBHostname
-          JINA_DB_USERNAME:
-            Ref: JinaDBUsername
-          JINA_DB_PASSWORD:
-            Ref: JinaDBPassword
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
-          JINA_DB_NAME:
-            Ref: JinaDBName
-  HubPushLambdaFn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: HubPushMongoAtlas
-      Description: Hub Push Lambda function
-      Code:
-        S3Bucket:
-          Ref: DefS3Bucket
-        S3Key:
-          Ref: HubPushLambdaFnS3Key
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      Role:
-        Ref: DefLambdaRole
-      Environment:
-        Variables:
-          JINA_DB_HOSTNAME:
-            Ref: JinaDBHostname
-          JINA_DB_USERNAME:
-            Ref: JinaDBUsername
-          JINA_DB_PASSWORD:
-            Ref: JinaDBPassword
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
-          JINA_DB_NAME:
-            Ref: JinaDBName
-  HubAPIAuthorizeLambdaFn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: HubAPIAuthorizer
-      Description: Hub API Authorize Lambda function
-      Code:
-        S3Bucket:
-          Ref: DefS3Bucket
-        S3Key:
-          Ref: HubAPIAuthorizeLambdaFnS3Key
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      Role:
-        Ref: DefLambdaRole
-  HubDeleteLambdaFn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: HubDeleteMongoAtlas
-      Description: Hub Delete Lambda function
-      Code:
-        S3Bucket:
-          Ref: DefS3Bucket
-        S3Key:
-          Ref: HubDeleteLambdaFnS3Key
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      Role:
-        Ref: DefLambdaRole
-      Environment:
-        Variables:
-          JINA_DB_HOSTNAME:
-            Ref: JinaDBHostname
-          JINA_DB_USERNAME:
-            Ref: JinaDBUsername
-          JINA_DB_PASSWORD:
-            Ref: JinaDBPassword
-          JINA_DB_COLLECTION:
-            Ref: JinaDBCollection
-          JINA_DB_NAME:
-            Ref: JinaDBName
-  DockerCredFetcherLambdaFn:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: DockerCredFetcher
-      Description: Docker Cred fetcher Lambda function
-      Code:
-        S3Bucket:
-          Ref: DefS3Bucket
-        S3Key:
-          Ref: DockerCredFetcherLambdaFnS3Key
-      Handler: lambda_function.lambda_handler
-      Runtime: python3.8
-      Role:
-        Ref: DefLambdaRole
-      Environment:
-        Variables:
-          JINA_DOCKER_USERNAME:
-            Ref: JinaDockerUsername
-          JINA_DOCKER_PASSWORD:
-            Ref: JinaDockerPassword
+      Default: hubapi_list/1/mongoatlas_reader.zip
+      Description: Enter S3 Key where Hub List Lambda function code is uploaded
+    HubPushLambdaFnS3Key:
+      Type: String
+      Default: hubapi_push/1/mongoatlas_reader.zip
+      Description: Enter S3 Key where Hub List Lambda function code is uploaded
+    HubAPIAuthorizeLambdaFnS3Key:
+      Type: String
+      Default: hubapi_authorize/1/mongoatlas_reader.zip
+      Description: Enter S3 Key where Hub List Lambda function code is uploaded
+    DockerCredFetcherLambdaFnS3Key:
+      Type: String
+      Default: docker_auth/1/mongoatlas_reader.zip
+      Description: Enter S3 Key where Docker auth Lambda function code is uploaded
+    DefLambdaRole:
+      Type: String
+      Default: 'arn:aws:iam::416454113568:role/lambda-role'
+      Description: Enter IAM role with LambdaAccess
+    DeploymentStage:
+      Type: String
+      Default: dev
+      Description: Enter API Gateway stage for deployment
+    HubDomain:
+      Type: String
+      Default: hubapi.jina.ai
+      Description: Hub API Endpoint
+    JinaDBHostname:
+      Type: String
+    JinaDBUsername:
+      Type: String
+    JinaDBPassword:
+      Type: String
+    JinaDBCollection:
+      Type: String
+    JinaDBName:
+      Type: String
+    JinaDockerUsername:
+        Type: String
+    JinaDockerPassword:
+        Type: String
+  
+  Resources:
+    HubAPI:
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        ApiKeySourceType: HEADER
+        Description: Jina Hub API for bookkeeping
+        EndpointConfiguration:
+          Types:
+            - EDGE
+        Name: jina-hub-api
+    HubAPIList:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt HubAPI.RootResourceId
+        PathPart: 'list'
+        RestApiId:
+          Ref: HubAPI
+    HubAPIListMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: false
+        AuthorizationType: NONE
+        HttpMethod: GET
+        Integration:
+          ConnectionType: INTERNET
+          Credentials: !GetAtt HubAPIIAMRole.Arn
+          IntegrationHttpMethod: POST
+          PassthroughBehavior: WHEN_NO_MATCH
+          TimeoutInMillis: 29000
+          Type: AWS_PROXY
+          Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubListLambdaFn.Arn}/invocations'
+        OperationName: 'HubList'
+        ResourceId:
+          Ref: HubAPIList
+        RestApiId:
+          Ref: HubAPI
+    HubAPIPush:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt HubAPI.RootResourceId
+        PathPart: 'push'
+        RestApiId:
+          Ref: HubAPI
+    HubAPIPushMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: false
+        AuthorizationType: CUSTOM
+        AuthorizerId: !Ref HubAPIAuthorizer
+        HttpMethod: POST
+        Integration:
+          ConnectionType: INTERNET
+          Credentials: !GetAtt HubAPIIAMRole.Arn
+          IntegrationHttpMethod: POST
+          PassthroughBehavior: WHEN_NO_MATCH
+          TimeoutInMillis: 29000
+          Type: AWS_PROXY
+          Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubPushLambdaFn.Arn}/invocations'
+        OperationName: 'HubPush'
+        ResourceId:
+          Ref: HubAPIPush
+        RestApiId:
+          Ref: HubAPI
+    HubAPIDockerAuth:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt HubAPI.RootResourceId
+        PathPart: 'docker_auth'
+        RestApiId:
+          Ref: HubAPI
+    HubAPIDockerAuthMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: false
+        AuthorizationType: CUSTOM
+        AuthorizerId: !Ref HubAPIAuthorizer
+        HttpMethod: GET
+        Integration:
+          ConnectionType: INTERNET
+          Credentials: !GetAtt HubAPIIAMRole.Arn
+          IntegrationHttpMethod: POST
+          PassthroughBehavior: WHEN_NO_MATCH
+          TimeoutInMillis: 29000
+          Type: AWS_PROXY
+          Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DockerCredFetcherLambdaFn.Arn}/invocations'
+        OperationName: 'HubDockerAuth'
+        ResourceId:
+          Ref: HubAPIDockerAuth
+        RestApiId:
+          Ref: HubAPI
+    HubAPIModel:
+      Type: AWS::ApiGateway::Model
+      Properties:
+        ContentType: 'application/json'
+        RestApiId:
+          Ref: HubAPI
+        Schema: {}
+    HubAPIStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        DeploymentId:
+          Ref: HubAPIDeployment
+        Description: HubAPI Stage v0
+        RestApiId:
+          Ref: HubAPI
+        StageName:
+          Ref: DeploymentStage
+    HubAPIDeployment:
+      Type: AWS::ApiGateway::Deployment
+      DependsOn:
+      - HubAPIListMethod
+      - HubAPIPushMethod
+      - HubAPIDockerAuthMethod
+      Properties:
+        Description: Lambda API Deployment
+        RestApiId:
+          Ref: HubAPI
+    HubAPIPathMapping:
+      DependsOn:
+      - HubAPIDeployment
+      - HubAPIStage
+      Type: AWS::ApiGateway::BasePathMapping
+      Properties:
+        BasePath: ""
+        DomainName:
+          Ref: HubDomain
+        RestApiId:
+          Ref: HubAPI
+        Stage:
+          Ref: DeploymentStage
+    HubAPIAuthorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Name: HubAuthorizer
+        RestApiId: !Ref HubAPI
+        Type: TOKEN
+        IdentitySource: method.request.header.authorizationToken
+        AuthorizerResultTtlInSeconds: 0
+        AuthorizerUri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubAPIAuthorizeLambdaFn.Arn}/invocations
+        AuthorizerCredentials: !GetAtt HubAPIIAMRole.Arn
+    HubAPIIAMRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Sid: ''
+              Effect: 'Allow'
+              Principal:
+                Service:
+                  - 'apigateway.amazonaws.com'
+              Action:
+                - 'sts:AssumeRole'
+        Path: '/'
+        Policies:
+          - PolicyName: LambdaAccess
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt HubListLambdaFn.Arn
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt HubPushLambdaFn.Arn
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt HubAPIAuthorizeLambdaFn.Arn
+                - Effect: 'Allow'
+                  Action: 'lambda:*'
+                  Resource: !GetAtt DockerCredFetcherLambdaFn.Arn
+    HubListLambdaFn:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: HubListMongoAtlas
+        Description: Hub List Lambda function
+        Code:
+          S3Bucket:
+            Ref: DefS3Bucket
+          S3Key:
+            Ref: HubListLambdaFnS3Key
+        Handler: lambda_function.lambda_handler
+        Runtime: python3.8
+        Role:
+          Ref: DefLambdaRole
+        Environment:
+          Variables:
+            JINA_DB_HOSTNAME:
+              Ref: JinaDBHostname
+            JINA_DB_USERNAME:
+              Ref: JinaDBUsername
+            JINA_DB_PASSWORD:
+              Ref: JinaDBPassword
+            JINA_DB_COLLECTION:
+              Ref: JinaDBCollection
+            JINA_DB_NAME:
+              Ref: JinaDBName
+        Timeout: 10
+    HubPushLambdaFn:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: HubPushMongoAtlas
+        Description: Hub Push Lambda function
+        Code:
+          S3Bucket:
+            Ref: DefS3Bucket
+          S3Key:
+            Ref: HubPushLambdaFnS3Key
+        Handler: lambda_function.lambda_handler
+        Runtime: python3.8
+        Role:
+          Ref: DefLambdaRole
+        Environment:
+          Variables:
+            JINA_DB_HOSTNAME:
+              Ref: JinaDBHostname
+            JINA_DB_USERNAME:
+              Ref: JinaDBUsername
+            JINA_DB_PASSWORD:
+              Ref: JinaDBPassword
+            JINA_DB_COLLECTION:
+              Ref: JinaDBCollection
+            JINA_DB_NAME:
+              Ref: JinaDBName
+        Timeout: 10
+    HubAPIAuthorizeLambdaFn:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: HubAPIAuthorizer
+        Description: Hub API Authorize Lambda function
+        Code:
+          S3Bucket:
+            Ref: DefS3Bucket
+          S3Key:
+            Ref: HubAPIAuthorizeLambdaFnS3Key
+        Handler: lambda_function.lambda_handler
+        Runtime: python3.8
+        Role:
+          Ref: DefLambdaRole
+    DockerCredFetcherLambdaFn:
+      Type: AWS::Lambda::Function
+      Properties:
+        FunctionName: DockerCredFetcher
+        Description: Docker Cred fetcher Lambda function
+        Code:
+          S3Bucket:
+            Ref: DefS3Bucket
+          S3Key:
+            Ref: DockerCredFetcherLambdaFnS3Key
+        Handler: lambda_function.lambda_handler
+        Runtime: python3.8
+        Role:
+          Ref: DefLambdaRole
+        Environment:
+          Variables:
+            JINA_DOCKER_USERNAME:
+              Ref: JinaDockerUsername
+            JINA_DOCKER_PASSWORD:
+              Ref: JinaDockerPassword
