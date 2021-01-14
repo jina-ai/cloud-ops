@@ -65,9 +65,12 @@ class MongoDBHandler:
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    def find_many(self, query: Dict[str, Union[Dict, List]], limit: int = 0) -> None:
+    def find_many(self,
+                  query: Dict[str, Union[Dict, List]],
+                  projection: Dict[str, Union[Dict, List]],
+                  limit: int = 0) -> None:
         try:
-            return self.collection.find(filter=query, limit=limit)
+            return self.collection.find(filter=query, projection=projection, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
@@ -101,7 +104,7 @@ def is_db_envs_set():
 
 def _query_builder(params: Dict):
     logger = get_logger(context='query_builder')
-    logger.info(f'Got the following parans: {params}')
+    logger.info(f'Got the following params: {params}')
 
     if not params:
         return {}, 0
@@ -169,19 +172,20 @@ def lambda_handler(event, context):
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
 
-    _executor_query = _query_builder(params=event.get('queryStringParameters', {}))
+    projection = {'manifest_info': 1, '_id': 0}
+    _executor_query, limit = _query_builder(params=event.get('queryStringParameters', {}))
 
     hostname, username, password, database_name, collection_name = read_environment()
-    with MongoDBHandler(hostname=hostname, username=username, password=password,
-                        database_name=database_name, collection_name=collection_name) as db:
-        existing_docs = db.find_many(*_executor_query)
-        if existing_docs:
-            all_manifests = [doc['manifest_info'] for doc in existing_docs]
+    try:
+        with MongoDBHandler(hostname=hostname, username=username, password=password,
+                            database_name=database_name, collection_name=collection_name) as db:
+            cursor = db.find_many(query=_executor_query, projection=projection, limit=limit)
+            all_manifests = list(cursor)
             if all_manifests:
                 return _return_json_builder(body=json.dumps({"manifest": all_manifests}),
                                             status=200)
             return _return_json_builder(body="No docs found",
                                         status=400)
-
-    return _return_json_builder(body='Invalid filters passed',
-                                status=400)
+    except MongoDBException:
+        return _return_json_builder(body='Couldn\'t connect to the database',
+                                    status=502)
