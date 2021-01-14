@@ -1,4 +1,4 @@
-Name: Upload pod
+name: Upload pod
 on: [repository_dispatch]
 jobs:
   build:
