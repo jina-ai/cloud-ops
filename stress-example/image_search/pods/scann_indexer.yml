@@ -1,10 +1,9 @@
 !CompoundIndexer
 components:
-  - !AnnoyIndexer
+  - !ScannIndexer
     with:
+      distance_measure: 'squared_l2'
       #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
-      n_trees: 10
-      search_k: -1
       ref_indexer:
         !NumpyIndexer
         metas:
@@ -14,7 +13,7 @@ components:
           index_filename: 'vec.gz'
     metas:
       workspace: '/workspace/workspace'
-      name: annoyidx
+      name: scannidx
   - !BinaryPbIndexer
     with:
       index_filename: doc.gz
@@ -31,7 +30,7 @@ requests:
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: annoyidx
+          executor: scannidx
       - !KVSearchDriver
         with:
           executor: docidx
