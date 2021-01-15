@@ -69,6 +69,7 @@ if __name__ == '__main__':
                     \n | The directory {workspace} already exists. Please remove it before indexing again. | \
                     \n |                                   🤖🤖🤖                                        | \
                     \n +---------------------------------------------------------------------------------+')
+            sys.exit()
         index()
     elif sys.argv[1] == 'query':
         config()

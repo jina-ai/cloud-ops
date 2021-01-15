@@ -10,8 +10,10 @@ pods:
     parallel: $JINA_PARALLEL
     timeout_ready: 600000
   vec_idx:
-    uses: docker://annoy_indexer_image:test
-    uses_internal: pods/annoy_indexer.yml
+    #uses: docker://annoy_indexer_image:test
+    #uses_internal: pods/annoy_indexer.yml
+    uses: docker://faiss_indexer_image:test
+    uses_internal: pods/faiss_indexer.yml
     shards: $JINA_SHARDS
     separated_workspace: true
     polling: all
