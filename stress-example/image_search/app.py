@@ -1,6 +1,7 @@
 __copyright__ = "Copyright (c) 2020 Jina AI Limited. All rights reserved."
 __license__ = "Apache-2.0"
 
+import click
 import os
 import sys
 
@@ -34,14 +35,21 @@ def random_docs(start, end):
         yield doc
 
 
-def config():
-    parallel = 1 if sys.argv[1] == 'index' else 1
+def config(indexer_query_type):
+    parallel = 1
     shards = 2
 
-    os.environ.setdefault('JINA_PARALLEL', str(parallel))
-    os.environ.setdefault('JINA_SHARDS', str(shards))
+    os.environ['JINA_PARALLEL'] = str(parallel)
+    os.environ['JINA_SHARDS'] = str(shards)
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
+
+    if indexer_query_type == 'faiss':
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
+        os.environ['JINA_USES_INTERNAL'] = 'pods/faiss_indexer.yml'
+    elif indexer_query_type == 'annoy':
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
+        os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
 
 
 # for index
@@ -56,12 +64,12 @@ def query():
         search_flow.search(input_fn=random_docs(0, QUERY_NUM_DOCS), output_fn=validate_img, top_k=TOP_K)
 
 
-if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print('choose between "index" and "search" mode')
-        exit(1)
-    if sys.argv[1] == 'index':
-        config()
+@click.command()
+@click.option('--task', '-t')
+@click.option('--indexer-query-type', '-i')
+def main(task, indexer_query_type):
+    config(indexer_query_type)
+    if task == 'index':
         workspace = os.environ['JINA_WORKSPACE']
         if os.path.exists(workspace):
             print(f'\n +---------------------------------------------------------------------------------+ \
@@ -71,8 +79,12 @@ if __name__ == '__main__':
                     \n +---------------------------------------------------------------------------------+')
             sys.exit()
         index()
-    elif sys.argv[1] == 'query':
-        config()
+    elif task == 'query':
         query()
     else:
-        raise NotImplementedError(f'unsupported mode {sys.argv[1]}')
+        raise NotImplementedError(
+            f'unknown task: {task}. A valid task is either `index` or `query`.')
+
+
+if __name__ == '__main__':
+    main()
