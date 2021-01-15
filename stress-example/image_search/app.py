@@ -36,7 +36,7 @@ def random_docs(start, end):
 
 def config():
     parallel = 1 if sys.argv[1] == 'index' else 1
-    shards = 1
+    shards = 2
 
     os.environ.setdefault('JINA_PARALLEL', str(parallel))
     os.environ.setdefault('JINA_SHARDS', str(shards))

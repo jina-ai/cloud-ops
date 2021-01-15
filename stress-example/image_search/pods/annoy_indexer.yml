@@ -22,7 +22,7 @@ components:
       name: docidx
       workspace: '/workspace/workspace'
 metas:
-  name: indexer
+  name: vec_idx
   py_modules:
     - workspace/__init__.py
   workspace: '/workspace/workspace'
