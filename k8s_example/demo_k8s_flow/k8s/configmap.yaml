@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jina-flow-configmap
+  labels:
+    app: jina-flow
+data:
+  gateway-port-in: "55558"
+  gateway-port-out: "55555"
+  gateway-port-ctrl: "60000"
+  gateway-port-expose: "49000"
+  gateway-host-name: "jina-gateway-svc.default"
+  pod0-port-in: "55555"
+  pod0-port-out: "55556"
+  pod0-port-ctrl: "60001"
+  pod0-host-name: "jina-pod0-svc.default"
+  pod1-port-in: "55556"
+  pod1-port-out: "55558"
+  pod1-port-ctrl: "60002"
+  pod1-host-name: "jina-pod1-svc.default"

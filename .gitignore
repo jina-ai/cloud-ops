@@ -151,3 +151,6 @@ _package/
 # Zip/swp files created for Lambda deployment package
 *.zip
 *.swp
+
+# Pycharm cache
+*/.idea/
