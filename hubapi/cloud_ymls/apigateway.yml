@@ -10,19 +10,19 @@ Parameters:
     Description: Enter S3 Bucket where Lambda function code is uploaded
   HubListLambdaFnS3Key:
     Type: String
-    Default: hubapi_list/1/mongoatlas_reader.zip
+    Default: hubapi_list/1/hubapi_list.zip
     Description: Enter S3 Key where Hub List Lambda function code is uploaded
   HubPushLambdaFnS3Key:
     Type: String
-    Default: hubapi_push/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub List Lambda function code is uploaded
+    Default: hubapi_push/1/hubapi_push.zip
+    Description: Enter S3 Key where Hub Push Lambda function code is uploaded
   HubAPIAuthorizeLambdaFnS3Key:
     Type: String
-    Default: hubapi_authorize/1/mongoatlas_reader.zip
-    Description: Enter S3 Key where Hub List Lambda function code is uploaded
+    Default: hubapi_authorize/1/hubapi_authorize.zip
+    Description: Enter S3 Key where Hub Authorize Lambda function code is uploaded
   DockerCredFetcherLambdaFnS3Key:
     Type: String
-    Default: docker_auth/1/mongoatlas_reader.zip
+    Default: docker_auth/1/docker_auth.zip
     Description: Enter S3 Key where Docker auth Lambda function code is uploaded
   DefLambdaRole:
     Type: String
@@ -67,7 +67,7 @@ Resources:
     Type: AWS::ApiGateway::Resource
     Properties:
       ParentId: !GetAtt HubAPI.RootResourceId
-      PathPart: 'list'
+      PathPart: 'images'
       RestApiId:
         Ref: HubAPI
   HubAPIListMethod:

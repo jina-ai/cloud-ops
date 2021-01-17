@@ -156,6 +156,16 @@ def parse_summary(summary, logger):
     _hubpod_summary['jina_version'] = _build_summary['jina_version']
     _hubpod_summary['manifest_info'] = _build_summary['manifest_info']
 
+    # For sorting on semver, store `major`, `minor`, `patch` as integers
+    _version_major, _version_minor, _version_patch = _build_summary['version'].split('.')
+    _hubpod_summary['_version'] = {'major': int(_version_major),
+                                   'minor': int(_version_minor),
+                                   'patch': int(_version_patch)}
+    _jina_version_major, _jina_version_minor, _jina_version_patch = _build_summary['jina_version'].split('.')
+    _hubpod_summary['_jina_version'] = {'major': int(_jina_version_major),
+                                        'minor': int(_jina_version_minor),
+                                        'patch': int(_jina_version_patch)}
+
     # hubpod only has `name`, `version`, `jina_version`, `details`, `build_history`, `is_build_success`
     _metadata_summary = {}
     _metadata_summary['name'] = _build_summary['name']
