@@ -36,14 +36,14 @@ def read_environment():
 @click.option('--push-deployment-zip',
               help='Deployment package zip to be used with HubPush Lambda function')
 @click.option('--authorize-deployment-zip',
-              help='Deployment package zip to be used with HubPush Lambda function')
+              help='Deployment package zip to be used with HubAuthorizer Lambda function')
 @click.option('--docker-cred-deployment-zip',
               help='Deployment package zip to be used with DockerCredFetcher Lambda function')
 @click.option('--key-id',
               help='Enter folder to be created in S3 (will take PR# in GH Action)')
 @click.option('--stack-name',
-              default='jinahub-api-stack2',
-              help='Name of the CFN Stack (Defaults to jinahub-api-stack2)')
+              default='jinahub-api-stack',
+              help='Name of the CFN Stack (Defaults to jinahub-api-stack)')
 @click.option('--template',
               default='cloud_ymls/apigateway.yml',
               help='CFN Template to be used for deployment (Default - cloud_ymls/apigateway.yml)')
@@ -70,9 +70,11 @@ def trigger(list_deployment_zip, push_deployment_zip, authorize_deployment_zip, 
         logger.error('Invalid cfn yaml. Exiting!')
         sys.exit(1)
 
+    # TODO(Deepankar): this assumes that the lambda function exists already
     S3_DEFAULT_BUCKET = 'lambda-handlers-jina'
     s3 = S3(bucket=S3_DEFAULT_BUCKET)
 
+    # TODO(Deepankar): can be put in a loop for all lambda functions
     if list_deployment_zip is not None:
         zip_filename = os.path.basename(list_deployment_zip)
         s3_list_key = f'hubapi_list/{key_id}/{zip_filename}'
