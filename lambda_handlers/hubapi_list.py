@@ -54,10 +54,6 @@ class MongoDBHandler:
     @property
     def database(self):
         return self.client[self.database_name]
-    
-    @property
-    def client(self):
-        return self.client
 
     @property
     def collection(self):
