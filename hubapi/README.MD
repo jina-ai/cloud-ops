@@ -14,43 +14,33 @@ with the latest `Jina` version.
 * Returns only latest images for all executors (only one result per executor)
 * Returns docker pull command in addition to all info in manifest file.
 * Semver sort implementation with different fields for `major`, `minor` & `patch`
-* Optimized filter for searching with params:
-`kind` (indexer, encoder, segmenter etc),
-`type` (pod, app etc),
-`jina version`,
-`executor (manifest) version`,
-`keywords` (array search),
-`executor name` (simple regex search).
-  
+* Optimized filter for searching with following query string params:
+    * `kind`: `indexer`, `encoder`, `segmenter` etc. for exact match
+    * `type`: `pod`, `app` etc. for exact match
+    * `jina_version`: exact match
+    * `version`: executor (manifest) version for exact match
+    * `keywords`: array search
+    * `name`: executor name for simple regex search
+    
 The `Aggregation` pipeline has the following stages:
 
-Stage 1:
+### Stage 1:
 - Form `$match` from different query strings
 - This will be executed only if proper query strings are passed
-- Accepted query strings -
-  ```
-  | Query Param    | Supported Match     |
-  |:--------------:|:-------------------:|
-  | `name`         | simple regex search |
-  | `jina_version` | exact match         |
-  | `version`      | exact match         |
-  | `kind`         | exact match         |
-  | `type`         | exact match         |
-  | `keywords`     | array search        |
-  
+- Accepted query strings are as per the query parameters outlined in the section above.
 
-Stage 2:
+### Stage 2:
 - Sort by `name`, `jina_version` and `version`
 - `name`: `1` - this sorts alphabetically (set to -1 for reverse order)
-- `jina_version`: `-1` - Sorted according to semver. This should always be latest first.
-- `version`: `-1` - Sorted according to semver. This should also be latest first.
+- `jina_version`: `-1` - Sorted according to `semver`. This should always be latest first.
+- `version`: `-1` - Sorted according to `semver`. This should also be latest first.
 
-Stage 3:
-- Groupby `name` of the executor
+### Stage 3:
+- Group by `name` of the executor
 - Add `jina_version`, `version` and `manifest_info` to `images` list (this will be ordered)
 
-Stage 4:
-- Since groupby removes the sort on `name`, sort it again
+### Stage 4:
+- Since `groupby` removes the sort on `name`, sort it again
 ```
 sort_by_name_again_stage = {
     '$sort': {
@@ -59,16 +49,16 @@ sort_by_name_again_stage = {
 }
 ```
 
-Stage 5:
+### Stage 5:
 - Pagination: Fetch images only after a certain image name
 
-Stage 6:
+### Stage 6:
 - Fetch n results at a time
 
-Stage 7:
+### Stage 7:
  - 1st element of the `images` list would be the latest executor
 
-Stage 8:
+### Stage 8:
 - Finalize the arguments to be set
 
 
