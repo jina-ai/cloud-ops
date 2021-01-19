@@ -1,6 +1,13 @@
 !TransformerTorchEncoder
 with:
-  show_exc_info: true
-  pooling_strategy: auto
+  pooling_strategy: 'cls'
   pretrained_model_name_or_path: distilbert-base-cased
   max_length: 96
+requests:
+  on:
+    ControlRequest:
+      - !ControlReqDriver {}
+    [SearchRequest, TrainRequest, IndexRequest]:
+      - !EncodeDriver
+        with:
+          traversal_paths: ['c']

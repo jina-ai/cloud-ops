@@ -14,7 +14,7 @@ NUM_DOCS = 50
 NUM_CHUNKS = 5
 QUERY_NUM_DOCS = 1
 TOP_K = 3
-BATCH_SIZE = 4
+REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 
@@ -66,7 +66,7 @@ def validate_text(resp):
 # for index
 def index():
     with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=document_generator(0, NUM_DOCS, NUM_CHUNKS), batch_size=BATCH_SIZE)
+        index_flow.index(input_fn=document_generator(0, NUM_DOCS, NUM_CHUNKS), batch_size=REQUEST_SIZE)
 
 
 # for search
