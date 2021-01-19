@@ -5,13 +5,13 @@ components:
       index_filename: vec.gz
       metric: euclidean
     metas:
-      name: vecidx  # a customized name
+      name: vec_idx  # a customized name
       workspace: $JINA_WORKSPACE
   - !BinaryPbIndexer
     with:
       index_filename: chunk.gz
     metas:
-      name: chunkidx
+      name: chunk_idx
       workspace: $JINA_WORKSPACE
 metas:
   name: chunk_compound_indexer
@@ -21,18 +21,18 @@ requests:
     IndexRequest:
       - !VectorIndexDriver
         with:
-          executor: vecidx
+          executor: vec_idx
           traversal_paths: ['c']
       - !KVIndexDriver
         with:
-          executor: chunkidx
+          executor: chunk_idx
           traversal_paths: ['c']
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: vecidx
+          executor: vec_idx
           traversal_paths: ['c']
       - !KVSearchDriver
         with:
-          executor: chunkidx
+          executor: chunk_idx
           traversal_paths: ['cm']

@@ -29,20 +29,20 @@ def config(indexer_query_type):
     os.environ.setdefault('JINA_PORT', str(45678))
 
     if indexer_query_type == 'faiss':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://jinahub/pod.indexer.faissindexer:0.0.14-0.9.17')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://annoy_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/faiss_indexer.yml'
     elif indexer_query_type == 'annoy':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://jinahub/pod.indexer.annoyindexer:0.0.14-0.9.17')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
     elif indexer_query_type == 'scann':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 
-def document_generator(start, num_docs, num_chunks):
+def document_generator(num_docs, num_chunks):
     import numpy as np
     chunk_id = num_docs
-    for idx in range(start, num_docs):
+    for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
             doc.text = f'I have {idx} cats'
@@ -66,13 +66,13 @@ def validate_text(resp):
 # for index
 def index():
     with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=document_generator(0, NUM_DOCS, NUM_CHUNKS), batch_size=REQUEST_SIZE)
+        index_flow.index(input_fn=document_generator(NUM_DOCS, NUM_CHUNKS), request_size=REQUEST_SIZE)
 
 
 # for search
 def query():
     with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.search(input_fn=document_generator(0, QUERY_NUM_DOCS, NUM_CHUNKS), output_fn=validate_text,
+        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS, NUM_CHUNKS), output_fn=validate_text,
             top_k=TOP_K)
 
 
