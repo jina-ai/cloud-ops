@@ -15,8 +15,6 @@ NUM_CHUNKS = 5
 QUERY_NUM_DOCS = 1
 TOP_K = 3
 REQUEST_SIZE = 4
-IMG_HEIGHT = 224
-IMG_WIDTH = 224
 
 
 def config(indexer_query_type):
