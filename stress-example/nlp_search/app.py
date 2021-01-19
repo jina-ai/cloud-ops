@@ -21,7 +21,7 @@ IMG_WIDTH = 224
 
 def config(indexer_query_type):
     parallel = 1
-    shards = 2
+    shards = 1
 
     os.environ['JINA_PARALLEL'] = str(parallel)
     os.environ['JINA_SHARDS'] = str(shards)
@@ -29,13 +29,13 @@ def config(indexer_query_type):
     os.environ.setdefault('JINA_PORT', str(45678))
 
     if indexer_query_type == 'faiss':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://jinahub/pod.indexer.faissindexer:0.0.14-0.9.17')
         os.environ['JINA_USES_INTERNAL'] = 'pods/faiss_indexer.yml'
     elif indexer_query_type == 'annoy':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://jinahub/pod.indexer.annoyindexer:0.0.14-0.9.17')
         os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
     elif indexer_query_type == 'scann':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://scann_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 
