@@ -23,7 +23,7 @@ def create_random_img_array(img_height, img_width):
 
 def validate_img(resp):
     for d in resp.search.docs:
-        print(f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}')
+        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
 def random_docs(start, end):
@@ -44,6 +44,8 @@ def config(indexer_query_type):
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
 
+    # make sure you've built the images yourself
+    # ex.: go to jina hub faiss directory, `docker build -f Dockerfile -t faiss_indexer_image:test .`
     if indexer_query_type == 'faiss':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/faiss_indexer.yml'
@@ -51,7 +53,7 @@ def config(indexer_query_type):
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
     elif indexer_query_type == 'scann':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://scann_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 

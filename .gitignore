@@ -153,4 +153,5 @@ _package/
 *.swp
 
 # Pycharm cache
-*/.idea/
+**/.idea/
+
