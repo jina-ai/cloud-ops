@@ -49,7 +49,7 @@ def document_generator(num_docs, num_chunks):
             doc.text = f'I have {idx} cats'
             doc.embedding = np.random.random([9])
             for chunk_idx in range(num_chunks):
-                with Document() as chunk: #todo, the number of chunks to be random (0,10), also random text size, maybe other words, look for library
+                with Document() as chunk:
                     chunk.id = chunk_id
                     chunk.tags['id'] = chunk_idx
                     chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'
