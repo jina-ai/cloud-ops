@@ -21,12 +21,13 @@ IMG_WIDTH = 224
 
 def config(indexer_query_type):
     parallel = 1
-    shards = 1
+    shards = 2
 
     os.environ['JINA_PARALLEL'] = str(parallel)
     os.environ['JINA_SHARDS'] = str(shards)
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
+    os.environ['JINA_ENCODER_DRIVER_BATCH_SIZE'] = str(16)
 
     if indexer_query_type == 'faiss':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
@@ -48,7 +49,7 @@ def document_generator(num_docs, num_chunks):
             doc.text = f'I have {idx} cats'
             doc.embedding = np.random.random([9])
             for chunk_idx in range(num_chunks):
-                with Document() as chunk:
+                with Document() as chunk: #todo, the number of chunks to be random (0,10), also random text size, maybe other words, look for library
                     chunk.id = chunk_id
                     chunk.tags['id'] = chunk_idx
                     chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'

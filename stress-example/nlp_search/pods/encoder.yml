@@ -11,3 +11,4 @@ requests:
       - !EncodeDriver
         with:
           traversal_paths: ['c']
+          batch_size: $JINA_ENCODER_DRIVER_BATCH_SIZE
