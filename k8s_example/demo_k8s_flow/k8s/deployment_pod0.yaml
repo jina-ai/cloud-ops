@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jina-pod0-deployment
+  labels:
+    app: jina-pod0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jina-pod0
+  template:
+    metadata:
+      labels:
+        app: jina-pod0
+    spec:
+      containers:
+      - name: pod0
+        image: pod0
+        imagePullPolicy: Never
+        env:
+          - name: PORT_IN
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod0-port-in
+          - name: PORT_OUT
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod0-port-out
+          - name: PORT_CTRL
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod0-port-ctrl
+          - name: HOST_IN
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: gateway-host-name
+          - name: HOST_OUT
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod1-host-name
+        command: ["jina", "pod"]
+        args: ["--uses", "_logforward", "--port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)", "--port-ctrl", "$(PORT_CTRL)", "--host-out", "$(HOST_OUT)", "--socket-in", "PULL_BIND", "--socket-out", "PUSH_CONNECT"]
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - jina ping 0.0.0.0 $PORT_CTRL
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - jina ping 0.0.0.0 $PORT_CTRL
+          initialDelaySeconds: 30
+          periodSeconds: 30

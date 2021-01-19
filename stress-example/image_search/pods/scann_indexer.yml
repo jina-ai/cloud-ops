@@ -1,0 +1,39 @@
+!CompoundIndexer
+components:
+  - !ScannIndexer
+    with:
+      distance_measure: 'squared_l2'
+      #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
+      ref_indexer:
+        !NumpyIndexer
+        metas:
+          workspace: '/workspace/workspace'
+          name: vec_idx
+        with:
+          index_filename: 'vec.gz'
+    metas:
+      workspace: '/workspace/workspace'
+      name: scannidx
+  - !BinaryPbIndexer
+    with:
+      index_filename: doc.gz
+    metas:
+      name: docidx
+      workspace: '/workspace/workspace'
+metas:
+  name: vec_idx
+  py_modules:
+    - workspace/__init__.py
+  workspace: '/workspace/workspace'
+requests:
+  on:
+    SearchRequest:
+      - !VectorSearchDriver
+        with:
+          executor: scannidx
+      - !KVSearchDriver
+        with:
+          executor: docidx
+          traversal_paths: ['m']
+    ControlRequest:
+      - !ControlReqDriver {}

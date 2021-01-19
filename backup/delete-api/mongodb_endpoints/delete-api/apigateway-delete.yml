@@ -1,0 +1,99 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: API Gateway and Lambda Functions for Hub
+
+Parameters:
+  HubDeleteLambdaFnS3Key:
+    Type: String
+    Default: hubapi_delete/1/mongoatlas_reader.zip
+    Description: Enter S3 Key where Hub API Delete Lambda function code is uploaded
+
+Resources:
+  HubAPIDelete:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt HubAPI.RootResourceId
+      PathPart: 'hubapi_delete'
+      RestApiId:
+        Ref: HubAPI
+  HubAPIDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: false
+      AuthorizationType: CUSTOM
+      AuthorizerId: !Ref HubAPIAuthorizer
+      HttpMethod: POST
+      Integration:
+        ConnectionType: INTERNET
+        Credentials: !GetAtt HubAPIIAMRole.Arn
+        IntegrationHttpMethod: POST
+        PassthroughBehavior: WHEN_NO_MATCH
+        TimeoutInMillis: 29000
+        Type: AWS_PROXY
+        Uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HubDeleteLambdaFn.Arn}/invocations'
+      OperationName: 'HubDelete'
+      ResourceId:
+        Ref: HubAPIDelete
+      RestApiId:
+        Ref: HubAPI
+  HubAPIIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: ''
+            Effect: 'Allow'
+            Principal:
+              Service:
+                - 'apigateway.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: '/'
+      Policies:
+        - PolicyName: LambdaAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt HubListLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt HubPushLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt HubAPIAuthorizeLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt HubDeleteLambdaFn.Arn
+              - Effect: 'Allow'
+                Action: 'lambda:*'
+                Resource: !GetAtt DockerCredFetcherLambdaFn.Arn
+  HubDeleteLambdaFn:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: HubDeleteMongoAtlas
+      Description: Hub Delete Lambda function
+      Code:
+        S3Bucket:
+          Ref: DefS3Bucket
+        S3Key:
+          Ref: HubDeleteLambdaFnS3Key
+      Handler: lambda_function.lambda_handler
+      Runtime: python3.8
+      Role:
+        Ref: DefLambdaRole
+      Environment:
+        Variables:
+          JINA_DB_HOSTNAME:
+            Ref: JinaDBHostname
+          JINA_DB_USERNAME:
+            Ref: JinaDBUsername
+          JINA_DB_PASSWORD:
+            Ref: JinaDBPassword
+          JINA_DB_COLLECTION:
+            Ref: JinaDBCollection
+          JINA_DB_NAME:
+            Ref: JinaDBName

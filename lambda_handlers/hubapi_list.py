@@ -59,20 +59,26 @@ class MongoDBHandler:
     def collection(self):
         return self.database[self.collection_name]
 
-    def find(self, query: Dict[str, Union[Dict, List]]) -> None:
+    def find_one(self, query: Dict[str, Union[Dict, List]]) -> None:
         try:
             return self.collection.find_one(query)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    def find_many(self,
-                  query: Dict[str, Union[Dict, List]],
-                  projection: Dict[str, Union[Dict, List]],
-                  limit: int = 0) -> None:
+    def find(self,
+             query: Dict[str, Union[Dict, List]],
+             projection: Dict[str, Union[Dict, List]],
+             limit: int = 0) -> None:
         try:
             return self.collection.find(filter=query, projection=projection, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
+
+    def aggregate(self, pipeline: List[Dict]):
+        try:
+            return self.collection.aggregate(pipeline)
+        except pymongo.errors.PyMongoError as exp:
+            self.logger.error(f'got an error while executing an aggregation pipeline in the collection {exp}')
 
     def insert(self, document: str) -> Optional[str]:
         try:
@@ -98,50 +104,180 @@ class MongoDBHandler:
 
 def is_db_envs_set():
     """ Checks if any of the db env variables are not set """
-    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_DB_COLLECTION']
+    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_HUBPOD_COLLECTION', 'JINA_METADATA_COLLECTION']
     return all(len(os.environ.get(k, '')) > 0 for k in keys)
 
 
-def _query_builder(params: Dict):
-    logger = get_logger(context='query_builder')
-    logger.info(f'Got the following params: {params}')
+def configure_matches_stage(**kwargs):
+    matches_stage = {
+        '$match': {
+        }
+    }
 
-    if not params:
-        return {}, 0
+    for field in ['jina_version', 'version']:
+        if field in kwargs:
+            matches_stage['$match'][field] = kwargs[field]
 
-    sub_query = []
-    if 'kind' in params:
-        kind_query = {'manifest_info.kind': params['kind']}
-        sub_query.append(kind_query)
-    if 'type' in params:
-        type_query = {'manifest_info.type': params['type']}
-        sub_query.append(type_query)
-    if 'name' in params:
-        name_query = {'manifest_info.name': params['name']}
-        sub_query.append(name_query)
-    if 'keywords' in params:
-        keywords_list = params['keywords'].split(',')
-        keyword_query = {'manifest_info.keywords': {'$in': keywords_list}}
-        sub_query.append(keyword_query)
+    for field in ['kind', 'type']:
+        if field in kwargs:
+            matches_stage['$match'][f'manifest_info.{field}'] = kwargs[field]
 
-    # A limit() value of 0 (i.e. limit(0)) is equivalent to setting no limit.
-    # Retrieves all matched documents.
-    limit = params.get('limit', 0)
+    if isinstance(kwargs.get('keywords', None), list):
+        matches_stage['$match'][f'manifest_info.keywords'] = {'$in': kwargs['keywords']}
 
-    if sub_query:
-        _executor_query = {'$and': sub_query}
-        logger.info(f'Query to search in mongodb: {_executor_query}')
-        return _executor_query, limit
-    else:
-        # select ALL
-        # force the cursor to iterate over each object
-        return {}, limit
+    if isinstance(kwargs.get('name', None), str):
+        matches_stage['$match']['name'] = {'$regex': f'.*{kwargs["name"]}.*'}
+
+    if matches_stage['$match']:
+        return matches_stage
+
+
+def configure_aggregation(**kwargs):
+
+    aggregation_pipeline = []
+
+    """
+    Stage 1:
+    - Form `$match` from different query strings
+    - This will be executed only if proper query strings are passed
+    - Accepted query strings -
+      - `name` -> simple regex search
+      - `jina_version` -> exact match
+      - `version` -> exact match
+      - `kind` -> exact match
+      - `type` -> exact match
+      - `keywords` -> array search
+    """
+    matches_stage = configure_matches_stage(**kwargs)
+    if matches_stage:
+        aggregation_pipeline.append(matches_stage)
+
+    """
+    Stage 2:
+    - Sort by `name`, `jina_version` & `version`
+    - `name`: 1 - this sorts alphabetically (set to -1 for reverse order)
+    - `jina_version`: -1 - Sorted according to semver. This should always be latest first.
+    - `version`: -1 - Sorted according to semver. This should also be latest first.
+    """
+    init_sort_stage = {
+        '$sort': {
+            'name': 1,
+            "_jina_version.major": -1,
+            "_jina_version.minor": -1,
+            "_jina_version.patch": -1,
+            "_version.major": -1,
+            "_version.minor": -1,
+            "_version.patch": -1
+        }
+    }
+    aggregation_pipeline.append(init_sort_stage)
+
+    """
+    Stage 3:
+    - Groupby `name` of the executor
+    - Add `jina_version`, `version` & `manifest_info` to `images` list (this will be ordered)
+    """
+    group_by_name_stage = {
+        '$group': {
+            '_id': {
+                'name': '$name'
+            },
+            'images': {
+                '$push': {
+                    'jina_version': '$jina_version',
+                    'version': '$version',
+                    'manifest_info': '$manifest_info'
+                }
+            }
+        }
+    }
+    aggregation_pipeline.append(group_by_name_stage)
+
+    """
+    Stage 4:
+    - Since groupby removes the sort on `name`, sort it again
+    """
+    sort_by_name_again_stage = {
+        '$sort': {
+            '_id.name': 1
+        }
+    }
+    aggregation_pipeline.append(sort_by_name_again_stage)
+
+    """
+    Stage 5:
+    - Pagination: Fetch images only after a certain image name
+    """
+    if 'after' in kwargs:
+        pagination_filter_stage = {
+            '$match': {
+                '_id.name': {
+                    '$gt': kwargs['after']
+                }
+            }
+        }
+        aggregation_pipeline.append(pagination_filter_stage)
+
+    """
+    Stage 6:
+    - Fetch n results at a time
+    """
+    if 'n_per_page' in kwargs:
+        limit_stage = {
+            '$limit': int(kwargs['n_per_page'])
+        }
+        aggregation_pipeline.append(limit_stage)
+
+    """
+    Stage 7:
+     - 1st element of the `images` list would be the latest executor
+    """
+    project_executors_stage = {
+        '$project': {
+            'image_to_be_sent': {
+                '$arrayElemAt': ['$images', 0]
+            }
+        }
+    }
+    aggregation_pipeline.append(project_executors_stage)
+
+    """
+    # Stage 8:
+    # - Finalize the set of arguments to be set
+    """
+    project_final_args_stage = {
+        '$project': {
+            'docker-name': '$_id.name',
+            'version': '$image_to_be_sent.version',
+            'jina-version': '$image_to_be_sent.jina_version',
+            'docker-command': {
+                '$concat': ['docker pull ', '$_id.name', ':', '$image_to_be_sent.version', '-', '$image_to_be_sent.jina_version']
+            },
+            'name': '$image_to_be_sent.manifest_info.name',
+            'description': '$image_to_be_sent.manifest_info.description',
+            'type': '$image_to_be_sent.manifest_info.type',
+            'kind': '$image_to_be_sent.manifest_info.kind',
+            'keywords': '$image_to_be_sent.manifest_info.keywords',
+            'platform': '$image_to_be_sent.manifest_info.platform',
+            'license': '$image_to_be_sent.manifest_info.license',
+            'url': '$image_to_be_sent.manifest_info.url',
+            'documentation': '$image_to_be_sent.manifest_info.documentation',
+            'author': '$image_to_be_sent.manifest_info.author',
+            'avatar': '$image_to_be_sent.manifest_info.avatar',
+            '_id': 0
+        }
+    }
+    aggregation_pipeline.append(project_final_args_stage)
+    return aggregation_pipeline
 
 
 def _return_json_builder(body, status):
     return {
         "isBase64Encoded": False,
         "headers": {
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
             "Content-Type": "application/json"
         },
         "statusCode": int(status),
@@ -158,8 +294,20 @@ def read_environment():
     username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
     password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
     database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
-    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
-    return hostname, username, password, database_name, collection_name
+    hubpod_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_HUBPOD_COLLECTION'))
+    metadata_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_METADATA_COLLECTION'))
+    return hostname, username, password, database_name, hubpod_collection, metadata_collection
+
+
+def handle_query_strings(event):
+    query_string_params = event['queryStringParameters']
+    if event['multiValueQueryStringParameters'] and 'keywords' in event['multiValueQueryStringParameters']:
+        query_string_params['keywords'] = event["multiValueQueryStringParameters"]['keywords']
+
+    if query_string_params:
+        query_string_params = {k.replace('-', '_'): v for k, v in query_string_params.items()}
+
+    return query_string_params if query_string_params else {}
 
 
 def lambda_handler(event, context):
@@ -168,21 +316,19 @@ def lambda_handler(event, context):
     logger = get_logger(context='hub_list')
 
     if not is_db_envs_set():
-        logger.warning('MongoDB environment vars are not set! book-keeping skipped.')
+        logger.error('MongoDB environment vars are not set! book-keeping skipped.')
         return _return_json_builder(body='Invalid Lambda environment',
                                     status=500)
+    query_string_params = handle_query_strings(event)
+    hostname, username, password, database_name, hubpod_collection, metadata_collection = read_environment()
 
-    projection = {'manifest_info': 1, '_id': 0}
-    _executor_query, limit = _query_builder(params=event.get('queryStringParameters', {}))
-
-    hostname, username, password, database_name, collection_name = read_environment()
     try:
         with MongoDBHandler(hostname=hostname, username=username, password=password,
-                            database_name=database_name, collection_name=collection_name) as db:
-            cursor = db.find_many(query=_executor_query, projection=projection, limit=limit)
-            all_manifests = list(cursor)
-            if all_manifests:
-                return _return_json_builder(body=json.dumps({"manifest": all_manifests}),
+                            database_name=database_name, collection_name=hubpod_collection) as db:
+            cursor = db.aggregate(pipeline=configure_aggregation(**query_string_params))
+            current_images = list(cursor)
+            if current_images:
+                return _return_json_builder(body=json.dumps(current_images),
                                             status=200)
             return _return_json_builder(body="No docs found",
                                         status=400)

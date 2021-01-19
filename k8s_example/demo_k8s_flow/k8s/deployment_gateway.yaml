@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jina-gateway-deployment
+  labels:
+    app: jina-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jina-gateway
+  template:
+    metadata:
+      labels:
+        app: jina-gateway
+    spec:
+      containers:
+      - name: gateway
+        image: gateway
+        imagePullPolicy: Never
+        env:
+          - name: PORT_IN
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: gateway-port-in
+          - name: PORT_OUT
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: gateway-port-out
+          - name: PORT_CTRL
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: gateway-port-ctrl
+          - name: PORT_EXPOSE
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: gateway-port-expose
+          - name: HOST_IN
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod1-host-name
+          - name: HOST_OUT
+            valueFrom:
+              configMapKeyRef:
+                name: jina-flow-configmap
+                key: pod0-host-name
+        command: ["jina", "gateway"]
+        args: ["--port-in", "$(PORT_IN)", "--port-out", "$(PORT_OUT)", "--port-ctrl", "$(PORT_CTRL)", "--host-out", "$(HOST_OUT)", "--port-expose", "$(PORT_EXPOSE)", "--socket-in", "PULL_BIND"]
+        livenessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - echo "success"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - echo "success"
+          initialDelaySeconds: 30
+          periodSeconds: 30

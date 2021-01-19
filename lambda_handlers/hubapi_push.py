@@ -59,15 +59,18 @@ class MongoDBHandler:
     def collection(self):
         return self.database[self.collection_name]
 
-    def find(self, query: Dict[str, Union[Dict, List]]) -> None:
+    def find_one(self, query: Dict[str, Union[Dict, List]]) -> None:
         try:
             return self.collection.find_one(query)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
-    def find_many(self, query: Dict[str, Union[Dict, List]]) -> None:
+    def find(self,
+             query: Dict[str, Union[Dict, List]],
+             projection: Dict[str, Union[Dict, List]],
+             limit: int = 0) -> None:
         try:
-            return self.collection.find(query, limit=10)
+            return self.collection.find(filter=query, projection=projection, limit=limit)
         except pymongo.errors.PyMongoError as exp:
             self.logger.error(f'got an error while finding a document in the db {exp}')
 
@@ -95,7 +98,7 @@ class MongoDBHandler:
 
 def is_db_envs_set():
     """ Checks if any of the db env variables are not set """
-    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_DB_COLLECTION']
+    keys = ['JINA_DB_HOSTNAME', 'JINA_DB_USERNAME', 'JINA_DB_PASSWORD', 'JINA_DB_NAME', 'JINA_HUBPOD_COLLECTION', 'JINA_METADATA_COLLECTION']
     return all(len(os.environ.get(k, '')) > 0 for k in keys)
 
 
@@ -130,8 +133,49 @@ def read_environment():
     username = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_USERNAME'))
     password = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_PASSWORD'))
     database_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_NAME'))
-    collection_name = str_to_ascii_to_base64_to_str(os.environ.get('JINA_DB_COLLECTION'))
-    return hostname, username, password, database_name, collection_name
+    hubpod_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_HUBPOD_COLLECTION'))
+    metadata_collection = str_to_ascii_to_base64_to_str(os.environ.get('JINA_METADATA_COLLECTION'))
+    return hostname, username, password, database_name, hubpod_collection, metadata_collection
+
+
+def parse_summary(summary, logger):
+    _build_summary = _handle_dot_in_keys(document=summary)
+    _build_query = {
+        'name': _build_summary['name'],
+        'version': _build_summary['version'],
+        'jina_version': _build_summary['jina_version']
+    }
+
+    if not isinstance(_build_summary['build_history'], list):
+        _build_summary['build_history'] = [_build_summary['build_history']]
+
+    # hubpod only has `name`, `version`, `jina_version` & `manifest`
+    _hubpod_summary = {}
+    _hubpod_summary['name'] = _build_summary['name']
+    _hubpod_summary['version'] = _build_summary['version']
+    _hubpod_summary['jina_version'] = _build_summary['jina_version']
+    _hubpod_summary['manifest_info'] = _build_summary['manifest_info']
+
+    # For sorting on semver, store `major`, `minor`, `patch` as integers
+    _version_major, _version_minor, _version_patch = _build_summary['version'].split('.')
+    _hubpod_summary['_version'] = {'major': int(_version_major),
+                                   'minor': int(_version_minor),
+                                   'patch': int(_version_patch)}
+    _jina_version_major, _jina_version_minor, _jina_version_patch = _build_summary['jina_version'].split('.')
+    _hubpod_summary['_jina_version'] = {'major': int(_jina_version_major),
+                                        'minor': int(_jina_version_minor),
+                                        'patch': int(_jina_version_patch)}
+
+    # hubpod only has `name`, `version`, `jina_version`, `details`, `build_history`, `is_build_success`
+    _metadata_summary = {}
+    _metadata_summary['name'] = _build_summary['name']
+    _metadata_summary['version'] = _build_summary['version']
+    _metadata_summary['jina_version'] = _build_summary['jina_version']
+    _metadata_summary['details'] = _build_summary['details']
+    _metadata_summary['is_build_success'] = _build_summary['is_build_success']
+    _metadata_summary['build_history'] = _build_summary['build_history']
+
+    return _build_query, _hubpod_summary, _metadata_summary
 
 
 def lambda_handler(event, context):
@@ -146,43 +190,60 @@ def lambda_handler(event, context):
 
     try:
         if 'body' not in event or event['body'] is None:
+            logger.warning('body missing in event! bookkeeping skipped.')
             return _return_json_builder(body='Invalid body passed in event',
                                         status=500)
 
         summary = json.loads(event['body'])
-        build_summary = _handle_dot_in_keys(document=summary)
-        _build_query = {
-            'name': build_summary['name'],
-            'version': build_summary['version']
-        }
+        build_query, hubpod_document, metadata_document = parse_summary(summary=summary, logger=logger)
 
-        # this ensure _current_build_history is always a list
-        if not isinstance(build_summary['build_history'], list):
-            build_summary['build_history'] = list(build_summary['build_history'])
+        hostname, username, password, database_name, hubpod_collection, metadata_collection = read_environment()
 
-        _current_build_history = build_summary['build_history']
+        updated = False
+        replaced = False
 
-        hostname, username, password, database_name, collection_name = read_environment()
+
+        logger.info(f'pushing hubpod data!')
         with MongoDBHandler(hostname=hostname, username=username, password=password,
-                            database_name=database_name, collection_name=collection_name) as db:
-            existing_doc = db.find(query=_build_query)
+                            database_name=database_name, collection_name=hubpod_collection) as db:
+            existing_doc = db.find_one(query=build_query)
             if existing_doc:
-                build_summary['build_history'] = existing_doc['build_history'] + _current_build_history
-                _modified_count = db.replace(document=build_summary,
-                                             query=_build_query)
-                logger.info(f'Updated the build + push summary in db. {_modified_count} documents modified')
-                return _return_json_builder(body='Updated existing doc in MongoDB',
-                                            status=200)
+                _modified_count = db.replace(document=hubpod_document, query=build_query)
+                logger.info(f'Updated the hubpod document in db. {_modified_count} documents modified')
+                updated = True
             else:
-                _inserted_id = db.insert(document=build_summary)
-                logger.info(f'Inserted the build + push summary in db with id {_inserted_id}')
-                return _return_json_builder(body='Created new doc in MongoDB',
-                                            status=200)
+                _inserted_id = db.insert(document=hubpod_document)
+                logger.info(f'Inserted the hubpod in db with id {_inserted_id}')
+                replaced = True
+
+
+        logger.info(f'pushing metadata!')
+        current_build_history = metadata_document['build_history']
+        with MongoDBHandler(hostname=hostname, username=username, password=password,
+                            database_name=database_name, collection_name=metadata_collection) as db:
+            existing_doc = db.find_one(query=build_query)
+            if existing_doc:
+                metadata_document['build_history'] = existing_doc['build_history'] + current_build_history
+                _modified_count = db.replace(document=metadata_document, query=build_query)
+                logger.info(f'Updated the metadata document in db. {_modified_count} documents modified')
+                updated = True
+            else:
+                _inserted_id = db.insert(document=metadata_document)
+                logger.info(f'Inserted the metadata document in db with id {_inserted_id}')
+                replaced = True
+
+        if updated:
+            return _return_json_builder(body='Updated existing doc in MongoDB',
+                                        status=200)
+        if replaced:
+            return _return_json_builder(body='Created new doc in MongoDB',
+                                        status=200)
+
     except KeyError as exp:
-        logger.error(f'Got following keyerror during `hub_push` {exp}')
+        logger.error(f'Got following keyerror during `hub_push` {exp!r}')
         return _return_json_builder(body='KeyError. Please check Lambda logs',
                                     status=500)
     except Exception as exp:
-        logger.error(f'Got following exception for `hub_push` {exp}')
+        logger.error(f'Got following exception for `hub_push` {exp!r}')
         return _return_json_builder(body='Mongodb Push Failed. Please check Lambda logs',
                                     status=500)
