@@ -1,0 +1,27 @@
+!Flow
+version: '1'
+pods:
+  - name: segmenter
+    show_exc_info: true
+    uses: pods/segment.yml
+    read_only: true
+  - name: encoder
+    show_exc_info: true
+    uses: pods/encoder.yml
+    shards: $JINA_SHARDS_ENCODER
+    timeout_ready: 600000
+    read_only: true
+  - name: chunk_idx
+    show_exc_info: true
+    uses: pods/chunk.yml
+    shards: $JINA_SHARDS_INDEXERS
+    separated_workspace: true
+  - name: doc_idx
+    show_exc_info: true
+    uses: pods/doc.yml
+    shards: $JINA_SHARDS_INDEXERS
+    separated_workspace: true
+    needs: gateway
+  - name: join_all
+    uses: _merge
+    needs: [doc_idx, chunk_idx]

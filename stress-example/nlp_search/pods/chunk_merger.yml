@@ -1,0 +1,21 @@
+!BaseExecutor
+with: {}
+metas:
+  name: merge_matches
+requests:
+  on:
+    [SearchRequest, TrainRequest, IndexRequest, DeleteRequest, UpdateRequest]:
+      - !ReduceAllDriver
+        with:
+          traversal_paths: ['m']
+      - !SortQL
+        with:
+          field: 'score__value'
+          traversal_paths: ['m']
+      - !SliceQL
+        with:
+          start: 0
+          end: 50
+          traversal_paths: ['m']
+    ControlRequest:
+      - !ControlReqDriver {}

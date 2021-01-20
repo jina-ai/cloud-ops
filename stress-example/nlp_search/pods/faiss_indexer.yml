@@ -17,24 +17,34 @@ components:
       name: faissidx
   - !BinaryPbIndexer
     with:
-      index_filename: doc.gz
+      index_filename: chunk.gz
     metas:
-      name: docidx
+      name: chunk_idx
       workspace: '/docker_workspace/workspace'
 metas:
-  name: vec_idx
+  name: chunk_compound_indexer
   py_modules:
     - docker_workspace/__init__.py
   workspace: '/docker_workspace/workspace'
 requests:
   on:
+    IndexRequest:
+      - !VectorIndexDriver
+        with:
+          executor: faissidx
+          traversal_paths: ['c']
+      - !KVIndexDriver
+        with:
+          executor: chunk_idx
+          traversal_paths: ['c']
     SearchRequest:
       - !VectorSearchDriver
         with:
           executor: faissidx
+          traversal_paths: ['c']
       - !KVSearchDriver
         with:
-          executor: docidx
-          traversal_paths: ['m']
+          executor: chunk_idx
+          traversal_paths: ['cm']
     ControlRequest:
       - !ControlReqDriver {}

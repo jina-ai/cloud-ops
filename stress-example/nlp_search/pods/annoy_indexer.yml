@@ -1,10 +1,10 @@
 !CompoundIndexer
 components:
-  - !FaissIndexer
+  - !AnnoyIndexer
     with:
-      index_key: 'Flat' #TODO: Find suitable index
-      train_filepath: 'None'
       #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
+      n_trees: 10
+      search_k: -1
       ref_indexer:
         !NumpyIndexer
         metas:
@@ -14,27 +14,36 @@ components:
           index_filename: 'vec.gz'
     metas:
       workspace: '/docker_workspace/workspace'
-      name: faissidx
+      name: annoyidx
   - !BinaryPbIndexer
     with:
-      index_filename: doc.gz
+      index_filename: chunk.gz
     metas:
-      name: docidx
+      name: chunk_idx
       workspace: '/docker_workspace/workspace'
 metas:
-  name: vec_idx
+  name: chunk_compound_indexer
   py_modules:
     - docker_workspace/__init__.py
   workspace: '/docker_workspace/workspace'
 requests:
   on:
+    IndexRequest:
+      - !VectorIndexDriver
+        with:
+          executor: annoyidx
+          traversal_paths: ['c']
+      - !KVIndexDriver
+        with:
+          executor: chunk_idx
+          traversal_paths: ['c']
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: faissidx
+          executor: annoyidx
+          traversal_paths: ['c']
       - !KVSearchDriver
         with:
-          executor: docidx
-          traversal_paths: ['m']
-    ControlRequest:
-      - !ControlReqDriver {}
+          executor: chunk_idx
+          traversal_paths: ['cm']
+
