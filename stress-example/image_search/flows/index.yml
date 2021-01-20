@@ -4,7 +4,7 @@ with:
 pods:
   encoder:
     uses: pods/encoder.yml
-    parallel: $JINA_SHARDS_ENCODER
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
     read_only: true
   vec_idx:

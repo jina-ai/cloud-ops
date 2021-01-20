@@ -8,7 +8,7 @@ pods:
   - name: encoder
     show_exc_info: true
     uses: pods/encoder.yml
-    parallel: $JINA_SHARDS_ENCODER
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
     read_only: true
   - name: chunk_idx

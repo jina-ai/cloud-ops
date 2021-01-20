@@ -8,11 +8,11 @@ pods:
   - name: chunk_seg
     show_exc_info: true
     uses: pods/segment.yml
-    parallel: $JINA_SHARDS_ENCODER
+    shards: $JINA_SHARDS_ENCODER
   - name: encoder
     show_exc_info: true
     uses: pods/encoder.yml
-    parallel: $JINA_SHARDS_ENCODER
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
   - name: chunk_idx
     show_exc_info: true
