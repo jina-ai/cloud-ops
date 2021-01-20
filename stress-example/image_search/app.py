@@ -40,7 +40,7 @@ def config(indexer_query_type):
     shards_indexers = 2
 
     os.environ['JINA_SHARDS_ENCODER'] = str(shards_encoder)
-    os.environ['JINA_SHARDS_INDEXER'] = str(shards_indexers)
+    os.environ['JINA_SHARDS_INDEXERS'] = str(shards_indexers)
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
 

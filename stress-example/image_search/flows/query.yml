@@ -12,7 +12,7 @@ pods:
   vec_idx:
     uses: $JINA_USES
     uses_internal: $JINA_USES_INTERNAL
-    shards: $JINA_SHARDS_INDEXER
+    shards: $JINA_SHARDS_INDEXERS
     separated_workspace: true
     polling: all
     uses_after: _merge_matches
@@ -20,7 +20,7 @@ pods:
     volumes: './workspace:/docker_workspace/workspace'
   doc_idx:
     uses: pods/doc.yml
-    shards: $JINA_SHARDS_INDEXER
+    shards: $JINA_SHARDS_INDEXERS
     separated_workspace: true
     polling: all
     uses_after: pods/merge_and_topk.yml
