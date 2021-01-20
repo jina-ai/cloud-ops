@@ -1,0 +1,88 @@
+#Type: AWS::EC2::VPC
+#Properties:
+#  CidrBlock: String
+#  EnableDnsHostnames: Boolean
+#  EnableDnsSupport: Boolean
+#  InstanceTenancy: String
+#  Tags:
+#    - Tag
+daemonVPC:
+  Type: AWS::EC2::VPC
+  Properties:
+    CidrBlock: 10.0.0.0/16
+    EnableDnsSupport: 'false'
+    EnableDnsHostnames: 'false'
+    InstanceTenancy: dedicated
+    Tags:
+     - Key: num-pods
+       Value: 4
+
+
+#Type: AWS::EC2::SecurityGroup
+#Properties:
+#  GroupDescription: String
+#  GroupName: String
+#  SecurityGroupEgress:
+#    - Egress
+#  SecurityGroupIngress:
+#    - Ingress
+#  Tags:
+#    - Tag
+#  VpcId: String
+InstanceSecurityGroup:
+  Type: AWS::EC2::SecurityGroup
+  Properties:
+      GroupDescription: Allow http to client host
+      VpcId:
+         Ref: daemonVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+
+
+Encoder-Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: "ami-07efac79022b86107"
+    SecurityGroupIds:
+    - !GetAtt daemonVPC.DefaultSecurityGroup
+    SubnetId: !Ref subnet1
+
+Crafter-Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: "ami-07efac79022b86107"
+    SecurityGroupIds:
+    - !GetAtt daemonVPC.DefaultSecurityGroup
+    SubnetId: !Ref subnet1
+
+Indexer-Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: "ami-07efac79022b86107"
+    SecurityGroupIds:
+    - !GetAtt daemonVPC.DefaultSecurityGroup
+    SubnetId: !Ref subnet1
+
+Ranker-Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: "ami-07efac79022b86107"
+    SecurityGroupIds:
+    - !GetAtt daemonVPC.DefaultSecurityGroup
+    SubnetId: !Ref subnet1
+
+Flow-Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: "ami-07efac79022b86107"
+    SecurityGroupIds:
+    - !GetAtt daemonVPC.DefaultSecurityGroup
+    SubnetId: !Ref subnet1
