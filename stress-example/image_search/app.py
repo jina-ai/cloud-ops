@@ -23,6 +23,10 @@ def create_random_img_array(img_height, img_width):
 
 def validate_img(resp):
     for d in resp.search.docs:
+        for m in d.matches:
+            assert 'filename' in m.tags.keys()
+            # to test that the data from the KV store is retrieved
+            assert 'image ' in m.tags['filename']
         assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
@@ -32,6 +36,7 @@ def random_docs(start, end):
             doc.id = idx
             doc.content = create_random_img_array(IMG_HEIGHT, IMG_WIDTH)
             doc.mime_type = 'image/png'
+            doc.tags['filename'] = f'image {idx}'
         yield doc
 
 
@@ -58,16 +63,22 @@ def config(indexer_query_type):
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 
+docs_index = random_docs(0, NUM_DOCS)
+docs_query = random_docs(0, QUERY_NUM_DOCS)
+
+
 # for index
 def index():
-    with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=random_docs(0, NUM_DOCS), batch_size=BATCH_SIZE)
+    flow_index = Flow.load_config('flows/index.yml')
+    with flow_index:
+        flow_index.index(input_fn=docs_index, batch_size=BATCH_SIZE)
 
 
 # for search; annoy, faiss, scann with refIndexer
 def query():
-    with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.search(input_fn=random_docs(0, QUERY_NUM_DOCS), output_fn=validate_img, top_k=TOP_K)
+    flow_query = Flow.load_config('flows/query.yml')
+    with flow_query:
+        flow_query.search(input_fn=docs_query, on_done=validate_img, top_k=TOP_K)
 
 
 @click.command()

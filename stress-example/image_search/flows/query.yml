@@ -19,8 +19,8 @@ pods:
     uses_after: _merge_matches
     timeout_ready: 100000 # larger timeout as in query time will read all the data
     volumes: './workspace:/workspace/workspace'
-  - name: doc_idx
-    uses: pods/doc.yml
+  - name: redis_idx
+    uses: pods/redis.yml
     shards: $JINA_SHARDS_INDEXERS
     separated_workspace: true
     polling: all
