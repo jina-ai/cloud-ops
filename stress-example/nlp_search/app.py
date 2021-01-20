@@ -11,7 +11,6 @@ from jina.flow import Flow
 from jina import Document
 
 NUM_DOCS = 50
-NUM_CHUNKS = 5
 QUERY_NUM_DOCS = 1
 TOP_K = 3
 REQUEST_SIZE = 4
@@ -38,14 +37,16 @@ def config(indexer_query_type):
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 
-def document_generator(num_docs, num_chunks):
+def document_generator(num_docs):
     import numpy as np
+    import random
     chunk_id = num_docs
     for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
             doc.text = f'I have {idx} cats'
             doc.embedding = np.random.random([9])
+            num_chunks = random.randint(1, 10)
             for chunk_idx in range(num_chunks):
                 with Document() as chunk:
                     chunk.id = chunk_id
@@ -65,13 +66,13 @@ def validate_text(resp):
 # for index
 def index():
     with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=document_generator(NUM_DOCS, NUM_CHUNKS), request_size=REQUEST_SIZE)
+        index_flow.index(input_fn=document_generator(NUM_DOCS), request_size=REQUEST_SIZE)
 
 
 # for search
 def query():
     with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS, NUM_CHUNKS), output_fn=validate_text,
+        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS), output_fn=validate_text,
             top_k=TOP_K)
 
 

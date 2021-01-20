@@ -51,7 +51,7 @@ def config(indexer_query_type):
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
     elif indexer_query_type == 'scann':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://scann_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 
