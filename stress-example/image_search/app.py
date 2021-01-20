@@ -23,7 +23,7 @@ def create_random_img_array(img_height, img_width):
 
 def validate_img(resp):
     for d in resp.search.docs:
-        print(f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}')
+        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
 def random_docs(start, end):
