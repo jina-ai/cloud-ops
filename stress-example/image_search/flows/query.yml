@@ -1,15 +1,16 @@
 !Flow
+version: '1'
 with:
   read_only: true  # better add this in the query time
   rest_api: false
   port_expose: $JINA_PORT
   show_exc_info: true
 pods:
-  encoder:
+  - name: encoder
     uses: pods/encoder.yml
     parallel: $JINA_PARALLEL
     timeout_ready: 600000
-  vec_idx:
+  - name: vec_idx
     uses: $JINA_USES
     uses_internal: $JINA_USES_INTERNAL
     shards: $JINA_SHARDS
@@ -18,7 +19,7 @@ pods:
     uses_after: _merge_matches
     timeout_ready: 100000 # larger timeout as in query time will read all the data
     volumes: './workspace:/workspace/workspace'
-  doc_idx:
+  - name: doc_idx
     uses: pods/doc.yml
     shards: $JINA_SHARDS
     separated_workspace: true
