@@ -8,12 +8,12 @@ with:
 pods:
   - name: encoder
     uses: pods/encoder.yml
-    parallel: $JINA_PARALLEL
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
   - name: vec_idx
     uses: $JINA_USES
     uses_internal: $JINA_USES_INTERNAL
-    shards: $JINA_SHARDS
+    shards: $JINA_SHARDS_INDEXERS
     separated_workspace: true
     polling: all
     uses_after: _merge_matches
@@ -21,7 +21,7 @@ pods:
     volumes: './workspace:/workspace/workspace'
   - name: doc_idx
     uses: pods/doc.yml
-    shards: $JINA_SHARDS
+    shards: $JINA_SHARDS_INDEXERS
     separated_workspace: true
     polling: all
     uses_after: pods/merge_and_topk.yml
