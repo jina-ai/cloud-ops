@@ -60,14 +60,6 @@ def query():
 def main(task, indexer_query_type):
     config(task, indexer_query_type)
     if task == 'index':
-        workspace = os.environ['JINA_WORKSPACE']
-        if os.path.exists(workspace):
-            print(f'\n +---------------------------------------------------------------------------------+ \
-                    \n |                                   🤖🤖🤖                                        | \
-                    \n | The directory {workspace} already exists. Please remove it before indexing again. | \
-                    \n |                                   🤖🤖🤖                                        | \
-                    \n +---------------------------------------------------------------------------------+')
-            sys.exit()
         index()
     elif task == 'query':
         query()
