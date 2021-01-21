@@ -4,7 +4,7 @@ Description: Template to run stress-test for Jina on AWS
 Parameters:
   EC2ImageIdParam:
     Type: String
-    Default: ami-07efac79022b86107
+    Default: ami-00831fc7c1e3ddc60
     Description: Enter Image ID. Default is for Ubuntu 20.04
   EC2InstanceTypeParam:
     Type: String
@@ -16,8 +16,8 @@ Parameters:
     Description: Enter EBS volume size (type gp2). Default is 20GB.
   AvailabilityZoneParam:
     Type: String
-    Default: us-east-2a
-    Description: Enter Availability Zone for EC2. Default is us-east-2a
+    Default: us-west-1a
+    Description: Enter Availability Zone for EC2. Default is us-west-1a
 Resources:
   daemonVPC:
     Type: AWS::EC2::VPC
@@ -34,7 +34,7 @@ Resources:
       Type: AWS::EC2::Subnet
       Properties:
         VpcId: !Ref daemonVPC
-        CidrBlock: 10.1.10.0/24
+        CidrBlock: 10.0.1.0/24
         AvailabilityZone:
           Ref: AvailabilityZoneParam
 
@@ -42,7 +42,7 @@ Resources:
       Type: AWS::EC2::Subnet
       Properties:
         VpcId: !Ref daemonVPC
-        CidrBlock: 10.1.20.0/24
+        CidrBlock: 10.0.0.0/24
         AvailabilityZone:
           Ref: AvailabilityZoneParam
 
@@ -50,7 +50,7 @@ Resources:
       Type: AWS::EC2::Subnet
       Properties:
         VpcId: !Ref daemonVPC
-        CidrBlock: 10.1.30.0/24
+        CidrBlock: 10.0.2.0/24
         AvailabilityZone:
           Ref: AvailabilityZoneParam
 
@@ -58,7 +58,7 @@ Resources:
       Type: AWS::EC2::Subnet
       Properties:
         VpcId: !Ref daemonVPC
-        CidrBlock: 10.1.40.0/24
+        CidrBlock: 10.0.3.0/24
         AvailabilityZone:
           Ref: AvailabilityZoneParam
 
@@ -66,7 +66,7 @@ Resources:
       Type: AWS::EC2::Subnet
       Properties:
         VpcId: !Ref daemonVPC
-        CidrBlock: 10.1.50.0/24
+        CidrBlock: 10.0.4.0/24
         AvailabilityZone:
           Ref: AvailabilityZoneParam
 
@@ -87,58 +87,115 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
 
-  Encoder-Instance:
+  encoderInstance:
     Type: AWS::EC2::Instance
     Properties:
       ImageId:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-      SecurityGroups: [ InstanceSecurityGroup ]
-      SubnetId: !Ref encoderSubnet
-
-  Crafter-Instance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId:
-        Ref: EC2ImageIdParam
-      InstanceType:
-        Ref: EC2InstanceTypeParam
-      SecurityGroups: [ InstanceSecurityGroup ]
-      SubnetId: !Ref crafterSubnet
-
-  Indexer-Instance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId:
-        Ref: EC2ImageIdParam
-      InstanceType:
-        Ref: EC2InstanceTypeParam
-      SecurityGroups: [InstanceSecurityGroup]
-      SubnetId: !Ref indexerSubnet
-
-  Ranker-Instance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId:
-        Ref: EC2ImageIdParam
-      InstanceType:
-        Ref: EC2InstanceTypeParam
-      SecurityGroups: [InstanceSecurityGroup]
-      SubnetId: !Ref rankerSubnet
-
-  Flow-Instance:
-    Type: AWS::EC2::Instance
-    Properties:
-      ImageId:
-        Ref: EC2ImageIdParam
-      InstanceType:
-        Ref: EC2InstanceTypeParam
+#      SecurityGroups: [ InstanceSecurityGroup ]
       SecurityGroupIds:
-      - !GetAtt daemonVPC.DefaultSecurityGroup
-      SubnetId: !Ref flowSubnet
+        - Fn::GetAtt:
+            - InstanceSecurityGroup
+            - GroupId
+#      SubnetId: !Ref encoderSubnet
+#      NetworkInterfaces:
+#        - SubnetId:
+#            Ref: 'encoderSubnet'
+#          AssociatePublicIpAddress: 'true'
+#          DeviceIndex: '0'
+#          GroupSet:
+#            - Ref: 'InstanceSecurityGroup'
+
+  crafterInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+#      SecurityGroups: [ InstanceSecurityGroup ]
+      SecurityGroupIds:
+        - Fn::GetAtt:
+            - InstanceSecurityGroup
+            - GroupId
+#      SubnetId: !Ref crafterSubnet
+#      NetworkInterfaces:
+#        - SubnetId:
+#            Ref: 'crafterSubnet'
+#          AssociatePublicIpAddress: 'true'
+#          DeviceIndex: '0'
+#          GroupSet:
+#            - Ref: 'InstanceSecurityGroup'
+
+  indexerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+#      SecurityGroups: [ InstanceSecurityGroup ]
+      SecurityGroupIds:
+        - Fn::GetAtt:
+            - InstanceSecurityGroup
+            - GroupId
+#      SubnetId: !Ref indexerSubnet
+#      NetworkInterfaces:
+#        - SubnetId:
+#            Ref: 'indexerSubnet'
+#          AssociatePublicIpAddress: 'true'
+#          DeviceIndex: '0'
+#          GroupSet:
+#            - Ref: "InstanceSecurityGroup"
+
+  rankerInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+#      SecurityGroups: [ InstanceSecurityGroup ]
+      SecurityGroupIds:
+        - Fn::GetAtt:
+            - InstanceSecurityGroup
+            - GroupId
+#      SubnetId: !Ref rankerSubnet
+#      NetworkInterfaces:
+#        - SubnetId:
+#            Ref: "rankerSubnet"
+#          AssociatePublicIpAddress: 'true'
+#          DeviceIndex: '0'
+#          GroupSet:
+#            - Ref: "InstanceSecurityGroup"
+
+
+  flowInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+#      SecurityGroups: [ InstanceSecurityGroup ]
+      SecurityGroupIds:
+        - Fn::GetAtt:
+            - InstanceSecurityGroup
+            - GroupId
+#      SubnetId: !Ref flowSubnet
+#      NetworkInterfaces:
+#        - SubnetId:
+#            Ref: "flowSubnet"
+#          AssociatePublicIpAddress: 'true'
+#          DeviceIndex: '0'
+#          GroupSet:
+#            - Ref: 'InstanceSecurityGroup'
+#      SecurityGroupIds:
+#      - !GetAtt daemonVPC.DefaultSecurityGroup
 
   FlowEIP:
     Type: AWS::EC2::EIP
     Properties:
-      InstanceId: !Ref Flow-Instance
+      InstanceId: !Ref flowInstance
