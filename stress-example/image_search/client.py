@@ -1,9 +1,11 @@
+import multiprocessing as mp
 import time
 from datetime import datetime
 
 import click
 from jina import Client, Document
 from jina.parsers import set_client_cli_parser
+from websocket import warning
 
 DEFAULT_NUM_DOCS = 500
 QUERY_NUM_DOCS = 1
@@ -29,13 +31,24 @@ def validate_img(resp):
 
 
 def random_docs(start, end):
-    for idx in range(start, end+start):
+    for idx in range(start, end + start):
         with Document() as doc:
             doc.id = idx
             doc.content = create_random_img_array(IMG_HEIGHT, IMG_WIDTH)
             doc.mime_type = 'image/png'
             doc.tags['filename'] = f'image {idx}'
         yield doc
+
+
+def wrapper(client, docs, id, function, time_end):
+    print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
+    while True:
+        client.check_input(docs)
+        function(client, docs)
+        if time.time() >= time_end:
+            print(f'Process {id}: end reached')
+            # close Process
+            return
 
 
 def index(client, docs):
@@ -51,7 +64,9 @@ def query(client, docs):
 @click.option('--port', '-p')
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
-def main(task, port, load, nr):
+@click.option('--concurrency', '-c', default=1)
+def main(task, port, load, nr, concurrency):
+    print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
             f'unknown task: {task}. A valid task is either `index` or `query`.')
@@ -67,18 +82,28 @@ def main(task, port, load, nr):
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
-    new_ids = 0
-    while True:
-        docs = random_docs(new_ids, nr)
-        new_ids = nr + new_ids + 1
+    # needs to be a list otherwise it gets exhausted
+    docs = list(random_docs(0, nr))
+    # FIXME(cristianmtr): remote clients?
+    processes = [
+        mp.Process(
+            target=wrapper,
+            args=(grpc_client, docs, id, function, time_end),
+            name=f'{str(function)}-{id}'
+        )
+        for id in range(concurrency)
+    ]
+    for p in processes:
+        p.start()
 
-        # we want to do it at least once
-        print(f'Running function {function.__name__} with {nr} docs...')
-        function(grpc_client, docs)
+    wait_secs = time_end - time.time()
+    if wait_secs > 0:
+        time.sleep(wait_secs)
 
-        if time.time() >= time_end:
-            print(f'Time reached')
-            return
+    for p in processes:
+        if p.is_alive():
+            print(f'Process {p.name} is still alive. Will wait...')
+            p.join()
 
 
 if __name__ == '__main__':
