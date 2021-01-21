@@ -74,6 +74,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
         GroupDescription: Allow http to client host
+        GroupName: daemon-sg
         VpcId:
            Ref: daemonVPC
         SecurityGroupIngress:
@@ -94,19 +95,22 @@ Resources:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-#      SecurityGroups: [ InstanceSecurityGroup ]
-      SecurityGroupIds:
-        - Fn::GetAtt:
-            - InstanceSecurityGroup
-            - GroupId
+#      SecurityGroupIds:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroups:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroupIds:
+#        - Fn::GetAtt:
+#            - InstanceSecurityGroup
+#            - GroupId
 #      SubnetId: !Ref encoderSubnet
-#      NetworkInterfaces:
-#        - SubnetId:
-#            Ref: 'encoderSubnet'
-#          AssociatePublicIpAddress: 'true'
-#          DeviceIndex: '0'
-#          GroupSet:
-#            - Ref: 'InstanceSecurityGroup'
+      NetworkInterfaces:
+        - SubnetId:
+            Ref: 'encoderSubnet'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'InstanceSecurityGroup'
 
   crafterInstance:
     Type: AWS::EC2::Instance
@@ -115,19 +119,22 @@ Resources:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-#      SecurityGroups: [ InstanceSecurityGroup ]
-      SecurityGroupIds:
-        - Fn::GetAtt:
-            - InstanceSecurityGroup
-            - GroupId
+#      SecurityGroupIds:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroups:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroupIds:
+#        - Fn::GetAtt:
+#            - InstanceSecurityGroup
+#            - GroupId
 #      SubnetId: !Ref crafterSubnet
-#      NetworkInterfaces:
-#        - SubnetId:
-#            Ref: 'crafterSubnet'
-#          AssociatePublicIpAddress: 'true'
-#          DeviceIndex: '0'
-#          GroupSet:
-#            - Ref: 'InstanceSecurityGroup'
+      NetworkInterfaces:
+        - SubnetId:
+            Ref: 'crafterSubnet'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'InstanceSecurityGroup'
 
   indexerInstance:
     Type: AWS::EC2::Instance
@@ -136,19 +143,22 @@ Resources:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-#      SecurityGroups: [ InstanceSecurityGroup ]
-      SecurityGroupIds:
-        - Fn::GetAtt:
-            - InstanceSecurityGroup
-            - GroupId
+#      SecurityGroupIds:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroups:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroupIds:
+#        - Fn::GetAtt:
+#            - InstanceSecurityGroup
+#            - GroupId
 #      SubnetId: !Ref indexerSubnet
-#      NetworkInterfaces:
-#        - SubnetId:
-#            Ref: 'indexerSubnet'
-#          AssociatePublicIpAddress: 'true'
-#          DeviceIndex: '0'
-#          GroupSet:
-#            - Ref: "InstanceSecurityGroup"
+      NetworkInterfaces:
+        - SubnetId:
+            Ref: 'indexerSubnet'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'InstanceSecurityGroup'
 
   rankerInstance:
     Type: AWS::EC2::Instance
@@ -157,20 +167,22 @@ Resources:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-#      SecurityGroups: [ InstanceSecurityGroup ]
-      SecurityGroupIds:
-        - Fn::GetAtt:
-            - InstanceSecurityGroup
-            - GroupId
+#      SecurityGroupIds:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroups:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroupIds:
+#        - Fn::GetAtt:
+#            - InstanceSecurityGroup
+#            - GroupId
 #      SubnetId: !Ref rankerSubnet
-#      NetworkInterfaces:
-#        - SubnetId:
-#            Ref: "rankerSubnet"
-#          AssociatePublicIpAddress: 'true'
-#          DeviceIndex: '0'
-#          GroupSet:
-#            - Ref: "InstanceSecurityGroup"
-
+      NetworkInterfaces:
+        - SubnetId:
+            Ref: 'rankerSubnet'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'InstanceSecurityGroup'
 
   flowInstance:
     Type: AWS::EC2::Instance
@@ -179,23 +191,33 @@ Resources:
         Ref: EC2ImageIdParam
       InstanceType:
         Ref: EC2InstanceTypeParam
-#      SecurityGroups: [ InstanceSecurityGroup ]
-      SecurityGroupIds:
-        - Fn::GetAtt:
-            - InstanceSecurityGroup
-            - GroupId
-#      SubnetId: !Ref flowSubnet
-#      NetworkInterfaces:
-#        - SubnetId:
-#            Ref: "flowSubnet"
-#          AssociatePublicIpAddress: 'true'
-#          DeviceIndex: '0'
-#          GroupSet:
-#            - Ref: 'InstanceSecurityGroup'
 #      SecurityGroupIds:
-#      - !GetAtt daemonVPC.DefaultSecurityGroup
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroups:
+#        - !Ref InstanceSecurityGroup
+#      SecurityGroupIds:
+#        - Fn::GetAtt:
+#            - InstanceSecurityGroup
+#            - GroupId
+#      SubnetId: !Ref flowSubnet   #eg. usage SubnetId: subnet-abc01234
+      NetworkInterfaces:
+        - SubnetId:
+            Ref: 'flowSubnet'
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'InstanceSecurityGroup'
+#      SecurityGroupIds:
+#      - !GetAtt daemonVPC.DefaultSecurityGroup #eg. usage
 
   FlowEIP:
     Type: AWS::EC2::EIP
     Properties:
       InstanceId: !Ref flowInstance
+
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref flowInstance
+      EIP: FlowEIP
+
