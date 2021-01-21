@@ -1,13 +1,17 @@
+import time
+from datetime import datetime
+
 import click
 from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
-NUM_DOCS = 500
+DEFAULT_NUM_DOCS = 500
 QUERY_NUM_DOCS = 1
 TOP_K = 3
 BATCH_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
+HOST = '0.0.0.0'
 
 
 def create_random_img_array(img_height, img_width):
@@ -25,7 +29,7 @@ def validate_img(resp):
 
 
 def random_docs(start, end):
-    for idx in range(start, end):
+    for idx in range(start, end+start):
         with Document() as doc:
             doc.id = idx
             doc.content = create_random_img_array(IMG_HEIGHT, IMG_WIDTH)
@@ -34,39 +38,47 @@ def random_docs(start, end):
         yield doc
 
 
-docs_index = random_docs(0, NUM_DOCS)
-docs_query = random_docs(0, QUERY_NUM_DOCS)
+def index(client, docs):
+    client.index(docs)
 
 
-def index(port):
-    # TODO get hostname and port programatically
-    host = '0.0.0.0'
-    args = set_client_cli_parser().parse_args(
-        ['--host', host, '--port-expose', str(port)])
-    grpc_client = Client(args)
-    grpc_client.index(docs_index)
-
-
-def query(port):
-    # TODO get hostname and port programatically
-    host = '0.0.0.0'
-    args = set_client_cli_parser().parse_args(
-        ['--host', host, '--port-expose', str(port)])
-    grpc_client = Client(args)
-    grpc_client.search(input_fn=docs_query, on_done=validate_img, top_k=TOP_K)
+def query(client, docs):
+    client.search(input_fn=docs, on_done=validate_img, top_k=TOP_K)
 
 
 @click.command()
 @click.option('--task', '-t')
 @click.option('--port', '-p')
-def main(task, port):
-    if task == 'index':
-        index(port)
-    elif task == 'query':
-        query(port)
-    else:
+@click.option('--load', '-l', default=60)  # time (seconds)
+@click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
+def main(task, port, load, nr):
+    if task not in ['index', 'query']:
         raise NotImplementedError(
             f'unknown task: {task}. A valid task is either `index` or `query`.')
+
+    function = index
+    if task == 'query':
+        function = query
+
+    args = set_client_cli_parser().parse_args(
+        ['--host', HOST, '--port-expose', str(port)])
+    grpc_client = Client(args)
+
+    time_end = time.time() + load
+    print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
+
+    new_ids = 0
+    while True:
+        docs = random_docs(new_ids, nr)
+        new_ids = nr + new_ids + 1
+
+        # we want to do it at least once
+        print(f'Running function {function.__name__} with {nr} docs...')
+        function(grpc_client, docs)
+
+        if time.time() >= time_end:
+            print(f'Time reached')
+            return
 
 
 if __name__ == '__main__':
