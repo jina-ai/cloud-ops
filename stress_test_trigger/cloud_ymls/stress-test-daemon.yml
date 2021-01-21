@@ -1,88 +1,144 @@
-#Type: AWS::EC2::VPC
-#Properties:
-#  CidrBlock: String
-#  EnableDnsHostnames: Boolean
-#  EnableDnsSupport: Boolean
-#  InstanceTenancy: String
-#  Tags:
-#    - Tag
-daemonVPC:
-  Type: AWS::EC2::VPC
-  Properties:
-    CidrBlock: 10.0.0.0/16
-    EnableDnsSupport: 'false'
-    EnableDnsHostnames: 'false'
-    InstanceTenancy: dedicated
-    Tags:
-     - Key: num-pods
-       Value: 4
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to run stress-test for Jina on AWS
+Parameters:
+  EC2ImageIdParam:
+    Type: String
+    Default: ami-07efac79022b86107
+    Description: Enter Image ID. Default is for Ubuntu 20.04
+  EC2InstanceTypeParam:
+    Type: String
+    Default: t2.micro
+    Description: Enter instance type. Default is t2.micro.
+  VolumeSizeParam:
+    Type: Number
+    Default: 20
+    Description: Enter EBS volume size (type gp2). Default is 20GB.
+  AvailabilityZoneParam:
+    Type: String
+    Default: us-east-2a
+    Description: Enter Availability Zone for EC2. Default is us-east-2a
+Resources:
+  daemonVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: 'false'
+      EnableDnsHostnames: 'false'
+      InstanceTenancy: dedicated
+      Tags:
+       - Key: num-pods
+         Value: 4
 
+  crafterSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref daemonVPC
+        CidrBlock: 10.1.10.0/24
+        AvailabilityZone:
+          Ref: AvailabilityZoneParam
 
-#Type: AWS::EC2::SecurityGroup
-#Properties:
-#  GroupDescription: String
-#  GroupName: String
-#  SecurityGroupEgress:
-#    - Egress
-#  SecurityGroupIngress:
-#    - Ingress
-#  Tags:
-#    - Tag
-#  VpcId: String
-InstanceSecurityGroup:
-  Type: AWS::EC2::SecurityGroup
-  Properties:
-      GroupDescription: Allow http to client host
-      VpcId:
-         Ref: daemonVPC
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 80
-        ToPort: 80
-        CidrIp: 0.0.0.0/0
+  encoderSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref daemonVPC
+        CidrBlock: 10.1.20.0/24
+        AvailabilityZone:
+          Ref: AvailabilityZoneParam
 
+  indexerSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref daemonVPC
+        CidrBlock: 10.1.30.0/24
+        AvailabilityZone:
+          Ref: AvailabilityZoneParam
 
-Encoder-Instance:
-  Type: AWS::EC2::Instance
-  Properties:
-    ImageId: "ami-07efac79022b86107"
-    SecurityGroupIds:
-    - !GetAtt daemonVPC.DefaultSecurityGroup
-    SubnetId: !Ref subnet1
+  rankerSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref daemonVPC
+        CidrBlock: 10.1.40.0/24
+        AvailabilityZone:
+          Ref: AvailabilityZoneParam
 
-Crafter-Instance:
-  Type: AWS::EC2::Instance
-  Properties:
-    ImageId: "ami-07efac79022b86107"
-    SecurityGroupIds:
-    - !GetAtt daemonVPC.DefaultSecurityGroup
-    SubnetId: !Ref subnet1
+  flowSubnet:
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId: !Ref daemonVPC
+        CidrBlock: 10.1.50.0/24
+        AvailabilityZone:
+          Ref: AvailabilityZoneParam
 
-Indexer-Instance:
-  Type: AWS::EC2::Instance
-  Properties:
-    ImageId: "ami-07efac79022b86107"
-    SecurityGroupIds:
-    - !GetAtt daemonVPC.DefaultSecurityGroup
-    SubnetId: !Ref subnet1
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+        GroupDescription: Allow http to client host
+        VpcId:
+           Ref: daemonVPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
 
-Ranker-Instance:
-  Type: AWS::EC2::Instance
-  Properties:
-    ImageId: "ami-07efac79022b86107"
-    SecurityGroupIds:
-    - !GetAtt daemonVPC.DefaultSecurityGroup
-    SubnetId: !Ref subnet1
+  Encoder-Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      SecurityGroups: [ InstanceSecurityGroup ]
+      SubnetId: !Ref encoderSubnet
 
-Flow-Instance:
-  Type: AWS::EC2::Instance
-  Properties:
-    ImageId: "ami-07efac79022b86107"
-    SecurityGroupIds:
-    - !GetAtt daemonVPC.DefaultSecurityGroup
-    SubnetId: !Ref subnet1
+  Crafter-Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      SecurityGroups: [ InstanceSecurityGroup ]
+      SubnetId: !Ref crafterSubnet
+
+  Indexer-Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      SecurityGroups: [InstanceSecurityGroup]
+      SubnetId: !Ref indexerSubnet
+
+  Ranker-Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      SecurityGroups: [InstanceSecurityGroup]
+      SubnetId: !Ref rankerSubnet
+
+  Flow-Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId:
+        Ref: EC2ImageIdParam
+      InstanceType:
+        Ref: EC2InstanceTypeParam
+      SecurityGroupIds:
+      - !GetAtt daemonVPC.DefaultSecurityGroup
+      SubnetId: !Ref flowSubnet
+
+  FlowEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref Flow-Instance
