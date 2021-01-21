@@ -2,6 +2,8 @@
 version: '1'
 with:
   show_exc_info: true
+  rest_api: false
+  port_expose: $JINA_PORT
 pods:
   - name: encoder
     uses: pods/encoder.yml
@@ -11,12 +13,10 @@ pods:
   - name: vec_idx
     uses: pods/vec.yml
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     timeout_ready: 100000 # larger timeout as in query time will read all the data
   - name: redis_idx
     uses: pods/redis.yml
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     timeout_ready: 100000 # larger timeout as in query time will read all the data
     needs: [gateway]
   - name: join_all

@@ -10,7 +10,6 @@ components:
         metas:
           workspace: '/workspace/workspace'
           name: vec_idx
-          separated_workspace: true
         with:
           index_filename: 'vec.gz'
     metas:
