@@ -8,24 +8,22 @@ components:
       ref_indexer:
         !NumpyIndexer
         metas:
-          workspace: '/docker_workspace/workspace'
+          workspace: '/docker_workspace'
           name: vec_idx
         with:
           index_filename: 'vec.gz'
     metas:
-      workspace: '/docker_workspace/workspace'
       name: annoyidx
   - !BinaryPbIndexer
     with:
       index_filename: chunk.gz
     metas:
       name: chunk_idx
-      workspace: '/docker_workspace/workspace'
 metas:
   name: chunk_compound_indexer
   py_modules:
-    - docker_workspace/__init__.py
-  workspace: '/docker_workspace/workspace'
+    - workspace/__init__.py
+  workspace: '/docker_workspace'
 requests:
   on:
     IndexRequest:
