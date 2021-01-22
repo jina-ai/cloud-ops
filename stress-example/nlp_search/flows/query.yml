@@ -19,11 +19,10 @@ pods:
     uses: $JINA_USES
     uses_internal: $JINA_USES_INTERNAL
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     polling: all
     uses_after: pods/chunk_merger.yml
     timeout_ready: 100000 # larger timeout as in query time will read all the data
-    volumes: './workspace:/docker_workspace/workspace'
+    volumes: './workspace:/docker_workspace'
   - name: ranker
     show_exc_info: true
     uses: pods/ranker.yml
@@ -31,6 +30,5 @@ pods:
     show_exc_info: true
     uses: pods/doc.yml
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     polling: all
     timeout_ready: 100000 # larger timeout as in query time will read all the data

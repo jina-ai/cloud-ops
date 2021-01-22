@@ -3,29 +3,27 @@ components:
   - !FaissIndexer
     with:
       index_key: 'Flat' #TODO: Find suitable index
-      train_filepath: 'None'
+      #train_filepath: None
       #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
       ref_indexer:
         !NumpyIndexer
         metas:
-          workspace: '/docker_workspace/workspace'
+          workspace: '/docker_workspace'
           name: vec_idx
         with:
           index_filename: 'vec.gz'
     metas:
-      workspace: '/docker_workspace/workspace'
       name: faissidx
   - !BinaryPbIndexer
     with:
       index_filename: chunk.gz
     metas:
       name: chunk_idx
-      workspace: '/docker_workspace/workspace'
 metas:
   name: chunk_compound_indexer
   py_modules:
-    - docker_workspace/__init__.py
-  workspace: '/docker_workspace/workspace'
+    - workspace/__init__.py
+  workspace: '/docker_workspace'
 requests:
   on:
     IndexRequest:
