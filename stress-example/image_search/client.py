@@ -40,7 +40,8 @@ def random_docs(start, end):
         yield doc
 
 
-def wrapper(client, docs, id, function, time_end):
+def wrapper(args, docs, id, function, time_end):
+    client = Client(args)
     print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
     while True:
         client.check_input(docs)
@@ -77,7 +78,6 @@ def main(task, port, load, nr, concurrency):
 
     args = set_client_cli_parser().parse_args(
         ['--host', HOST, '--port-expose', str(port)])
-    grpc_client = Client(args)
 
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
@@ -88,8 +88,8 @@ def main(task, port, load, nr, concurrency):
     processes = [
         mp.Process(
             target=wrapper,
-            args=(grpc_client, docs, id, function, time_end),
-            name=f'{str(function)}-{id}'
+            args=(args, docs, id, function, time_end),
+            name=f'{function.__name__}-{id}'
         )
         for id in range(concurrency)
     ]
