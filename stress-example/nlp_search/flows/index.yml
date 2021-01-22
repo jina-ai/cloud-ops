@@ -15,12 +15,10 @@ pods:
     show_exc_info: true
     uses: pods/chunk.yml
     shards: $JINA_SHARDS
-    separated_workspace: true
   - name: doc_idx
     show_exc_info: true
     uses: pods/doc.yml
     shards: $JINA_SHARDS
-    separated_workspace: true
     needs: gateway
   - name: join_all
     uses: _merge

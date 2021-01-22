@@ -58,8 +58,14 @@ def document_generator(num_docs, num_chunks):
 
 
 def validate_text(resp):
+    assert len(resp.search.docs) == min(REQUEST_SIZE, QUERY_NUM_DOCS)
     for d in resp.search.docs:
-        print(f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}')
+        assert len(d.matches) == TOP_K
+        print(f' Length of matches {len(d.matches)} vs top_k {TOP_K}')
+
+
+def get_error(response):
+    print(f' HEEY CAPTURED ERROR {response}')
 
 
 # for index
@@ -71,8 +77,10 @@ def index():
 # for search
 def query():
     with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS, NUM_CHUNKS), output_fn=validate_text,
-            top_k=TOP_K)
+        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS, NUM_CHUNKS), on_done=validate_text,
+                           on_error=get_error,
+                           request_size = REQUEST_SIZE,
+                           top_k=TOP_K)
 
 
 @click.command()
