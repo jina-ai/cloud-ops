@@ -1,0 +1,46 @@
+!CompoundIndexer
+components:
+  - !AnnoyIndexer
+    with:
+      #index_filename: 'vec.gz' # Should be overwritten by ref_indexer index filename
+      n_trees: 10
+      search_k: -1
+      ref_indexer:
+        !NumpyIndexer
+        metas:
+          workspace: '/docker_workspace'
+          name: vec_idx
+        with:
+          index_filename: 'vec.gz'
+    metas:
+      name: annoyidx
+  - !BinaryPbIndexer
+    with:
+      index_filename: chunk.gz
+    metas:
+      name: chunk_idx
+metas:
+  name: chunk_compound_indexer
+  py_modules:
+    - workspace/__init__.py
+  workspace: '/docker_workspace'
+requests:
+  on:
+    IndexRequest:
+      - !VectorIndexDriver
+        with:
+          executor: annoyidx
+          traversal_paths: ['c']
+      - !KVIndexDriver
+        with:
+          executor: chunk_idx
+          traversal_paths: ['c']
+    SearchRequest:
+      - !VectorSearchDriver
+        with:
+          executor: annoyidx
+          traversal_paths: ['c']
+      - !KVSearchDriver
+        with:
+          executor: chunk_idx
+          traversal_paths: ['cm']
