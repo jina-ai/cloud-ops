@@ -23,7 +23,7 @@ def create_random_img_array(img_height, img_width):
 
 def validate_img(resp):
     for d in resp.search.docs:
-        print(f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}')
+        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
 def random_docs(start, end):
@@ -36,11 +36,11 @@ def random_docs(start, end):
 
 
 def config(indexer_query_type):
-    parallel = 1
-    shards = 2
+    shards_encoder = 1
+    shards_indexers = 2
 
-    os.environ['JINA_PARALLEL'] = str(parallel)
-    os.environ['JINA_SHARDS'] = str(shards)
+    os.environ['JINA_SHARDS_ENCODER'] = str(shards_encoder)
+    os.environ['JINA_SHARDS_INDEXERS'] = str(shards_indexers)
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
 
@@ -51,7 +51,7 @@ def config(indexer_query_type):
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://annoy_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/annoy_indexer.yml'
     elif indexer_query_type == 'scann':
-        os.environ['JINA_USES'] = os.environ.get('JINA_USES_ANNOY', 'docker://scann_indexer_image:test')
+        os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
 
 

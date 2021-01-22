@@ -8,17 +8,17 @@ pods:
   - name: encoder
     show_exc_info: true
     uses: pods/encoder.yml
-    parallel: $JINA_PARALLEL
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
     read_only: true
   - name: chunk_idx
     show_exc_info: true
     uses: pods/chunk.yml
-    shards: $JINA_SHARDS
+    shards: $JINA_SHARDS_INDEXERS
   - name: doc_idx
     show_exc_info: true
     uses: pods/doc.yml
-    shards: $JINA_SHARDS
+    shards: $JINA_SHARDS_INDEXERS
     needs: gateway
   - name: join_all
     uses: _merge
