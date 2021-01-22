@@ -62,7 +62,7 @@ def query(client, docs):
 
 @click.command()
 @click.option('--task', '-t')
-@click.option('--port', '-p')
+@click.option('--port', '-p', default=45678)
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
