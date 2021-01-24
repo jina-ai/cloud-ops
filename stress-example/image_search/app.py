@@ -20,6 +20,9 @@ def config(task, indexer_query_type):
     os.environ['JINA_SHARDS_INDEXERS'] = str(shards_indexers)
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(JINA_PORT))
+    os.environ['JINA_DISTANCE_REVERSE'] = os.environ.get('JINA_DISTANCE_REVERSE',
+                                                         'False')
+    os.environ['OMP_NUM_THREADS'] = os.environ.get('OMP_NUM_THREADS', '1')
 
     # make sure you've built the images yourself
     # ex.: go to jina hub faiss directory, `docker build -f Dockerfile -t faiss_indexer_image:test .`
