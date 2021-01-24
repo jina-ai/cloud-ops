@@ -25,6 +25,11 @@ def config(indexer_query_type):
     os.environ.setdefault('JINA_WORKSPACE', './workspace')
     os.environ.setdefault('JINA_PORT', str(45678))
     os.environ['JINA_ENCODER_DRIVER_BATCH_SIZE'] = str(16)
+    os.environ['JINA_RANKER_AGGREGATE_FUNCTION'] = os.environ.get('JINA_RANKER_AGGREGATE_FUNCTION',
+                                                                  'min')
+    os.environ['JINA_DISTANCE_REVERSE'] = os.environ.get('JINA_DISTANCE_REVERSE',
+                                                         'True')
+    os.environ['OMP_NUM_THREADS'] = os.environ.get('OMP_NUM_THREADS', '1')
 
     if indexer_query_type == 'faiss':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
