@@ -1,5 +1,4 @@
 torch==1.7.1
-numpy
-jina[cv,http]==0.9.12
+jina[cv,http]==0.9.20
 docker==4.4.1
 redis==3.5.3
