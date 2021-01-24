@@ -18,7 +18,7 @@ jobs:
         run: |
           cd api/hub
           apt-get update && apt-get install curl
-          curl -s https://hubapi.jina.ai/list >> hublist.json
+          curl -s https://hubapi.jina.ai/images >> hublist.json
           git config --local user.email "dev-bot@jina.ai"
           git config --local user.name "Jina Dev Bot"
           git add hublist.json && git commit -m "hublist cache from hubapi" && git push
