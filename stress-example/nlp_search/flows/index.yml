@@ -6,16 +6,19 @@ pods:
     uses: pods/segment.yml
     read_only: true
   - name: encoder
+    polling: any
     show_exc_info: true
     uses: pods/encoder.yml
     shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
     read_only: true
   - name: chunk_idx
+    polling: any
     show_exc_info: true
     uses: pods/chunk.yml
     shards: $JINA_SHARDS_INDEXERS
   - name: doc_idx
+    polling: any
     show_exc_info: true
     uses: pods/doc.yml
     shards: $JINA_SHARDS_INDEXERS
