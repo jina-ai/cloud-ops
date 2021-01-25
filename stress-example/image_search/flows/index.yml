@@ -1,24 +1,25 @@
 !Flow
+version: '1'
 with:
   show_exc_info: true
+  rest_api: false
+  port_expose: $JINA_PORT
 pods:
-  encoder:
+  - name: encoder
     uses: pods/encoder.yml
     shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
     read_only: true
-  vec_idx:
+  - name: vec_idx
     uses: pods/vec.yml
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     timeout_ready: 100000 # larger timeout as in query time will read all the data
-  doc_idx:
-    uses: pods/doc.yml
+  - name: redis_idx
+    uses: pods/redis.yml
     shards: $JINA_SHARDS_INDEXERS
-    separated_workspace: true
     timeout_ready: 100000 # larger timeout as in query time will read all the data
     needs: [gateway]
-  join_all:
+  - name: join_all
     uses: _merge
-    needs: [doc_idx, vec_idx]
+    needs: [redis_idx, vec_idx]
     read_only: true
