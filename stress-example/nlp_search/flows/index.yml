@@ -21,10 +21,10 @@ pods:
     show_exc_info: true
     uses: pods/chunk.yml
     shards: $JINA_SHARDS_INDEXERS
-  - name: doc_idx
+  - name: redis
     polling: any
     show_exc_info: true
-    uses: pods/doc.yml
+    uses: pods/redis.yml
     shards: $JINA_SHARDS_INDEXERS
     needs: gateway
   - name: join_all

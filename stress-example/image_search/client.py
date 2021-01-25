@@ -51,11 +51,11 @@ def wrapper(args, docs, id, function, time_end, req_size):
 
 
 def index(client, docs, req_size):
-    client.index(docs)
+    client.index(docs, request_size=req_size)
 
 
 def query(client, docs, req_size):
-    client.search(input_fn=docs, on_done=validate_img, top_k=TOP_K)
+    client.search(input_fn=docs, on_done=validate_img, top_k=TOP_K, request_size=req_size)
 
 
 @click.command()
