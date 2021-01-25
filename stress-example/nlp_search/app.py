@@ -3,20 +3,17 @@ __license__ = "Apache-2.0"
 
 __version__ = '0.0.1'
 
-import click
 import os
-import sys
 
+import click
 from jina.flow import Flow
-from jina import Document
 
-NUM_DOCS = 50
 QUERY_NUM_DOCS = 1
 TOP_K = 3
 REQUEST_SIZE = 4
 
 
-def config(indexer_query_type):
+def config(task, indexer_query_type):
     shards_encoder = 1
     shards_indexers = 2
 
@@ -31,6 +28,8 @@ def config(indexer_query_type):
                                                          'True')
     os.environ['OMP_NUM_THREADS'] = os.environ.get('OMP_NUM_THREADS', '1')
 
+    # make sure you've built the images yourself
+    # ex.: go to jina hub faiss directory, `docker build -f Dockerfile -t faiss_indexer_image:test .`
     if indexer_query_type == 'faiss':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_FAISS', 'docker://faiss_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/faiss_indexer.yml'
@@ -40,70 +39,34 @@ def config(indexer_query_type):
     elif indexer_query_type == 'scann':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
+    elif task == 'query':
+        raise ValueError(f'Indexer type {indexer_query_type} not supported')
 
 
-def document_generator(num_docs):
-    import numpy as np
-    import random
-    chunk_id = num_docs
-    for idx in range(num_docs):
-        with Document() as doc:
-            doc.id = idx
-            doc.text = f'I have {idx} cats'
-            doc.embedding = np.random.random([9])
-            num_chunks = random.randint(1, 10)
-            for chunk_idx in range(num_chunks):
-                with Document() as chunk:
-                    chunk.id = chunk_id
-                    chunk.tags['id'] = chunk_idx
-                    chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'
-                    chunk.embedding = np.random.random([9])
-                chunk_id += 1
-                doc.chunks.append(chunk)
-        yield doc
 
-
-def validate_text(resp):
-    assert len(resp.search.docs) == min(REQUEST_SIZE, QUERY_NUM_DOCS)
-    for d in resp.search.docs:
-        assert len(d.matches) == TOP_K
-        print(f' Length of matches {len(d.matches)} vs top_k {TOP_K}')
-
-
-def get_error(response):
-    print(f' HEEY CAPTURED ERROR {response}')
-
-
-# for index
 def index():
-    with Flow.load_config('flows/index.yml') as index_flow:
-        index_flow.index(input_fn=document_generator(NUM_DOCS), request_size=REQUEST_SIZE)
+    flow_index = Flow.load_config('flows/index.yml')
+    with flow_index:
+        print(f'Flow available at  {flow_index.host}, {flow_index.port_expose}')
+        flow_index.block()
+
+    return flow_index
 
 
-# for search
+# for search; annoy, faiss, scann with refIndexer
 def query():
-    with Flow.load_config('flows/query.yml') as search_flow:
-        search_flow.search(input_fn=document_generator(QUERY_NUM_DOCS), on_done=validate_text,
-                           on_error=get_error,
-                           request_size=REQUEST_SIZE,
-                           top_k=TOP_K)
+    flow_query = Flow.load_config('flows/query.yml')
+    with flow_query:
+        print(f'Flow available at  {flow_query.host}, {flow_query.port_expose}')
+        flow_query.block()
 
 
 @click.command()
 @click.option('--task', '-t')
 @click.option('--indexer-query-type', '-i')
 def main(task, indexer_query_type):
-    config(indexer_query_type)
-
+    config(task, indexer_query_type)
     if task == 'index':
-        workspace = os.environ['JINA_WORKSPACE']
-        if os.path.exists(workspace):
-            print(f'\n +---------------------------------------------------------------------------------+ \
-                    \n |                                   🤖🤖🤖                                        | \
-                    \n | The directory {workspace} already exists. Please remove it before indexing again. | \
-                    \n |                                   🤖🤖🤖                                        | \
-                    \n +---------------------------------------------------------------------------------+')
-            sys.exit()
         index()
     elif task == 'query':
         query()
