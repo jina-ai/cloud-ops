@@ -1,0 +1,34 @@
+version: "3.3"
+services:
+  flow:
+    image: stress_example_image_search
+    ports:
+      - "8000:8000"
+      - "45678:45678"
+    env_file:
+      - .env
+    expose:
+      - 5000-60000
+  encoder:
+    image: stress_example_image_search
+    expose:
+      - 8000
+      - 5000-60000
+    env_file:
+      - .env
+  vector_indexer:
+    image: stress_example_image_search
+    expose:
+      - 8000
+      - 5000-60000
+    env_file:
+      - .env
+  redis_indexer:
+    image: stress_example_image_search
+    command: -c "redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes && jinad"
+    entrypoint: ['/bin/sh']
+    expose:
+      - 8000
+      - 5000-60000
+    env_file:
+      - .env
