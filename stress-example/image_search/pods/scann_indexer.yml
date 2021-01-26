@@ -20,5 +20,6 @@ requests:
       - !VectorSearchDriver
         with:
           executor: scannidx
+          traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

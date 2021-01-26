@@ -21,5 +21,6 @@ requests:
       - !VectorSearchDriver
         with:
           executor: faissidx
+          traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

@@ -21,5 +21,6 @@ requests:
       - !VectorSearchDriver
         with:
           executor: annoyidx
+          traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

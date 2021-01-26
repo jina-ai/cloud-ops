@@ -12,12 +12,16 @@ requests:
     ControlRequest:
       - !ControlReqDriver {}
     SearchRequest:
-      - !KVSearchDriver {}
+      - !KVSearchDriver
+        with:
+          traversal_paths: ['m']
     [IndexRequest, UpdateRequest, DeleteRequest]:
     - !ExcludeQL
       with:
         fields:
           - chunks  # we don't want to save nested structure
           - buffer
-    - !KVIndexDriver {}
+    - !KVIndexDriver
+      with:
+        traversal_paths: ['r']
 

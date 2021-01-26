@@ -8,6 +8,7 @@ requests:
       - !ReduceAllDriver
         with:
           traversal_paths: ['m']
+      - !LogInfoDriver {}
       - !SortQL
         with:
           field: 'score__value'
