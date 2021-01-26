@@ -1,5 +1,9 @@
 !Flow
 version: '1'
+with:
+  show_exc_info: true
+  rest_api: false
+  port_expose: $JINA_PORT
 pods:
   - name: segmenter
     show_exc_info: true
@@ -17,10 +21,10 @@ pods:
     show_exc_info: true
     uses: pods/chunk.yml
     shards: $JINA_SHARDS_INDEXERS
-  - name: doc_idx
+  - name: redis
     polling: any
     show_exc_info: true
-    uses: pods/doc.yml
+    uses: pods/redis.yml
     shards: $JINA_SHARDS_INDEXERS
     needs: gateway
   - name: join_all

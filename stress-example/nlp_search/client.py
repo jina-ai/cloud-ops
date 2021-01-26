@@ -7,35 +7,40 @@ from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
 DEFAULT_NUM_DOCS = 500
-TOP_K = 3
 REQUEST_SIZE = 4
-IMG_HEIGHT = 224
-IMG_WIDTH = 224
+TOP_K = 3
 HOST = '0.0.0.0'
 
 
-def create_random_img_array(img_height, img_width):
+def document_generator(num_docs):
     import numpy as np
-    return np.random.randint(0, 256, (img_height, img_width, 3))
-
-
-def validate_img(resp):
-    for d in resp.search.docs:
-        for m in d.matches:
-            assert 'filename' in m.tags.keys()
-            # to test that the data from the KV store is retrieved
-            assert 'image ' in m.tags['filename']
-        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
-
-
-def random_docs(start, end):
-    for idx in range(start, end + start):
+    import random
+    chunk_id = num_docs
+    for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
-            doc.content = create_random_img_array(IMG_HEIGHT, IMG_WIDTH)
-            doc.mime_type = 'image/png'
-            doc.tags['filename'] = f'image {idx}'
+            doc.text = f'I have {idx} cats'
+            doc.embedding = np.random.random([9])
+            doc.tags['filename'] = f'filename {idx}'
+            num_chunks = random.randint(1, 10)
+            for chunk_idx in range(num_chunks):
+                with Document() as chunk:
+                    chunk.id = chunk_id
+                    chunk.tags['id'] = chunk_idx
+                    chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'
+                    chunk.embedding = np.random.random([9])
+                chunk_id += 1
+                doc.chunks.append(chunk)
         yield doc
+
+
+def validate_text(resp):
+    print(f'got {len(resp.search.docs)} docs in resp.search')
+    for d in resp.search.docs:
+        for m in d.matches:
+            # to test that the data from the KV store is retrieved
+            assert 'filename' in m.tags.keys()
+        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
 def wrapper(args, docs, id, function, time_end, req_size):
@@ -55,7 +60,7 @@ def index(client, docs, req_size):
 
 
 def query(client, docs, req_size):
-    client.search(input_fn=docs, on_done=validate_img, top_k=TOP_K, request_size=req_size)
+    client.search(input_fn=docs, on_done=validate_text, top_k=TOP_K, request_size=req_size)
 
 
 @click.command()
@@ -82,7 +87,7 @@ def main(task, port, load, nr, concurrency, req_size):
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
     # needs to be a list otherwise it gets exhausted
-    docs = list(random_docs(0, nr))
+    docs = list(document_generator(nr))
     # FIXME(cristianmtr): remote clients?
     processes = [
         mp.Process(

@@ -1,0 +1,9 @@
+!RedisDBIndexer
+with:
+  level: doc
+  db: 0
+  port: 6379
+  show_exc_info: true
+metas:
+  name: redis_idx
+  workspace: $JINA_WORKSPACE
