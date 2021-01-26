@@ -4,7 +4,7 @@ __license__ = "Apache-2.0"
 import os
 import sys
 
-from typing import List
+from typing import List, Optional, Dict
 
 from contextlib import ExitStack
 import requests
@@ -66,7 +66,6 @@ def query():
 
 def create_workspace(filepaths: List[str],
                      url: str = 'http://localhost:8000/workspaces') -> str:
-
     with ExitStack() as file_stack:
         files = [
             ('files', file_stack.enter_context(open(filepath, 'rb')))
@@ -93,21 +92,47 @@ def create_flow_2(flow_yaml: str,
         return r.json()
 
 
-def publish_flow_index():
+def publish_flow(flow_yaml):
     dependencies = [f'pods/vec.yml', f'pods/encoder.yml', f'pods/redis.yml',
-                    f'pods/craft.yml']
+                    f'pods/craft.yml', f'pods/merge_and_topk.yml']
     workspace_id = create_workspace(filepaths=dependencies)
-    ret = create_flow_2('flows/index.yml', workspace_id)
+    ret = create_flow_2(flow_yaml, workspace_id)
     print(f' Creating flow results {ret}')
+
+
+def assert_request(method: str,
+                   url: str,
+                   payload: Optional[Dict] = None,
+                   expect_rcode: int = 200):
+    try:
+        if payload:
+            response = getattr(requests, method)(url, json=payload)
+        else:
+            response = getattr(requests, method)(url)
+        assert response.status_code == expect_rcode
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f'got an exception while invoking request {e!r}')
+
+
+def close_flow(flow_id):
+    assert_request(method='delete',
+                   url=f'http://localhost:8000/flows/{flow_id}',
+                   payload={'workspace': False})
 
 
 @click.command()
 @click.option('--task', '-t')
 @click.option('--indexer-query-type', '-i')
 @click.option('--jinad')
-def main(task, indexer_query_type, jinad):
-    if jinad:
-        publish_flow_index()
+@click.option('--flow-id')
+def main(task, indexer_query_type, jinad, flow_id):
+    if jinad == 'index':
+        publish_flow('flows/index.yml')
+    elif jinad == 'query':
+        publish_flow('flows/query.yml')
+    elif jinad == 'remove':
+        close_flow(flow_id)
     else:
         config(task, indexer_query_type)
         if task == 'index':
