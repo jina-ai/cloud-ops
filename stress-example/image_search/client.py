@@ -11,7 +11,6 @@ TOP_K = 3
 REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
-HOST = '0.0.0.0'
 
 
 def create_random_img_array(img_height, img_width):
@@ -25,9 +24,9 @@ def validate_img(resp):
             print(f' MATCHES LENGTH IS NOT TOP_K but {len(d.matches)}')
         for m in d.matches:
             print(f' match {m.id}')
-            #assert 'filename' in m.tags.keys()
+            assert 'filename' in m.tags.keys()
             # to test that the data from the KV store is retrieved
-            #assert 'image ' in m.tags['filename']
+            assert 'image ' in m.tags['filename']
         #assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
@@ -43,8 +42,8 @@ def random_docs(start, end):
 
 def wrapper(args, docs, id, function, time_end, req_size):
     client = Client(args)
-    print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
     while True:
+        print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
         client.check_input(docs)
         function(client, docs, req_size)
         if time.time() >= time_end:
@@ -53,8 +52,14 @@ def wrapper(args, docs, id, function, time_end, req_size):
             return
 
 
+def index_done(resp):
+    print(f'done with indexing...')
+    print(f'len of resp = {len(resp.index.docs)}')
+
+
 def index(client, docs, req_size):
-    client.index(docs, request_size=req_size)
+    print('indexing!!!')
+    client.index(docs, request_size=req_size, on_done=index_done)
 
 
 def query(client, docs, req_size):
@@ -64,12 +69,13 @@ def query(client, docs, req_size):
 
 @click.command()
 @click.option('--task', '-t')
+@click.option('--host', '-h', default='0.0.0.0')
 @click.option('--port', '-p', default=45678)
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
 @click.option('--req_size', '-r', default=REQUEST_SIZE)
-def main(task, port, load, nr, concurrency, req_size):
+def main(task, host, port, load, nr, concurrency, req_size):
     print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
@@ -80,7 +86,7 @@ def main(task, port, load, nr, concurrency, req_size):
         function = query
 
     args = set_client_cli_parser().parse_args(
-        ['--host', HOST, '--port-expose', str(port)])
+        ['--host', host, '--port-expose', str(port)])
 
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')

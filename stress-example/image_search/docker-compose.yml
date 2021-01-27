@@ -9,6 +9,8 @@ services:
       - .env
     expose:
       - 5000-60000
+    volumes:
+      - ./:/code
   encoder:
     image: stress_example_image_search
     expose:
