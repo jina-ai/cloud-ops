@@ -54,6 +54,7 @@ spec:
               - jina ping 0.0.0.0 $PORT_CTRL
           initialDelaySeconds: 30
           periodSeconds: 30
+          timeoutSeconds: 30
         readinessProbe:
           exec:
             command:
@@ -61,4 +62,5 @@ spec:
               - -c
               - jina ping 0.0.0.0 $PORT_CTRL
           initialDelaySeconds: 30
-          periodSeconds: 30
+          periodSeconds: 30 
+          timeoutSeconds: 30
