@@ -94,25 +94,30 @@ def main(task, host, port, load, nr, concurrency, req_size):
     # needs to be a list otherwise it gets exhausted
     docs = list(random_docs(0, nr))
     # FIXME(cristianmtr): remote clients?
-    processes = [
-        mp.Process(
-            target=wrapper,
-            args=(args, docs, id, function, time_end, req_size),
-            name=f'{function.__name__}-{id}'
-        )
-        for id in range(concurrency)
-    ]
-    for p in processes:
-        p.start()
+    if concurrency == 1:
+        print(f'Starting only one process. Not using multiprocessing...')
+        wrapper(args, docs, 1, function, time_end, req_size)
+    else:
+        print(f'Using multiprocessing to start {concurrency} processes...')
+        processes = [
+            mp.Process(
+                target=wrapper,
+                args=(),
+                name=f'{function.__name__}-{id}'
+            )
+            for id in range(concurrency)
+        ]
+        for p in processes:
+            p.start()
 
-    wait_secs = time_end - time.time()
-    if wait_secs > 0:
-        time.sleep(wait_secs)
+        wait_secs = time_end - time.time()
+        if wait_secs > 0:
+            time.sleep(wait_secs)
 
-    for p in processes:
-        if p.is_alive():
-            print(f'Process {p.name} is still alive. Will wait...')
-            p.join()
+        for p in processes:
+            if p.is_alive():
+                print(f'Process {p.name} is still alive. Will wait...')
+                p.join()
 
 
 if __name__ == '__main__':
