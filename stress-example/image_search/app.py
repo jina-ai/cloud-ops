@@ -13,6 +13,9 @@ from jina.flow import Flow
 
 # TODO make it available to the client
 JINA_PORT = 45678
+FLOW_HOST = os.environ['FLOW_HOST']
+if FLOW_HOST is None:
+    raise ValueError('set FLOW_HOST')
 
 
 def config(task, indexer_query_type):
@@ -65,7 +68,7 @@ def query():
 
 
 def create_workspace(filepaths: List[str],
-                     url: str = 'http://localhost:8000/workspaces') -> str:
+                     url: str = f'{FLOW_HOST}/workspaces') -> str:
     with ExitStack() as file_stack:
         files = [
             ('files', file_stack.enter_context(open(filepath, 'rb')))
@@ -82,7 +85,7 @@ def create_workspace(filepaths: List[str],
 
 def create_flow_2(flow_yaml: str,
                   workspace_id: str = None,
-                  url: str = 'http://localhost:8000/flows') -> str:
+                  url: str = f'{FLOW_HOST}/flows') -> str:
     with open(flow_yaml, 'rb') as f:
         r = requests.post(url,
                           data={'workspace_id': workspace_id},
@@ -117,7 +120,7 @@ def assert_request(method: str,
 
 def close_flow(flow_id):
     assert_request(method='delete',
-                   url=f'http://localhost:8000/flows/{flow_id}',
+                   url=f'{FLOW_HOST}/flows/{flow_id}',
                    payload={'workspace': False})
 
 
