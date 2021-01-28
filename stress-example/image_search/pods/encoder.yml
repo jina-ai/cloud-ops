@@ -5,3 +5,11 @@ with:
   img_shape: 96
   show_exc_info: true
   channel_axis: -1
+requests:
+  on:
+    ControlRequest:
+      - !ControlReqDriver {}
+    [IndexRequest, SearchRequest]:
+      - !EncodeDriver
+        with:
+          traversal_paths: ['r']

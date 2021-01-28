@@ -1,26 +1,17 @@
-!CompoundIndexer
-components:
-  - !FaissIndexer
-    with:
-      index_key: 'Flat' #TODO: Find suitable index
-      # train_filepath:
-      # index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
-      ref_indexer:
-        !NumpyIndexer
-        metas:
-          workspace: '/docker-workspace'
-          name: vec_idx
-        with:
-          index_filename: 'vec.gz'
+!FaissIndexer
+with:
+  index_key: 'Flat' #TODO: Find suitable index
+  # train_filepath:
+  # index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
+  ref_indexer:
+    !NumpyIndexer
     metas:
-      name: faissidx
-  - !BinaryPbIndexer
+      workspace: '/docker-workspace'
+      name: vec_idx
     with:
-      index_filename: doc.gz
-    metas:
-      name: docidx
+      index_filename: 'vec.gz'
 metas:
-  name: vec_idx
+  name: faissidx
   py_modules:
     - workspace/__init__.py
   workspace: '/docker-workspace'
@@ -30,9 +21,6 @@ requests:
       - !VectorSearchDriver
         with:
           executor: faissidx
-      - !KVSearchDriver
-        with:
-          executor: docidx
-          traversal_paths: ['m']
+          traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

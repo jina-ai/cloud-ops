@@ -4,6 +4,10 @@ __license__ = "Apache-2.0"
 import os
 import sys
 
+from typing import List, Optional, Dict
+
+from contextlib import ExitStack
+import requests
 import click
 from jina.flow import Flow
 
@@ -35,6 +39,9 @@ def config(task, indexer_query_type):
     elif indexer_query_type == 'scann':
         os.environ['JINA_USES'] = os.environ.get('JINA_USES_SCANN', 'docker://scann_indexer_image:test')
         os.environ['JINA_USES_INTERNAL'] = 'pods/scann_indexer.yml'
+    elif indexer_query_type == 'numpy':
+        os.environ['JINA_USES'] = 'pods/vec.yml'
+        os.environ['JINA_USES_INTERNAL'] = ''
     elif task == 'query':
         raise ValueError(f'Indexer type {indexer_query_type} not supported')
 
@@ -57,18 +64,84 @@ def query():
         flow_query.block()
 
 
+def create_workspace(filepaths: List[str],
+                     url: str = 'http://localhost:8000/workspaces') -> str:
+    with ExitStack() as file_stack:
+        files = [
+            ('files', file_stack.enter_context(open(filepath, 'rb')))
+            for filepath in filepaths
+        ]
+        print(f'uploading {files}')
+        r = requests.post(url, files=files)
+        assert r.status_code == 201
+
+        workspace_id = r.json()
+        print(f'Got workspace_id: {workspace_id}')
+        return workspace_id
+
+
+def create_flow_2(flow_yaml: str,
+                  workspace_id: str = None,
+                  url: str = 'http://localhost:8000/flows') -> str:
+    with open(flow_yaml, 'rb') as f:
+        r = requests.post(url,
+                          data={'workspace_id': workspace_id},
+                          files={'flow': f})
+        print(f'Checking if the flow creation is succeeded: {r.json()}')
+        assert r.status_code == 201
+        return r.json()
+
+
+def publish_flow(flow_yaml):
+    dependencies = [f'pods/vec.yml', f'pods/encoder.yml', f'pods/redis.yml',
+                    f'pods/craft.yml', f'pods/merge_and_topk.yml']
+    workspace_id = create_workspace(filepaths=dependencies)
+    ret = create_flow_2(flow_yaml, workspace_id)
+    print(f' Creating flow results {ret}')
+
+
+def assert_request(method: str,
+                   url: str,
+                   payload: Optional[Dict] = None,
+                   expect_rcode: int = 200):
+    try:
+        if payload:
+            response = getattr(requests, method)(url, json=payload)
+        else:
+            response = getattr(requests, method)(url)
+        assert response.status_code == expect_rcode
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f'got an exception while invoking request {e!r}')
+
+
+def close_flow(flow_id):
+    assert_request(method='delete',
+                   url=f'http://localhost:8000/flows/{flow_id}',
+                   payload={'workspace': False})
+
+
 @click.command()
 @click.option('--task', '-t')
 @click.option('--indexer-query-type', '-i')
-def main(task, indexer_query_type):
-    config(task, indexer_query_type)
-    if task == 'index':
-        index()
-    elif task == 'query':
-        query()
+@click.option('--jinad')
+@click.option('--flow-id')
+def main(task, indexer_query_type, jinad, flow_id):
+    if jinad == 'index':
+        publish_flow('flows/index.yml')
+    elif jinad == 'query':
+        publish_flow('flows/query.yml')
+    elif jinad == 'remove':
+        close_flow(flow_id)
     else:
-        raise NotImplementedError(
-            f'unknown task: {task}. A valid task is either `index` or `query`.')
+        config(task, indexer_query_type)
+        if task == 'index':
+            index()
+        elif task == 'query':
+            query()
+        else:
+            raise NotImplementedError(
+                f'unknown task: {task}. A valid task is either `index` or `query`.')
 
 
 if __name__ == '__main__':
