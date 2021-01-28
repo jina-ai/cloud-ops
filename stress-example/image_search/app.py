@@ -2,20 +2,16 @@ __copyright__ = "Copyright (c) 2020 Jina AI Limited. All rights reserved."
 __license__ = "Apache-2.0"
 
 import os
-import sys
-
+from contextlib import ExitStack
 from typing import List, Optional, Dict
 
-from contextlib import ExitStack
-import requests
 import click
+import requests
 from jina.flow import Flow
 
 # TODO make it available to the client
 JINA_PORT = 45678
-FLOW_HOST = os.environ['FLOW_HOST']
-if FLOW_HOST is None:
-    raise ValueError('set FLOW_HOST')
+FLOW_HOST_PORT = os.environ.get('FLOW_HOST_PORT')
 
 
 def config(task, indexer_query_type):
@@ -68,7 +64,7 @@ def query():
 
 
 def create_workspace(filepaths: List[str],
-                     url: str = f'{FLOW_HOST}/workspaces') -> str:
+                     url: str = f'{FLOW_HOST_PORT}/workspaces') -> str:
     with ExitStack() as file_stack:
         files = [
             ('files', file_stack.enter_context(open(filepath, 'rb')))
@@ -85,7 +81,7 @@ def create_workspace(filepaths: List[str],
 
 def create_flow_2(flow_yaml: str,
                   workspace_id: str = None,
-                  url: str = f'{FLOW_HOST}/flows') -> str:
+                  url: str = f'{FLOW_HOST_PORT}/flows') -> str:
     with open(flow_yaml, 'rb') as f:
         r = requests.post(url,
                           data={'workspace_id': workspace_id},
@@ -120,22 +116,26 @@ def assert_request(method: str,
 
 def close_flow(flow_id):
     assert_request(method='delete',
-                   url=f'{FLOW_HOST}/flows/{flow_id}',
+                   url=f'{FLOW_HOST_PORT}/flows/{flow_id}',
                    payload={'workspace': False})
 
 
 @click.command()
 @click.option('--task', '-t')
 @click.option('--indexer-query-type', '-i')
-@click.option('--jinad')
+@click.option('--jinad', default=None)
 @click.option('--flow-id')
 def main(task, indexer_query_type, jinad, flow_id):
-    if jinad == 'index':
-        publish_flow('flows/index.yml')
-    elif jinad == 'query':
-        publish_flow('flows/query.yml')
-    elif jinad == 'remove':
-        close_flow(flow_id)
+    if jinad is not None:
+        if FLOW_HOST_PORT is None:
+            raise ValueError('set FLOW_HOST_PORT')
+        print(f'FLOW_HOST={FLOW_HOST_PORT}')
+        if jinad == 'index':
+            publish_flow('flows/index.yml')
+        elif jinad == 'query':
+            publish_flow('flows/query.yml')
+        elif jinad == 'remove':
+            close_flow(flow_id)
     else:
         config(task, indexer_query_type)
         if task == 'index':
