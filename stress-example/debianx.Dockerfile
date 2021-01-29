@@ -73,6 +73,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y ruby-dev build-
     pip install .[daemon] --compile --extra-index-url ${PIP_EXTRA_INDEX_URL} && \
     rm -rf /tmp/* && rm -rf /jina && rm /usr/include/xlocale.h
 
-RUN apt-get update && apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes && pip install torch==1.7.1 && pip install redis==3.5.3 && pip install jina[cv,http]
+RUN apt-get update && apt-get install -y redis-server && pip install torch==1.7.1 && pip install redis==3.5.3 && pip install jina[cv,http]
+RUN pip install transformers==4.1.1
 
 ENTRYPOINT ["jinad"]
