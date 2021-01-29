@@ -4,11 +4,11 @@ Description: Template to run stress-test for Jina on AWS
 Parameters:
   EC2ImageIdParam:
     Type: String
-    Default: ami-00831fc7c1e3ddc60
+    Default: ami-00831fc7c1e3ddc60 # Deep learning instance: ami-016a12e19041b168e
     Description: Enter Image ID. Default is for Ubuntu 20.04
   EC2InstanceTypeParam:
     Type: String
-    Default: t2.micro
+    Default: t3.large
   KeyNameParam:
     Type: String
     Default: flow-login
@@ -19,11 +19,8 @@ Parameters:
     Description: Enter EBS volume size (type gp2). Default is 20GB.
   AvailabilityZoneParam:
     Type: String
-    Default: us-west-1a
+    Default: us-west-1a #eu-central-1
     Description: Enter Availability Zone for EC2. Default is us-west-1a
-  UserData:
-    Type: String
-    Default: ""
 Resources:
   daemonVPC:
     Type: AWS::EC2::VPC
@@ -102,6 +99,14 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
+#        - IpProtocol: tcp # custom
+#          FromPort: 8000
+#          ToPort: 8000
+#          CidrIp: 0.0.0.0/0
+#        - IpProtocol: tcp # custom
+#          FromPort: 10000
+#          ToPort: 65535
+#          CidrIp: 0.0.0.0/0
 
   encoderInstance:
     Type: AWS::EC2::Instance
@@ -113,6 +118,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
 
 #  EncoderEIP:
 #    Type: AWS::EC2::EIP
@@ -146,6 +155,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
 
 #  CrafterEIP:
 #    Type: AWS::EC2::EIP
@@ -179,6 +192,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
 
 #  IndexerEIP:
 #    Type: AWS::EC2::EIP
@@ -212,6 +229,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
 
 #  RankerEIP:
 #    Type: AWS::EC2::EIP
@@ -265,6 +286,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -323,7 +348,10 @@ Resources:
       KeyName:
         Ref: KeyNameParam
       SecurityGroups: [!Ref 'SSHSecurityGroup']
-
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 32
   ClientEIP:
     Type: AWS::EC2::EIP
     Properties:
