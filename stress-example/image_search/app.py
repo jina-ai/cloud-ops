@@ -79,9 +79,9 @@ def create_workspace(filepaths: List[str],
         return workspace_id
 
 
-def create_flow_2(flow_yaml: str,
-                  workspace_id: str = None,
-                  url: str = f'{FLOW_HOST_PORT}/flows') -> str:
+def create_remote_flow(flow_yaml: str,
+                       workspace_id: str = None,
+                       url: str = f'{FLOW_HOST_PORT}/flows') -> str:
     with open(flow_yaml, 'rb') as f:
         r = requests.post(url,
                           data={'workspace_id': workspace_id},
@@ -91,11 +91,13 @@ def create_flow_2(flow_yaml: str,
         return r.json()
 
 
-def publish_flow(flow_yaml):
+def publish_flow(flow_yaml, workspace_id=None):
+    # TODO adjust for reading either image or nlp search
     dependencies = [f'pods/vec.yml', f'pods/encoder.yml', f'pods/redis.yml',
                     f'pods/craft.yml', f'pods/merge_and_topk.yml']
-    workspace_id = create_workspace(filepaths=dependencies)
-    ret = create_flow_2(flow_yaml, workspace_id)
+    if workspace_id is None:
+        workspace_id = create_workspace(filepaths=dependencies)
+    ret = create_remote_flow(flow_yaml, workspace_id)
     print(f' Creating flow results {ret}')
 
 
@@ -121,30 +123,33 @@ def close_flow(flow_id):
 
 
 @click.command()
-@click.option('--task', '-t')
-@click.option('--indexer-query-type', '-i')
-@click.option('--jinad', default=None)
-@click.option('--flow-id')
-def main(task, indexer_query_type, jinad, flow_id):
+@click.option('--task', '-t', type=click.Choice(['index', 'query']))
+@click.option('--indexer-query-type', '-i', type=click.Choice(['faiss', 'annoy', 'numpy', 'scann']))
+@click.option('--jinad', default=None, type=click.Choice(['index', 'query', 'remove']))
+@click.option('--flow-id', default=None)
+@click.option('--ws', default=None)
+def main(task, indexer_query_type, jinad, flow_id, ws):
     if jinad is not None:
         if FLOW_HOST_PORT is None:
             raise ValueError('set FLOW_HOST_PORT')
-        print(f'FLOW_HOST={FLOW_HOST_PORT}')
+        print(f'Using jinad gateway on {FLOW_HOST_PORT}')
+        if ws:
+            print(f'reusing workspace id {ws}')
         if jinad == 'index':
-            publish_flow('flows/index.yml')
+            # TODO make it possible to use either image or text flows
+            # `flows/{dataset}/{task}.yml`
+            publish_flow('flows/index.yml', ws)
         elif jinad == 'query':
-            publish_flow('flows/query.yml')
+            publish_flow('flows/query.yml', ws)
         elif jinad == 'remove':
             close_flow(flow_id)
     else:
+        print(f'creating local flow on task {task}...')
         config(task, indexer_query_type)
         if task == 'index':
             index()
         elif task == 'query':
             query()
-        else:
-            raise NotImplementedError(
-                f'unknown task: {task}. A valid task is either `index` or `query`.')
 
 
 if __name__ == '__main__':
