@@ -8,12 +8,12 @@ with:
 pods:
   - name: chunk_seg
     show_exc_info: true
-    uses: pods/segment.yml
+    uses: segment.yml
     shards: $JINA_SHARDS_ENCODER
   - name: encoder
     polling: any
     show_exc_info: true
-    uses: pods/encoder.yml
+    uses: encoder.yml
     shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
   - name: chunk_idx
@@ -22,7 +22,7 @@ pods:
     uses_internal: $JINA_USES_INTERNAL
     shards: $JINA_SHARDS_INDEXERS
     polling: all
-    uses_after: pods/chunk_merger.yml
+    uses_after: chunk_merger.yml
     timeout_ready: 100000 # larger timeout as in query time will read all the data
     volumes: './workspace:/docker_workspace'
     docker_kwargs:
@@ -30,10 +30,10 @@ pods:
         OMP_NUM_THREADS: $OMP_NUM_THREADS
   - name: ranker
     show_exc_info: true
-    uses: pods/ranker.yml
+    uses: ranker.yml
   - name: redis
     show_exc_info: true
-    uses: pods/redis.yml
+    uses: redis.yml
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     timeout_ready: 100000 # larger timeout as in query time will read all the data

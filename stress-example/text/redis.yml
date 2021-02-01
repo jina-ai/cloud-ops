@@ -6,4 +6,4 @@ with:
   show_exc_info: true
 metas:
   name: redis_idx
-  workspace: $JINA_WORKSPACE
+  workspace: '/docker-workspace'

@@ -1,8 +1,10 @@
 import multiprocessing as mp
+import random
 import time
 from datetime import datetime
 
 import click
+import numpy as np
 from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
@@ -27,7 +29,7 @@ def validate_img(resp):
             assert 'filename' in m.tags.keys()
             # to test that the data from the KV store is retrieved
             assert 'image ' in m.tags['filename']
-        #assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
+        # assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
 def random_docs(start, end):
@@ -40,12 +42,12 @@ def random_docs(start, end):
         yield doc
 
 
-def wrapper(args, docs, id, function, time_end, req_size):
+def wrapper(args, docs, id, function, time_end, req_size, dataset):
     client = Client(args)
     while True:
         print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
         client.check_input(docs)
-        function(client, docs, req_size)
+        function(client, docs, req_size, dataset)
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
             # close Process
@@ -57,14 +59,57 @@ def index_done(resp):
     print(f'len of resp = {len(resp.index.docs)}')
 
 
-def index(client, docs, req_size):
-    print('indexing!!!')
-    client.index(docs, request_size=req_size, on_done=index_done)
+def index(client, docs, req_size, dataset):
+    on_done = index_done
+    if dataset == 'text':
+        # TODO maybe specific validation?
+        pass
+    client.index(docs, request_size=req_size, on_done=on_done)
 
 
-def query(client, docs, req_size):
+def validate_text(resp):
+    print(f'got {len(resp.search.docs)} docs in resp.search')
+    for d in resp.search.docs:
+        for m in d.matches:
+            # to test that the data from the KV store is retrieved
+            assert 'filename' in m.tags.keys()
+        assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
+
+
+def query(client, docs, req_size, dataset):
     print(f' heeey query')
-    client.search(input_fn=docs, on_done=validate_img, top_k=TOP_K, request_size=req_size)
+    on_done = validate_img
+    if dataset == 'text':
+        on_done = validate_text
+    client.search(input_fn=docs, on_done=on_done, top_k=TOP_K, request_size=req_size)
+
+
+def document_generator(num_docs):
+    chunk_id = num_docs
+    for idx in range(num_docs):
+        with Document() as doc:
+            doc.id = idx
+            doc.text = f'I have {idx} cats'
+            doc.embedding = np.random.random([9])
+            doc.tags['filename'] = f'filename {idx}'
+            num_chunks = random.randint(1, 10)
+            for chunk_idx in range(num_chunks):
+                with Document() as chunk:
+                    chunk.id = chunk_id
+                    chunk.tags['id'] = chunk_idx
+                    chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'
+                    chunk.embedding = np.random.random([9])
+                chunk_id += 1
+                doc.chunks.append(chunk)
+        yield doc
+
+
+def get_dataset_docs(dataset, nr):
+    if dataset == 'image':
+        return list(random_docs(0, nr))
+
+    elif dataset == 'text':
+        return list(document_generator(nr))
 
 
 @click.command()
@@ -75,7 +120,8 @@ def query(client, docs, req_size):
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
 @click.option('--req_size', '-r', default=REQUEST_SIZE)
-def main(task, host, port, load, nr, concurrency, req_size):
+@click.option('--dataset')
+def main(task, host, port, load, nr, concurrency, req_size, dataset):
     print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
@@ -85,24 +131,23 @@ def main(task, host, port, load, nr, concurrency, req_size):
     if task == 'query':
         function = query
 
-    args = set_client_cli_parser().parse_args(
+    grpc_args = set_client_cli_parser().parse_args(
         ['--host', host, '--port-expose', str(port)])
 
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
     # needs to be a list otherwise it gets exhausted
-    docs = list(random_docs(0, nr))
-    # FIXME(cristianmtr): remote clients?
+    docs = get_dataset_docs(dataset, nr)
     if concurrency == 1:
         print(f'Starting only one process. Not using multiprocessing...')
-        wrapper(args, docs, 1, function, time_end, req_size)
+        wrapper(grpc_args, docs, 1, function, time_end, req_size, dataset)
     else:
         print(f'Using multiprocessing to start {concurrency} processes...')
         processes = [
             mp.Process(
                 target=wrapper,
-                args=(),
+                args=(grpc_args, docs, id, function, time_end, req_size, dataset),
                 name=f'{function.__name__}-{id}'
             )
             for id in range(concurrency)
