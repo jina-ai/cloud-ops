@@ -6,7 +6,7 @@ with:
   show_exc_info: true
 metas:
   name: redis_idx
-  workspace: '/docker-workspace'
+  workspace: $JINA_WORKSPACE
 requests:
   on:
     ControlRequest:
