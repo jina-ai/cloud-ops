@@ -8,8 +8,8 @@ Parameters:
     Description: Enter Image ID. Default is for Ubuntu 20.04, non GPU, Frankfurt
   GPUEC2ImageIdParam:
     Type: String
-    Default: ami-0156b1cf492edb708
-    Description: Enter Image ID. Default is for Deep Learning Base AMI (Amazon Linux 2) Version 33.0, Frankfurt
+    Default: ami-0deafbc40577c9a2b
+    Description: Enter Image ID. Default is for Deep Learning Base Ubuntu 18.04, Frankfurt
   EC2InstanceTypeParam:
     Type: String
     Default: t3.large
@@ -143,7 +143,7 @@ Resources:
            #!/bin/bash -xe
            yum -y update
            yum install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/gpu-deb-systemd.sh > /home/ec2-user/cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ec2-user/cfn-init-script.sh
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ec2-user/requirements.txt
            cd /home/ec2-user
            chmod +x cfn-init-script.sh
@@ -151,6 +151,10 @@ Resources:
            # Install new script with yum commands
            ./cfn-init-script.sh
            pip3 install -r requirements.txt
+           apt-get install docker --yes
+           apt install docker.io --yes
+           usermod -aG docker $USER
+           systemctl enable --now docker
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -173,6 +177,11 @@ Resources:
       InstanceId: !Ref encoderInstance
       VolumeId: !Ref encoderVolume
       Device: /dev/sdh
+
+  EncoderEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref encoderInstance
 
   crafterInstance:
     Type: AWS::EC2::Instance
@@ -235,6 +244,11 @@ Resources:
       VolumeId: !Ref crafterVolume
       Device: /dev/sdh
 
+  CrafterEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref crafterInstance
+
   indexerInstance:
     Type: AWS::EC2::Instance
     Metadata:
@@ -278,6 +292,7 @@ Resources:
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
            apt-get install docker --yes
            apt install docker.io --yes
+           usermod -aG docker $USER
            systemctl enable --now docker
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
@@ -301,6 +316,11 @@ Resources:
       InstanceId: !Ref indexerInstance
       VolumeId: !Ref indexerVolume
       Device: /dev/sdh
+
+  IndexerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref indexerInstance
 
   rankerInstance:
     Type: AWS::EC2::Instance
@@ -345,6 +365,7 @@ Resources:
            chmod +x requirements.txt
            apt-get install docker --yes
            apt install docker.io --yes
+           usermod -aG docker $USER
            systemctl enable --now docker
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
@@ -369,6 +390,11 @@ Resources:
       InstanceId: !Ref rankerInstance
       VolumeId: !Ref rankerVolume
       Device: /dev/sdh
+
+  RankerEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref rankerInstance
 
   flowInstance:
     Type: AWS::EC2::Instance
@@ -412,6 +438,7 @@ Resources:
            pip3 install redis==3.5.3
            apt-get install docker --yes
            apt install docker.io --yes
+           usermod -aG docker $USER
            systemctl enable --now docker
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
@@ -484,11 +511,6 @@ Resources:
        - Key: Name
          Value: Client-Instance
 
-  ClientEIP:
-    Type: AWS::EC2::EIP
-    Properties:
-      InstanceId: !Ref clientInstance
-
   clientVolume:
     Type: AWS::EC2::Volume
     Properties:
@@ -506,13 +528,34 @@ Resources:
       VolumeId: !Ref clientVolume
       Device: /dev/sdh
 
+  ClientEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref clientInstance
+
 
 Outputs:
   FlowEIPAllocationId:
     Value: !GetAtt FlowEIP.AllocationId  # Value: !Ref FlowEIP
     Export:
       Name: "FlowEIP"
+  EncoderEIPAllocationId:
+    Value: !GetAtt EncoderEIP.AllocationId  # Value: !Ref EncoderEIP
+    Export:
+      Name: "EncoderEIP"
+  IndexerEIPAllocationId:
+    Value: !GetAtt IndexerEIP.AllocationId  # Value: !Ref IndexerEIP
+    Export:
+      Name: "IndexerEIP"
+  RankerEIPAllocationId:
+    Value: !GetAtt RankerEIP.AllocationId  # Value: !Ref RankerEIP
+    Export:
+      Name: "RankerEIP"
   ClientEIPAllocationId:
     Value: !GetAtt ClientEIP.AllocationId  # Value: !Ref ClientEIP
     Export:
       Name: "ClientEIP"
+  CrafterEIPAllocationId:
+    Value: !GetAtt CrafterEIP.AllocationId  # Value: !Ref CrafterEIP
+    Export:
+      Name: "CrafterEIP"
