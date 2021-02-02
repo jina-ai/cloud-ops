@@ -1,10 +1,12 @@
 import multiprocessing as mp
+import os
 import random
 import time
 from datetime import datetime
 from typing import Generator, Callable
 
 import click
+import numpy as np
 from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
@@ -14,9 +16,16 @@ REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 
+FLOW_HOST = os.environ.get('FLOW_HOST')
+FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
+
+if FLOW_HOST is None or FLOW_PORT_GRPC is None:
+    raise ValueError(
+        f'Make sure you set both FLOW_HOST and FLOW_PORT_GRPC. \
+        Current FLOW_HOST = {FLOW_HOST}; FLOW_HOST_GRPC = {FLOW_PORT_GRPC}')
+
 
 def create_random_img_array(img_height, img_width):
-    import numpy as np
     return np.random.randint(0, 256, (img_height, img_width, 3))
 
 
@@ -129,15 +138,15 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
 
 @click.command()
 @click.option('--task', '-t')
-@click.option('--host', '-h', default='0.0.0.0')
-@click.option('--port', '-p', default=45678)
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
 @click.option('--req_size', '-r', default=REQUEST_SIZE)
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
-def main(task, host, port, load, nr, concurrency, req_size, dataset):
-    print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
+def main(task, load, nr, concurrency, req_size, dataset):
+    print(f'task = {task}; load = {load}; nr = {nr}; concurrency = {concurrency}; \
+     req_size = {req_size}; dataset = {dataset}')
+    print(f'connecting to gRPC gateway at {FLOW_HOST}:{FLOW_PORT_GRPC}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
             f'unknown task: {task}. A valid task is either `index` or `query`.')
@@ -147,7 +156,7 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
         function = query
 
     grpc_args = set_client_cli_parser().parse_args(
-        ['--host', host, '--port-expose', str(port)])
+        ['--host', FLOW_HOST, '--port-expose', str(FLOW_PORT_GRPC)])
 
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
@@ -182,5 +191,6 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
 
 if __name__ == '__main__':
     import nltk
+
     nltk.download('words')
     main()

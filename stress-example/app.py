@@ -9,8 +9,14 @@ from typing import List, Optional, Dict
 import click
 import requests
 
-# TODO make it available to the client
-FLOW_HOST_PORT = os.environ.get('FLOW_HOST_PORT')
+FLOW_PROTO = os.environ.get('FLOW_PROTO')
+FLOW_HOST = os.environ.get('FLOW_HOST')
+FLOW_PORT = os.environ.get('FLOW_PORT')
+
+FLOW_HOST_PORT = f'{FLOW_PROTO}://{FLOW_HOST}:{FLOW_PORT}'
+
+if FLOW_PROTO is None or FLOW_HOST is None or FLOW_PORT is None:
+    raise ValueError(f'Make sure you set all of FLOW_PROTO, FLOW_HOST, FLOW_PORT. Current url = {FLOW_HOST_PORT}')
 
 
 def create_workspace(filepaths: List[str],
@@ -26,6 +32,8 @@ def create_workspace(filepaths: List[str],
 
         workspace_id = r.json()
         print(f'Got workspace_id: {workspace_id}')
+        with open('ws.txt', 'w') as f:
+            f.write(workspace_id)
         return workspace_id
 
 
@@ -47,6 +55,8 @@ def publish_flow(flow_yaml, dataset, workspace_id=None):
         workspace_id = create_workspace(filepaths=dependencies)
     ret = create_remote_flow(flow_yaml, workspace_id)
     print(f' Creating flow results {ret}')
+    with open('flow.txt', 'w') as f:
+        f.write(ret)
 
 
 def assert_request(method: str,
@@ -76,9 +86,6 @@ def close_flow(flow_id):
 @click.option('--ws', default=None)
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(jinad, flow_id, ws, dataset):
-    if FLOW_HOST_PORT is None:
-        raise ValueError('set FLOW_HOST_PORT')
-
     print(f'Using jinad gateway on {FLOW_HOST_PORT}')
 
     if ws:

@@ -10,18 +10,18 @@ Steps for cloud stress example
    **NOTE** Make sure you use the IPs of the machines.
 
 1. Run `bash env_vars_config.sh`. This replaces all env vars used in the yml files with the env vars you've set. This is required in order to make sure the hosts referred to are the same across machines in the flow
-1. Configure `FLOW_HOST_PORT` to point to the gateway machine in AWS.
+1. Configure `FLOW_PROTO`, `FLOW_HOST`, `FLOW_PORT`, `FLOW_PORT_GRPC` to point to the gateway machine in AWS.
 1. Start flow `python app.py --jinad index --dataset $DATASET`
    
     **NOTE** Keep track of flow id and workspace ids.
 
-1. Run the client to index `python3 client.py --dataset $DATASET -t index -n 100 -l 0 -c 1 -h 0.0.0.0 -p 45678`. Replace `-h` and `-p` with machine and port for gateway (`FLOW_HOST_PORT`)
+1. Run the client to index `python3 client.py --dataset $DATASET -t index -n 100 -l 0 -c 1`. Replace `-h` and `-p` with machine and port for gateway (`FLOW_HOST_PORT`)
 1. Remove flow `python app.py --jina remove --flow-id $FLOW_ID`
 1. Start new flow and reuse workspace
 
     `python3 app.py --jinad query --ws $WORKSPACE_ID --dataset $DATASET`
 
-1. Query some docs: `python3 client.py -t query -n 10 -l 0 -c 1 -h 0.0.0.0 -p 45678 --dataset $DATASET`
+1. Query some docs: `python3 client.py -t query -n 10 -l 0 -c 1 --dataset $DATASET`
 
 Testing locally with docker compose
 
