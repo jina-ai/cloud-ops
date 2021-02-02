@@ -141,21 +141,15 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            cd /home/ubuntu
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
            chmod +x cfn-init-script.sh
-           chmod +x requirements.txt
            ./cfn-init-script.sh
            python3.8 -m pip install -r requirements.txt
-           apt-get install docker --yes
-           apt install docker.io --yes
-           sudo usermod -aG docker $USER
-           systemctl enable --now docker
-           systemctl restart jinad.service
-           sudo reboot
+           apt-get install -y docker
+           usermod -aG docker $USER
+           reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -213,15 +207,15 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
            cd /home/ubuntu
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           pip3 install jina[cv,http]==0.9.25
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           chmod +x requirements.txt
+           python3.8 -m pip install -r requirements.txt
+           apt-get install -y docker
+           usermod -aG docker $USER
+           reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -279,24 +273,16 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
            cd /home/ubuntu
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           pip3 install jina[cv,http]==0.9.25
-           pip3 install docker==4.4.1
-           pip3 install redis==3.5.3
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           chmod +x requirements.txt
-           apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
-           apt-get install docker --yes
-           apt install docker.io --yes
+           python3.8 -m pip install -r requirements.txt
+           apt-get install -y docker
            usermod -aG docker $USER
-           systemctl enable --now docker
-           systemctl restart jinad.service
-           sudo reboot
+           reboot
+           apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -355,24 +341,16 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
            cd /home/ubuntu
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           pip3 install jina[cv,http]==0.9.25
-           pip3 install docker==4.4.1
-           pip3 install redis==3.5.3
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           chmod +x requirements.txt
-           apt-get install docker --yes
-           apt install docker.io --yes
+           python3.8 -m pip install -r requirements.txt
+           apt-get install -y docker
            usermod -aG docker $USER
-           systemctl enable --now docker
+           reboot
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
-           systemctl restart jinad.service
-           # sudo reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -430,23 +408,15 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
            cd /home/ubuntu
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           chmod +x requirements.txt
-           pip3 install jina[cv,http]==0.9.25
-           pip3 install docker==4.4.1
-           pip3 install redis==3.5.3
-           apt-get install docker --yes
-           apt install docker.io --yes
+           python3.8 -m pip install -r requirements.txt
+           apt-get install -y docker
            usermod -aG docker $USER
-           systemctl enable --now docker
-           systemctl restart jinad.service
-           sudo reboot
+           reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
 
@@ -506,12 +476,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y  git-all
-           apt install -y python3-pip
-           pip3 install jina[cv,http]==0.9.25
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           chmod +x requirements.txt
+           apt-get update && apt-get -y install python3.8 python3.8-dev python3.8-distutils python3.8-venv python3-pip git-all
+           python3 -m pip install --pre jina[cv,http]
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -542,27 +508,27 @@ Resources:
 
 
 Outputs:
-  FlowEIPAllocationId:
-    Value: !GetAtt FlowEIP.AllocationId  # Value: !Ref FlowEIP
+  FlowIP:
+    Value: !Ref FlowEIP
     Export:
-      Name: "FlowEIP"
-  EncoderEIPAllocationId:
-    Value: !GetAtt EncoderEIP.AllocationId  # Value: !Ref EncoderEIP
+      Name: "FlowEIP::Address"
+  EncoderIP:
+    Value: !Ref EncoderEIP
     Export:
-      Name: "EncoderEIP"
-  IndexerEIPAllocationId:
-    Value: !GetAtt IndexerEIP.AllocationId  # Value: !Ref IndexerEIP
+      Name: "EncoderEIP::Address"
+  IndexerIP:
+    Value: !Ref IndexerEIP
     Export:
-      Name: "IndexerEIP"
-  RankerEIPAllocationId:
-    Value: !GetAtt RankerEIP.AllocationId  # Value: !Ref RankerEIP
+      Name: "IndexerEIP::Address"
+  RankerIP:
+    Value: !Ref RankerEIP
     Export:
-      Name: "RankerEIP"
-  ClientEIPAllocationId:
-    Value: !GetAtt ClientEIP.AllocationId  # Value: !Ref ClientEIP
+      Name: "RankerEIP::Address"
+  ClientIP:
+    Value: !Ref ClientEIP
     Export:
-      Name: "ClientEIP"
-  CrafterEIPAllocationId:
-    Value: !GetAtt CrafterEIP.AllocationId  # Value: !Ref CrafterEIP
+      Name: "ClientEIP::Address"
+  CrafterIP:
+    Value: !Ref CrafterEIP
     Export:
-      Name: "CrafterEIP"
+      Name: "CrafterEIP::Address"
