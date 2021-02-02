@@ -171,7 +171,7 @@ def main(task, load, nr, concurrency, req_size, dataset):
         processes = [
             mp.Process(
                 target=wrapper,
-                args=(grpc_args, docs_generator, id, function, time_end, req_size, dataset),
+                args=(grpc_args, docs_generator, id, function, time_end, req_size, dataset, nr),
                 name=f'{function.__name__}-{id}'
             )
             for id in range(concurrency)

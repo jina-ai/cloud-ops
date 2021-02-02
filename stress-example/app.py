@@ -81,7 +81,7 @@ def close_flow(flow_id):
 
 
 @click.command()
-@click.option('--jinad', default=None, type=click.Choice(['index', 'query', 'remove']))
+@click.option('--jinad', default=None)
 @click.option('--flow-id', default=None)
 @click.option('--ws', default=None)
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
@@ -96,10 +96,10 @@ def main(jinad, flow_id, ws, dataset):
     else:
         if dataset is None:
             raise ValueError('choose --dataset')
-        if jinad == 'index':
-            publish_flow(f'{dataset}/index.yml', dataset, ws)
-        elif jinad == 'query':
-            publish_flow(f'{dataset}/query.yml', dataset, ws)
+        flow_path = f'{dataset}/{jinad}.yml'
+        if not os.path.exists:
+            raise ValueError(f'File for flow could not be found: {flow_path}')
+        publish_flow(flow_path, dataset, ws)
 
 
 if __name__ == '__main__':
