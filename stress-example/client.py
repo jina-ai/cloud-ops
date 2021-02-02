@@ -2,9 +2,9 @@ import multiprocessing as mp
 import random
 import time
 from datetime import datetime
+from typing import Generator, Callable
 
 import click
-import numpy as np
 from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
@@ -32,7 +32,7 @@ def validate_img(resp):
         # assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
-def random_docs(start, end):
+def random_docs(end, start=0):
     for idx in range(start, end + start):
         with Document() as doc:
             doc.id = idx
@@ -42,12 +42,25 @@ def random_docs(start, end):
         yield doc
 
 
-def wrapper(args, docs, id, function, time_end, req_size, dataset):
+ClientFunction = Callable[[Client, Callable[[int], Generator], int, str, int], None]
+
+
+def wrapper(
+        args,
+        docs_gen_func: Callable[[int], Generator],
+        id,
+        function: ClientFunction,
+        time_end: int,
+        req_size: int,
+        dataset: str,
+        nr_docs: int
+):
     client = Client(args)
     while True:
-        print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
-        client.check_input(docs)
-        function(client, docs, req_size, dataset)
+        print(
+            f'Process {id}: Running function {function.__name__} with {nr_docs} docs via {docs_gen_func.__name__}...')
+        client.check_input(docs_gen_func(nr_docs))
+        function(client, docs_gen_func, req_size, dataset, nr_docs)
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
             # close Process
@@ -59,12 +72,12 @@ def index_done(resp):
     print(f'len of resp = {len(resp.index.docs)}')
 
 
-def index(client, docs, req_size, dataset):
+def index(client: Client, docs_gen_func: Callable[[int], Generator], req_size: int, dataset: str, nr_docs: int):
     on_done = index_done
     if dataset == 'text':
         # TODO maybe specific validation?
         pass
-    client.index(docs, request_size=req_size, on_done=on_done)
+    client.index(docs_gen_func(nr_docs), request_size=req_size, on_done=on_done)
 
 
 def validate_text(resp):
@@ -76,12 +89,12 @@ def validate_text(resp):
         assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
-def query(client, docs, req_size, dataset):
+def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: int, dataset: str, nr_docs: int):
     print(f' heeey query')
     on_done = validate_img
     if dataset == 'text':
         on_done = validate_text
-    client.search(input_fn=docs, on_done=on_done, top_k=TOP_K, request_size=req_size)
+    client.search(docs_gen_func(nr_docs), on_done=on_done, top_k=TOP_K, request_size=req_size)
 
 
 def document_generator(num_docs):
@@ -106,12 +119,12 @@ def document_generator(num_docs):
         yield doc
 
 
-def get_dataset_docs(dataset, nr):
+def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
     if dataset == 'image':
-        return list(random_docs(0, nr))
+        return random_docs
 
     elif dataset == 'text':
-        return list(document_generator(nr))
+        return document_generator
 
 
 @click.command()
@@ -122,7 +135,7 @@ def get_dataset_docs(dataset, nr):
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
 @click.option('--req_size', '-r', default=REQUEST_SIZE)
-@click.option('--dataset')
+@click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(task, host, port, load, nr, concurrency, req_size, dataset):
     print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
     if task not in ['index', 'query']:
@@ -139,17 +152,17 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
-    # needs to be a list otherwise it gets exhausted
-    docs = get_dataset_docs(dataset, nr)
+    docs_generator = get_dataset_docs_gens(dataset)
+
     if concurrency == 1:
         print(f'Starting only one process. Not using multiprocessing...')
-        wrapper(grpc_args, docs, 1, function, time_end, req_size, dataset)
+        wrapper(grpc_args, docs_generator, 1, function, time_end, req_size, dataset, nr)
     else:
         print(f'Using multiprocessing to start {concurrency} processes...')
         processes = [
             mp.Process(
                 target=wrapper,
-                args=(grpc_args, docs, id, function, time_end, req_size, dataset),
+                args=(grpc_args, docs_generator, id, function, time_end, req_size, dataset),
                 name=f'{function.__name__}-{id}'
             )
             for id in range(concurrency)

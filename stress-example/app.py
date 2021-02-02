@@ -74,19 +74,25 @@ def close_flow(flow_id):
 @click.option('--jinad', default=None, type=click.Choice(['index', 'query', 'remove']))
 @click.option('--flow-id', default=None)
 @click.option('--ws', default=None)
-@click.option('--dataset')
+@click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(jinad, flow_id, ws, dataset):
     if FLOW_HOST_PORT is None:
         raise ValueError('set FLOW_HOST_PORT')
+
     print(f'Using jinad gateway on {FLOW_HOST_PORT}')
+
     if ws:
         print(f'reusing workspace id {ws}')
-    if jinad == 'index':
-        publish_flow(f'{dataset}/index.yml', dataset, ws)
-    elif jinad == 'query':
-        publish_flow(f'{dataset}/query.yml', dataset, ws)
-    elif jinad == 'remove':
+
+    if jinad == 'remove':
         close_flow(flow_id)
+    else:
+        if dataset is None:
+            raise ValueError('choose --dataset')
+        if jinad == 'index':
+            publish_flow(f'{dataset}/index.yml', dataset, ws)
+        elif jinad == 'query':
+            publish_flow(f'{dataset}/query.yml', dataset, ws)
 
 
 if __name__ == '__main__':
