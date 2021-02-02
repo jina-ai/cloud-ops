@@ -13,7 +13,7 @@ components:
       name: chunk_idx
 metas:
   name: chunk_compound_indexer
-  workspace: '/docker-workspace'
+  workspace: $JINA_WORKSPACE
 requests:
   on:
     IndexRequest:

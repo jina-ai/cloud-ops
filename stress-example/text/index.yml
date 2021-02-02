@@ -40,5 +40,6 @@ pods:
     timeout_ready: -1
 #    needs: gateway
 #  - name: join_all
+#    method: needs
 #    uses: _merge
 #    needs: [doc_idx, chunk_idx]
