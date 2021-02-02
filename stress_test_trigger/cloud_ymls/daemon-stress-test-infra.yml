@@ -141,16 +141,15 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           yum -y update
-           yum install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ec2-user/cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ec2-user/requirements.txt
-           cd /home/ec2-user
+           apt-get -y update
+           apt install -y python3-pip
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
+           cd /home/ubuntu
            chmod +x cfn-init-script.sh
            chmod +x requirements.txt
-           # Install new script with yum commands
            ./cfn-init-script.sh
-           pip3 install -r requirements.txt
+           python3.8 -m pip install -r requirements.txt
            apt-get install docker --yes
            apt install docker.io --yes
            usermod -aG docker $USER
