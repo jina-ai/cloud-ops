@@ -85,20 +85,22 @@ def query(client, docs, req_size, dataset):
 
 
 def document_generator(num_docs):
+    from nltk.corpus import words
+    from random import sample
     chunk_id = num_docs
     for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
-            doc.text = f'I have {idx} cats'
-            doc.embedding = np.random.random([9])
+            length = random.randint(5, 30)
+            doc.text = ' '.join(sample(words.words(), length))
             doc.tags['filename'] = f'filename {idx}'
             num_chunks = random.randint(1, 10)
             for chunk_idx in range(num_chunks):
                 with Document() as chunk:
                     chunk.id = chunk_id
                     chunk.tags['id'] = chunk_idx
-                    chunk.text = f'I have {chunk_idx} chunky cats. So long and thanks for all the fish'
-                    chunk.embedding = np.random.random([9])
+                    length = random.randint(5, 30)
+                    chunk.text = ' '.join(sample(words.words(), length))
                 chunk_id += 1
                 doc.chunks.append(chunk)
         yield doc
@@ -166,4 +168,6 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
 
 
 if __name__ == '__main__':
+    import nltk
+    nltk.download('words')
     main()
