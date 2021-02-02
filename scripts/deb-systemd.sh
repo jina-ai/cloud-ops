@@ -18,7 +18,7 @@ sudo bash <<INIT
         gem install fluentd --no-doc
 
     # install jinad
-    pip3 install --prefix /usr/local "jina[daemon]"
+    python3.8 -m pip install --prefix /usr/local "jina[daemon]"
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
