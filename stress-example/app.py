@@ -9,7 +9,7 @@ from typing import List, Optional, Dict
 import click
 import requests
 
-FLOW_PROTO = os.environ.get('FLOW_PROTO')
+FLOW_PROTO = os.environ.get('FLOW_PROTO', 'http')
 FLOW_HOST = os.environ.get('FLOW_HOST')
 FLOW_PORT = os.environ.get('FLOW_PORT')
 
