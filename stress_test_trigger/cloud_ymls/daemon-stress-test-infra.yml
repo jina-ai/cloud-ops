@@ -8,8 +8,8 @@ Parameters:
     Description: Enter Image ID. Default is for Ubuntu 20.04, non GPU, Frankfurt
   GPUEC2ImageIdParam:
     Type: String
-    Default: ami-0deafbc40577c9a2b
-    Description: Enter Image ID. Default is for Ubuntu 18.04, with GPU, Frankfurt
+    Default: ami-0156b1cf492edb708
+    Description: Enter Image ID. Default is for Deep Learning Base AMI (Amazon Linux 2) Version 33.0, Frankfurt
   EC2InstanceTypeParam:
     Type: String
     Default: t3.large
@@ -23,8 +23,8 @@ Parameters:
     Description: Enter EBS volume size (type gp2). Default is 20GB.
   AvailabilityZoneParam:
     Type: String
-    Default: eu-central-1a
-    Description: Enter Availability Zone for EC2. Default is eu-central-1a (Frankfurt)
+    Default: eu-central-1b
+    Description: Enter Availability Zone for EC2. Default is eu-central-1b (Frankfurt)
 Resources:
   daemonVPC:
     Type: AWS::EC2::VPC
@@ -141,13 +141,14 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
-           apt-get -y update
-           apt install -y python3-pip
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > /home/ubuntu/cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
-           cd /home/ubuntu
+           yum -y update
+           yum install -y python3-pip
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/gpu-deb-systemd.sh > /home/ec2-user/cfn-init-script.sh
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ec2-user/requirements.txt
+           cd /home/ec2-user
            chmod +x cfn-init-script.sh
            chmod +x requirements.txt
+           # Install new script with yum commands
            ./cfn-init-script.sh
            pip3 install -r requirements.txt
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
@@ -208,10 +209,9 @@ Resources:
            cd /home/ubuntu
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           # pip3 install jina[cv,http]==0.9.22
+           pip3 install jina[cv,http]==0.9.25
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            chmod +x requirements.txt
-           pip3 install -r requirements.txt
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -270,14 +270,15 @@ Resources:
            cd /home/ubuntu
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           # pip3 install jina[cv,http]==0.9.22
-           # pip3 install docker==4.4.1
-           # pip3 install redis==3.5.3
+           pip3 install jina[cv,http]==0.9.25
+           pip3 install docker==4.4.1
+           pip3 install redis==3.5.3
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            chmod +x requirements.txt
-           pip3 install -r requirements.txt
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
            apt-get install docker --yes
+           apt install docker.io --yes
+           systemctl enable --now docker
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -337,13 +338,14 @@ Resources:
            cd /home/ubuntu
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           # pip3 install jina[cv,http]==0.9.22
-           # pip3 install docker==4.4.1
-           # pip3 install redis==3.5.3
+           pip3 install jina[cv,http]==0.9.25
+           pip3 install docker==4.4.1
+           pip3 install redis==3.5.3
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            chmod +x requirements.txt
-           pip3 install -r requirements.txt
            apt-get install docker --yes
+           apt install docker.io --yes
+           systemctl enable --now docker
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
@@ -405,11 +407,12 @@ Resources:
            ./cfn-init-script.sh
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            chmod +x requirements.txt
-           pip3 install -r requirements.txt
-           # pip3 install jina[cv,http]==0.9.22
-           # pip3 install docker==4.4.1
-           # pip3 install redis==3.5.3
+           pip3 install jina[cv,http]==0.9.25
+           pip3 install docker==4.4.1
+           pip3 install redis==3.5.3
            apt-get install docker --yes
+           apt install docker.io --yes
+           systemctl enable --now docker
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
 
@@ -472,10 +475,9 @@ Resources:
            apt-get -y update
            apt install -y  git-all
            apt install -y python3-pip
-           # pip3 install jina[cv,http]==0.9.22
+           pip3 install jina[cv,http]==0.9.25
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > /home/ubuntu/requirements.txt
            chmod +x requirements.txt
-           pip3 install -r requirements.txt
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
       Tags:
