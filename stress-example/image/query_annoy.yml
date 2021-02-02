@@ -14,7 +14,7 @@ pods:
     timeout_ready: 600000
   - name: vec_idx
     uses: docker://jinahub/pod.indexer.annoyindexer:0.0.14-0.9.23
-    uses_internal: vec.yml
+    uses_internal: annoy_indexer.yml
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: _merge_matches

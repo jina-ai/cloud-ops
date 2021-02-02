@@ -13,8 +13,8 @@ pods:
     port_expose: 8000
     timeout_ready: 600000
   - name: vec_idx
-    uses: docker://jinahub/pod.indexer.annoyindexer:0.0.14-0.9.23
-    uses_internal: vec.yml
+    uses: docker://jinahub/pod.indexer.faissindexer:0.0.14-0.9.23
+    uses_internal: faiss_indexer.yml
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: _merge_matches
