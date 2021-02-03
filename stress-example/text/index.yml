@@ -42,4 +42,4 @@ pods:
   - name: join_all
     method: needs
     uses: _merge
-    needs: [doc_idx, chunk_idx]
+    needs: [redis, chunk_idx]
