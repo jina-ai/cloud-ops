@@ -1,7 +1,9 @@
 import multiprocessing as mp
+import os
 import random
 import time
 from datetime import datetime
+from typing import Generator, Callable
 
 import click
 import numpy as np
@@ -14,9 +16,16 @@ REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 
+FLOW_HOST = os.environ.get('FLOW_HOST')
+FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
+
+if FLOW_HOST is None or FLOW_PORT_GRPC is None:
+    raise ValueError(
+        f'Make sure you set both FLOW_HOST and FLOW_PORT_GRPC. \
+        Current FLOW_HOST = {FLOW_HOST}; FLOW_HOST_GRPC = {FLOW_PORT_GRPC}')
+
 
 def create_random_img_array(img_height, img_width):
-    import numpy as np
     return np.random.randint(0, 256, (img_height, img_width, 3))
 
 
@@ -32,7 +41,7 @@ def validate_img(resp):
         # assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
-def random_docs(start, end):
+def random_docs(end, start=0):
     for idx in range(start, end + start):
         with Document() as doc:
             doc.id = idx
@@ -42,12 +51,25 @@ def random_docs(start, end):
         yield doc
 
 
-def wrapper(args, docs, id, function, time_end, req_size, dataset):
+ClientFunction = Callable[[Client, Callable[[int], Generator], int, str, int], None]
+
+
+def wrapper(
+        args,
+        docs_gen_func: Callable[[int], Generator],
+        id,
+        function: ClientFunction,
+        time_end: int,
+        req_size: int,
+        dataset: str,
+        nr_docs: int
+):
     client = Client(args)
     while True:
-        print(f'Process {id}: Running function {function.__name__} with {len(docs)} docs...')
-        client.check_input(docs)
-        function(client, docs, req_size, dataset)
+        print(
+            f'Process {id}: Running function {function.__name__} with {nr_docs} docs via {docs_gen_func.__name__}...')
+        client.check_input(docs_gen_func(nr_docs))
+        function(client, docs_gen_func, req_size, dataset, nr_docs)
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
             # close Process
@@ -59,12 +81,12 @@ def index_done(resp):
     print(f'len of resp = {len(resp.index.docs)}')
 
 
-def index(client, docs, req_size, dataset):
+def index(client: Client, docs_gen_func: Callable[[int], Generator], req_size: int, dataset: str, nr_docs: int):
     on_done = index_done
     if dataset == 'text':
         # TODO maybe specific validation?
         pass
-    client.index(docs, request_size=req_size, on_done=on_done)
+    client.index(docs_gen_func(nr_docs), request_size=req_size, on_done=on_done)
 
 
 def validate_text(resp):
@@ -76,12 +98,12 @@ def validate_text(resp):
         assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
-def query(client, docs, req_size, dataset):
+def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: int, dataset: str, nr_docs: int):
     print(f' heeey query')
     on_done = validate_img
     if dataset == 'text':
         on_done = validate_text
-    client.search(input_fn=docs, on_done=on_done, top_k=TOP_K, request_size=req_size)
+    client.search(docs_gen_func(nr_docs), on_done=on_done, top_k=TOP_K, request_size=req_size)
 
 
 def document_generator(num_docs):
@@ -106,25 +128,25 @@ def document_generator(num_docs):
         yield doc
 
 
-def get_dataset_docs(dataset, nr):
+def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
     if dataset == 'image':
-        return list(random_docs(0, nr))
+        return random_docs
 
     elif dataset == 'text':
-        return list(document_generator(nr))
+        return document_generator
 
 
 @click.command()
 @click.option('--task', '-t')
-@click.option('--host', '-h', default='0.0.0.0')
-@click.option('--port', '-p', default=45678)
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
 @click.option('--req_size', '-r', default=REQUEST_SIZE)
-@click.option('--dataset')
-def main(task, host, port, load, nr, concurrency, req_size, dataset):
-    print(f'task = {task}; port = {port}; load = {load}; nr = {nr}; concurrency = {concurrency}')
+@click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
+def main(task, load, nr, concurrency, req_size, dataset):
+    print(f'task = {task}; load = {load}; nr = {nr}; concurrency = {concurrency}; \
+     req_size = {req_size}; dataset = {dataset}')
+    print(f'connecting to gRPC gateway at {FLOW_HOST}:{FLOW_PORT_GRPC}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
             f'unknown task: {task}. A valid task is either `index` or `query`.')
@@ -134,22 +156,22 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
         function = query
 
     grpc_args = set_client_cli_parser().parse_args(
-        ['--host', host, '--port-expose', str(port)])
+        ['--host', FLOW_HOST, '--port-expose', str(FLOW_PORT_GRPC)])
 
     time_end = time.time() + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
-    # needs to be a list otherwise it gets exhausted
-    docs = get_dataset_docs(dataset, nr)
+    docs_generator = get_dataset_docs_gens(dataset)
+
     if concurrency == 1:
         print(f'Starting only one process. Not using multiprocessing...')
-        wrapper(grpc_args, docs, 1, function, time_end, req_size, dataset)
+        wrapper(grpc_args, docs_generator, 1, function, time_end, req_size, dataset, nr)
     else:
         print(f'Using multiprocessing to start {concurrency} processes...')
         processes = [
             mp.Process(
                 target=wrapper,
-                args=(grpc_args, docs, id, function, time_end, req_size, dataset),
+                args=(grpc_args, docs_generator, id, function, time_end, req_size, dataset, nr),
                 name=f'{function.__name__}-{id}'
             )
             for id in range(concurrency)
@@ -169,5 +191,6 @@ def main(task, host, port, load, nr, concurrency, req_size, dataset):
 
 if __name__ == '__main__':
     import nltk
+
     nltk.download('words')
     main()
