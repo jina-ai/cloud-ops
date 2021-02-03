@@ -1,14 +1,12 @@
 !Flow
 version: '1'
 with:
-  show_exc_info: true
   rest_api: false
   port_expose: $JINA_PORT
 pods:
   - name: segmenter
     polling: any
     scheduling: $SCHEDULING
-    show_exc_info: true
     uses: segment.yml
     read_only: true
     shards: $JINA_SHARDS_ENCODER
@@ -21,14 +19,12 @@ pods:
     shards: $JINA_SHARDS_ENCODER
     host: $JINA_ENCODER_HOST
     port_expose: 8000
-    show_exc_info: true
     uses: encoder.yml
     timeout_ready: -1
     read_only: true
   - name: chunk_idx
     polling: any
     scheduling: $SCHEDULING
-    show_exc_info: true
     uses: chunk.yml
     shards: $JINA_SHARDS_INDEXERS
     host: $JINA_VEC_INDEXER_HOST
@@ -37,7 +33,6 @@ pods:
   - name: redis
     polling: any
     scheduling: $SCHEDULING
-    show_exc_info: true
     uses: redis.yml
     shards: $JINA_SHARDS_INDEXERS
     host: $JINA_REDIS_INDEXER_HOST

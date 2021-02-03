@@ -1,7 +1,6 @@
 !Flow
 version: '1'
 with:
-  show_exc_info: true
   rest_api: false
   port_expose: $JINA_PORT
 pods:

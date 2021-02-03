@@ -2,12 +2,10 @@
 version: '1'
 with:
   read_only: true  # better add this in the query time
-  show_exc_info: true
   rest_api: false
   port_expose: $JINA_PORT
 pods:
   - name: chunk_seg
-    show_exc_info: true
     uses: segment.yml
     host: $JINA_ENCODER_HOST
     port_expose: 8000
@@ -16,7 +14,6 @@ pods:
     host: $JINA_ENCODER_HOST
     port_expose: 8000
     polling: any
-    show_exc_info: true
     uses: encoder.yml
     shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
@@ -25,7 +22,6 @@ pods:
     uses_internal: faiss_indexer.yml
     host: $JINA_VEC_INDEXER_HOST
     port_expose: 8000
-    show_exc_info: true
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: chunk_merger.yml
@@ -35,12 +31,10 @@ pods:
       environment:
         OMP_NUM_THREADS: $OMP_NUM_THREADS
   - name: ranker
-    show_exc_info: true
     uses: ranker.yml
     host: $JINA_RANKER_HOST
     port_expose: 8000
   - name: redis
-    show_exc_info: true
     uses: redis.yml
     shards: $JINA_SHARDS_INDEXERS
     host: $JINA_REDIS_INDEXER_HOST
