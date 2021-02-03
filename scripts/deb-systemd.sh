@@ -18,7 +18,7 @@ sudo bash <<INIT
         gem install fluentd --no-doc
 
     # install jinad
-    python3.8 -m pip install --prefix /usr/local "jina[daemon]"
+    python3.8 -m pip install --prefix /usr/local --pre "jina[daemon]"
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
@@ -26,10 +26,12 @@ sudo bash -c 'cat  << EOF > /etc/systemd/system/jinad.service
 [Unit]
 Description=JinaD (Jina Remote manager)
 After=network.target
+
 [Service]
 User=ubuntu
 ExecStart=/usr/local/bin/jinad
 Restart=always
+
 [Install]
 WantedBy=multi-user.target
 EOF'
@@ -38,6 +40,7 @@ EOF'
 echo -e "\n\nStarting jinad service\n"
 sudo bash <<JINAD_START
     systemctl daemon-reload
+    systemctl enable jinad.service
     systemctl restart jinad.service
 JINAD_START
 
