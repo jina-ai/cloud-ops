@@ -12,3 +12,4 @@ requests:
       - !EncodeDriver
         with:
           traversal_paths: ['r']
+          batch_size: 16

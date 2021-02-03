@@ -28,9 +28,9 @@ pods:
     host: $JINA_REDIS_INDEXER_HOST
     port_expose: 8000
     timeout_ready: -1 # larger timeout as in query time will read all the data
-    needs: gateway
-  - name: join_all
-    method: needs
-    uses: _merge
-    needs: [redis_idx, vec_idx]
-    read_only: true
+#    needs: gateway
+#  - name: join_all
+#    method: needs
+#    uses: _merge
+#    needs: [redis_idx, vec_idx]
+#    read_only: true

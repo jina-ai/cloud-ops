@@ -34,7 +34,6 @@ def validate_img(resp):
         if len(d.matches) != TOP_K:
             print(f' MATCHES LENGTH IS NOT TOP_K but {len(d.matches)}')
         for m in d.matches:
-            print(f'match {m.id}')
             if 'filename' not in m.tags.keys():
                 print(f'filename not in tags: {m.tags}')
             # to test that the data from the KV store is retrieved
