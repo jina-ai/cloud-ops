@@ -12,7 +12,7 @@ pods:
     port_expose: 8000
     timeout_ready: 600000
   - name: vec_idx
-    uses: docker://jinahub/pod.indexer.annoyindexer:0.0.14-0.9.23
+    uses: docker://jinahub/pod.indexer.annoyindexer:0.0.16-0.9.27
     uses_internal: annoy_indexer.yml
     shards: $JINA_SHARDS_INDEXERS
     polling: all
