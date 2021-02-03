@@ -22,7 +22,7 @@ FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
 if FLOW_HOST is None or FLOW_PORT_GRPC is None:
     raise ValueError(
         f'Make sure you set both FLOW_HOST and FLOW_PORT_GRPC. \
-        Current FLOW_HOST = {FLOW_HOST}; FLOW_HOST_GRPC = {FLOW_PORT_GRPC}')
+        Current FLOW_HOST = {FLOW_HOST}; FLOW_PORT_GRPC = {FLOW_PORT_GRPC}')
 
 
 def create_random_img_array(img_height, img_width):
@@ -34,10 +34,12 @@ def validate_img(resp):
         if len(d.matches) != TOP_K:
             print(f' MATCHES LENGTH IS NOT TOP_K but {len(d.matches)}')
         for m in d.matches:
-            print(f' match {m.id}')
-            assert 'filename' in m.tags.keys()
+            print(f'match {m.id}')
+            if 'filename' not in m.tags.keys():
+                print(f'filename not in tags: {m.tags}')
             # to test that the data from the KV store is retrieved
-            assert 'image ' in m.tags['filename']
+            if 'image ' not in m.tags['filename']:
+                print(f'"image" not in m.tags["filename"]: {m.tags["filename"]}')
         # assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
@@ -107,14 +109,12 @@ def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: i
 
 
 def document_generator(num_docs):
-    from nltk.corpus import words
-    from random import sample
     chunk_id = num_docs
     for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
             length = random.randint(5, 30)
-            doc.text = ' '.join(sample(words.words(), length))
+            doc.text = 'some text'
             doc.tags['filename'] = f'filename {idx}'
             num_chunks = random.randint(1, 10)
             for chunk_idx in range(num_chunks):
@@ -122,7 +122,7 @@ def document_generator(num_docs):
                     chunk.id = chunk_id
                     chunk.tags['id'] = chunk_idx
                     length = random.randint(5, 30)
-                    chunk.text = ' '.join(sample(words.words(), length))
+                    chunk.text = 'some more text'
                 chunk_id += 1
                 doc.chunks.append(chunk)
         yield doc
@@ -145,7 +145,7 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(task, load, nr, concurrency, req_size, dataset):
     print(f'task = {task}; load = {load}; nr = {nr}; concurrency = {concurrency}; \
-     req_size = {req_size}; dataset = {dataset}')
+req_size = {req_size}; dataset = {dataset}')
     print(f'connecting to gRPC gateway at {FLOW_HOST}:{FLOW_PORT_GRPC}')
     if task not in ['index', 'query']:
         raise NotImplementedError(

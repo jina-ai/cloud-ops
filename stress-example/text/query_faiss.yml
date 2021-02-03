@@ -21,11 +21,11 @@ pods:
     shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
   - name: chunk_idx
+    uses: docker://jinahub/pod.indexer.faissindexer:0.0.14-0.9.23
+    uses_internal: faiss_indexer.yml
     host: $JINA_VEC_INDEXER_HOST
     port_expose: 8000
     show_exc_info: true
-    uses: chunk.yml
-    uses_internal: ''
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: chunk_merger.yml

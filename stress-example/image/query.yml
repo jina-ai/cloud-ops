@@ -13,8 +13,8 @@ pods:
     port_expose: 8000
     timeout_ready: 600000
   - name: vec_idx
-    uses: $JINA_USES
-    uses_internal: $JINA_USES_INTERNAL
+    uses: vec.yml
+    uses_internal: ''
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: _merge_matches
