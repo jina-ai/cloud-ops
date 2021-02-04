@@ -28,7 +28,7 @@ jobs:
           JINA_VERSION=$(sed -n '/^__version__/p' ./jina/__init__.py | cut -d \' -f2)-master
           echo "JINA_VERSION=${JINA_VERSION}" >> $GITHUB_ENV
           cd schema
-          python scripts/get-gateway-openapi.py
+          python ../scripts/get-gateway-openapi.py
           ls -l 
           ls -l scripts
           cd -
