@@ -29,7 +29,7 @@ jobs:
           echo "JINA_VERSION=${JINA_VERSION}" >> $GITHUB_ENV
           cd schema
           python ../scripts/get-gateway-openapi.py
-          ls -l 
+          ls -lR 
           cd -
       - name: redoc-cli-gateway
         uses: seeebiii/redoc-cli-github-action@v10
@@ -37,11 +37,13 @@ jobs:
           args: 'bundle schema/gateway.json -o rest.html'
       - name: push-to-api-repo
         run: |
+          ls -lR
           mkdir -p schema/rest/
           cp rest.html schema/rest/master.html
           rm schema/gateway.json
           rm -rf schema/rest
           cd schema
+          ls -lR
           git config --local user.email "dev-bot@jina.ai"
           git config --local user.name "Jina Dev Bot"
           git add . && git commit -m "update ${{env.JINA_VERSION}} due to ${{github.event_name}} on ${{github.repository}}" && git push
