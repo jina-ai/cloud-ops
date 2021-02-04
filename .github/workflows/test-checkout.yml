@@ -1,4 +1,4 @@
-name: CD
+name: TEST CHECKOUT
 
 on:
   workflow_dispatch:
