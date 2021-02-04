@@ -36,7 +36,7 @@ pods:
     port_expose: 8000
   - name: redis
     uses: redis.yml
-    shards: $JINA_SHARDS_INDEXERS
+    shards: $JINA_SHARDS_REDIS
     host: $JINA_REDIS_INDEXER_HOST
     port_expose: 8000
     polling: all
