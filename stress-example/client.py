@@ -3,6 +3,7 @@ import os
 import random
 import time
 from datetime import datetime
+from glob import glob
 from typing import Generator, Callable
 
 import click
@@ -15,6 +16,7 @@ TOP_K = 3
 REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
+FILE_PREFIX = 'stats'
 
 FLOW_HOST = os.environ.get('FLOW_HOST')
 FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
@@ -66,16 +68,20 @@ def wrapper(
         nr_docs: int
 ):
     client = Client(args)
+    total_docs = 0
     while True:
         # add counter for docs and log to file {id}
         print(
             f'Process {id}: Running function {function.__name__} with {nr_docs} docs via {docs_gen_func.__name__}...')
         client.check_input(docs_gen_func(nr_docs))
         function(client, docs_gen_func, req_size, dataset, nr_docs)
+        total_docs += nr_docs
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
-            # close Process
-            # log to file {function.__name__} - {id}
+            fname = os.path.join(f'{FILE_PREFIX}-{time_end}-{function.__name__}-{id}.txt')
+            print(f'process {id}: logging stats to {fname}')
+            with open(fname, 'w') as f:
+                f.write(f'{str(total_docs)}\n')
             return
 
 
@@ -137,6 +143,16 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
         return document_generator
 
 
+def read_stats(time_end, op, load):
+    files = glob(f'{FILE_PREFIX}-{time_end}*.txt')
+    total = 0
+    for f in files:
+        with open(f, 'r') as f_h:
+            count = int(f_h.readline())
+        total += count
+    print(f'TOTAL: Ran operation {op} for {load} seconds on {total} documents')
+
+
 @click.command()
 @click.option('--task', '-t')
 @click.option('--load', '-l', default=60)  # time (seconds)
@@ -191,6 +207,7 @@ req_size = {req_size}; dataset = {dataset}')
 
     # glob process logs file and sum the total processed
     # by indexing and querying
+    read_stats(time_end, op=task, load=load)
 
 
 if __name__ == '__main__':
