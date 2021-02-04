@@ -1,0 +1,30 @@
+name: CD
+
+on:
+  workflow_dispatch:
+  
+jobs:
+  clone1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        repository: jina-ai/jina
+        with:
+          submodules: true
+          fetch-depth: 100
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/api
+          path: schema
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.7
+      - run: |
+          echo $PWD
+          ls -l
+          pip install .[daemon] --no-cache-dir
+          JINA_VERSION=$(sed -n '/^__version__/p' ./jina/__init__.py | cut -d \' -f2)-master
+          echo "JINA_VERSION=${JINA_VERSION}" >> $GITHUB_ENV
+          python scripts/get-gateway-openapi.py
+ 
