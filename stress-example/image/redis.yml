@@ -20,6 +20,7 @@ requests:
         fields:
           - chunks  # we don't want to save nested structure
           - buffer
+          - embedding
     - !KVIndexDriver
       with:
         traversal_paths: ['r']

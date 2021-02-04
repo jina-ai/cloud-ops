@@ -67,6 +67,7 @@ def wrapper(
 ):
     client = Client(args)
     while True:
+        # add counter for docs and log to file {id}
         print(
             f'Process {id}: Running function {function.__name__} with {nr_docs} docs via {docs_gen_func.__name__}...')
         client.check_input(docs_gen_func(nr_docs))
@@ -74,6 +75,7 @@ def wrapper(
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
             # close Process
+            # log to file {function.__name__} - {id}
             return
 
 
@@ -186,6 +188,9 @@ req_size = {req_size}; dataset = {dataset}')
             if p.is_alive():
                 print(f'Process {p.name} is still alive. Will wait...')
                 p.join()
+
+    # glob process logs file and sum the total processed
+    # by indexing and querying
 
 
 if __name__ == '__main__':
