@@ -1,7 +1,7 @@
 !AnnoyIndexer
 with:
   #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
-  n_trees: 10
+  n_trees: 100
   search_k: -1
   ref_indexer:
     !NumpyIndexer
