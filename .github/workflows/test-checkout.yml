@@ -30,7 +30,6 @@ jobs:
           cd schema
           python ../scripts/get-gateway-openapi.py
           ls -l 
-          ls -l scripts
           cd -
       - name: redoc-cli-gateway
         uses: seeebiii/redoc-cli-github-action@v10
