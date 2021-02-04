@@ -1,6 +1,7 @@
 !FaissIndexer
 with:
-  index_key: 'Flat' #TODO: Find suitable index
+  index_key: 'IVF50,Flat' #TODO: Find suitable index
+  max_num_training_points: 50000
   # train_filepath:
   # index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
   ref_indexer:

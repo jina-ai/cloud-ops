@@ -3,6 +3,7 @@ import os
 import random
 import time
 from datetime import datetime
+from glob import glob
 from typing import Generator, Callable
 
 import click
@@ -15,6 +16,7 @@ TOP_K = 3
 REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
+FILE_PREFIX = 'stats'
 
 FLOW_HOST = os.environ.get('FLOW_HOST')
 FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
@@ -22,7 +24,7 @@ FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
 if FLOW_HOST is None or FLOW_PORT_GRPC is None:
     raise ValueError(
         f'Make sure you set both FLOW_HOST and FLOW_PORT_GRPC. \
-        Current FLOW_HOST = {FLOW_HOST}; FLOW_HOST_GRPC = {FLOW_PORT_GRPC}')
+        Current FLOW_HOST = {FLOW_HOST}; FLOW_PORT_GRPC = {FLOW_PORT_GRPC}')
 
 
 def create_random_img_array(img_height, img_width):
@@ -34,10 +36,11 @@ def validate_img(resp):
         if len(d.matches) != TOP_K:
             print(f' MATCHES LENGTH IS NOT TOP_K but {len(d.matches)}')
         for m in d.matches:
-            print(f' match {m.id}')
-            assert 'filename' in m.tags.keys()
+            if 'filename' not in m.tags.keys():
+                print(f'filename not in tags: {m.tags}')
             # to test that the data from the KV store is retrieved
-            assert 'image ' in m.tags['filename']
+            if 'image ' not in m.tags['filename']:
+                print(f'"image" not in m.tags["filename"]: {m.tags["filename"]}')
         # assert len(d.matches) == TOP_K, f'Number of actual matches: {len(d.matches)} vs expected number: {TOP_K}'
 
 
@@ -65,14 +68,20 @@ def wrapper(
         nr_docs: int
 ):
     client = Client(args)
+    total_docs = 0
     while True:
+        # add counter for docs and log to file {id}
         print(
             f'Process {id}: Running function {function.__name__} with {nr_docs} docs via {docs_gen_func.__name__}...')
         client.check_input(docs_gen_func(nr_docs))
         function(client, docs_gen_func, req_size, dataset, nr_docs)
+        total_docs += nr_docs
         if time.time() >= time_end:
             print(f'Process {id}: end reached')
-            # close Process
+            fname = os.path.join(f'{FILE_PREFIX}-{time_end}-{function.__name__}-{id}.txt')
+            print(f'process {id}: logging stats to {fname}')
+            with open(fname, 'w') as f:
+                f.write(f'{str(total_docs)}\n')
             return
 
 
@@ -107,14 +116,12 @@ def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: i
 
 
 def document_generator(num_docs):
-    from nltk.corpus import words
-    from random import sample
     chunk_id = num_docs
     for idx in range(num_docs):
         with Document() as doc:
             doc.id = idx
             length = random.randint(5, 30)
-            doc.text = ' '.join(sample(words.words(), length))
+            doc.text = 'some text'
             doc.tags['filename'] = f'filename {idx}'
             num_chunks = random.randint(1, 10)
             for chunk_idx in range(num_chunks):
@@ -122,7 +129,7 @@ def document_generator(num_docs):
                     chunk.id = chunk_id
                     chunk.tags['id'] = chunk_idx
                     length = random.randint(5, 30)
-                    chunk.text = ' '.join(sample(words.words(), length))
+                    chunk.text = 'some more text'
                 chunk_id += 1
                 doc.chunks.append(chunk)
         yield doc
@@ -136,6 +143,16 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
         return document_generator
 
 
+def read_stats(time_end, op, load):
+    files = glob(f'{FILE_PREFIX}-{time_end}*.txt')
+    total = 0
+    for f in files:
+        with open(f, 'r') as f_h:
+            count = int(f_h.readline())
+        total += count
+    print(f'TOTAL: Ran operation {op} for {load} seconds on {total} documents')
+
+
 @click.command()
 @click.option('--task', '-t')
 @click.option('--load', '-l', default=60)  # time (seconds)
@@ -145,7 +162,7 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(task, load, nr, concurrency, req_size, dataset):
     print(f'task = {task}; load = {load}; nr = {nr}; concurrency = {concurrency}; \
-     req_size = {req_size}; dataset = {dataset}')
+req_size = {req_size}; dataset = {dataset}')
     print(f'connecting to gRPC gateway at {FLOW_HOST}:{FLOW_PORT_GRPC}')
     if task not in ['index', 'query']:
         raise NotImplementedError(
@@ -187,6 +204,10 @@ def main(task, load, nr, concurrency, req_size, dataset):
             if p.is_alive():
                 print(f'Process {p.name} is still alive. Will wait...')
                 p.join()
+
+    # glob process logs file and sum the total processed
+    # by indexing and querying
+    read_stats(time_end, op=task, load=load)
 
 
 if __name__ == '__main__':

@@ -1,12 +1,12 @@
 !Flow
 version: '1'
 with:
-  show_exc_info: true
   rest_api: false
   port_expose: $JINA_PORT
 pods:
   - name: segmenter
-    show_exc_info: true
+    polling: any
+    scheduling: $SCHEDULING
     uses: segment.yml
     read_only: true
     shards: $JINA_SHARDS_ENCODER
@@ -15,16 +15,16 @@ pods:
     timeout_ready: -1
   - name: encoder
     polling: any
+    scheduling: $SCHEDULING
     shards: $JINA_SHARDS_ENCODER
     host: $JINA_ENCODER_HOST
     port_expose: 8000
-    show_exc_info: true
     uses: encoder.yml
     timeout_ready: -1
     read_only: true
   - name: chunk_idx
     polling: any
-    show_exc_info: true
+    scheduling: $SCHEDULING
     uses: chunk.yml
     shards: $JINA_SHARDS_INDEXERS
     host: $JINA_VEC_INDEXER_HOST
@@ -32,14 +32,14 @@ pods:
     timeout_ready: -1
   - name: redis
     polling: any
-    show_exc_info: true
+    scheduling: $SCHEDULING
     uses: redis.yml
-    shards: $JINA_SHARDS_INDEXERS
+    shards: $JINA_SHARDS_REDIS
     host: $JINA_REDIS_INDEXER_HOST
     port_expose: 8000
     timeout_ready: -1
-#    needs: gateway
-#  - name: join_all
-#    method: needs
-#    uses: _merge
-#    needs: [doc_idx, chunk_idx]
+    needs: gateway
+  - name: join_all
+    method: needs
+    uses: _merge
+    needs: [redis, chunk_idx]

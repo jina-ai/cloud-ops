@@ -5,30 +5,40 @@ with:
   rest_api: false
   port_expose: $JINA_PORT
 pods:
-  - name: encoder
-    uses: encoder.yml
-    shards: $JINA_SHARDS_ENCODER
+  - name: chunk_seg
+    uses: segment.yml
     host: $JINA_ENCODER_HOST
     port_expose: 8000
+    shards: $JINA_SHARDS_ENCODER
+  - name: encoder
+    host: $JINA_ENCODER_HOST
+    port_expose: 8000
+    polling: any
+    uses: encoder.yml
+    shards: $JINA_SHARDS_ENCODER
     timeout_ready: 600000
-  - name: vec_idx
+  - name: chunk_idx
     uses: docker://jinahub/pod.indexer.faissindexer:0.0.15-0.9.27
     uses_internal: faiss_indexer.yml
-    shards: $JINA_SHARDS_INDEXERS
-    polling: all
-    uses_after: _merge_matches
-    timeout_ready: 100000 # larger timeout as in query time will read all the data
-    volumes: $JINA_WORKSPACE:/docker-workspace
     host: $JINA_VEC_INDEXER_HOST
     port_expose: 8000
+    shards: $JINA_SHARDS_INDEXERS
+    polling: all
+    uses_after: chunk_merger.yml
+    timeout_ready: 100000 # larger timeout as in query time will read all the data
+    volumes: './workspace:/docker_workspace'
     docker_kwargs:
       environment:
         OMP_NUM_THREADS: $OMP_NUM_THREADS
-  - name: redis_idx
+  - name: ranker
+    uses: ranker.yml
+    host: $JINA_RANKER_HOST
+    port_expose: 8000
+  - name: redis
     uses: redis.yml
     shards: $JINA_SHARDS_REDIS
-    polling: all
-    uses_after: merge_and_topk.yml
     host: $JINA_REDIS_INDEXER_HOST
     port_expose: 8000
+    polling: all
     timeout_ready: 100000 # larger timeout as in query time will read all the data
+    uses_after: merge_and_topk.yml

@@ -3,7 +3,26 @@ with:
   level: doc
   db: 0
   port: 6379
-  show_exc_info: true
 metas:
   name: redis_idx
   workspace: $JINA_WORKSPACE
+requests:
+  on:
+    ControlRequest:
+      - !ControlReqDriver {}
+    SearchRequest:
+      - !KVSearchDriver
+        with:
+          traversal_paths: ['m']
+    [IndexRequest, UpdateRequest, DeleteRequest]:
+    - !ExcludeQL
+      with:
+        fields:
+          - chunks  # we don't want to save nested structure
+          - buffer
+          - embedding
+        traversal_paths: ['r']
+    - !KVIndexDriver
+      with:
+        traversal_paths: ['r']
+

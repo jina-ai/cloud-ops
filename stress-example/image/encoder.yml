@@ -3,7 +3,6 @@ with:
   pool_strategy: mean
   model_name: mobilenet_v2
   img_shape: 96
-  show_exc_info: true
   channel_axis: -1
 requests:
   on:
@@ -13,3 +12,4 @@ requests:
       - !EncodeDriver
         with:
           traversal_paths: ['r']
+          batch_size: 16

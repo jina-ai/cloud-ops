@@ -1,7 +1,7 @@
 !SimpleAggregateRanker
 with:
   aggregate_function: $JINA_RANKER_AGGREGATE_FUNCTION
-  is_reversed_score: $JINA_REVERSE_DISTANCE
+  is_reversed_score: $JINA_DISTANCE_REVERSE
 requests:
   on:
     ControlRequest:
