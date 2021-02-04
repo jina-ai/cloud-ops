@@ -1,0 +1,17 @@
+name: Test Dashboard version sync
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Dashboard version update
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Sync version with Jina core
+          repo: jina-ai/dashboard
+          token: ${{ secrets.JINA_DEV_BOT }}
+          inputs: '{ "version": "0.9.1" }'
