@@ -8,19 +8,19 @@ Parameters:
     Description: Enter Image ID. Default is for Ubuntu 20.04, non GPU, Frankfurt
   GPUEC2ImageIdParam:
     Type: String
-    Default: ami-0deafbc40577c9a2b
+    Default: ami-0502e817a62226e03
     Description: Enter Image ID. Default is for Deep Learning Base Ubuntu 18.04, Frankfurt
   EC2InstanceTypeParam:
     Type: String
-    Default: t3.large
+    Default: c5.2xlarge
   KeyNameParam:
     Type: String
     Default: instance-login
     Description: Enter Key Name. Default is instance-login.
   VolumeSizeParam:
     Type: Number
-    Default: 20
-    Description: Enter EBS volume size (type gp2). Default is 20GB.
+    Default: 100
+    Description: Enter EBS volume size (type gp2). Default is 100GB.
   AvailabilityZoneParam:
     Type: String
     Default: eu-central-1b
@@ -137,19 +137,24 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 60
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
            cd /home/ubuntu
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > image_requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/text/requirements.txt  > text_requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           python3.8 -m pip install -r requirements.txt
-           apt-get install -y docker
-           usermod -aG docker $USER
+           python3.8 -m pip install -r image_requirements.txt
+           python3.8 -m pip install -r text_requirements.txt
+           apt-get install -y docker docker.io
+           usermod -aG docker ubuntu
            reboot
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
+           ./cfn-init-script.sh
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource encoderInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -203,18 +208,21 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 32
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
            cd /home/ubuntu
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > image_requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/text/requirements.txt  > text_requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           python3.8 -m pip install -r requirements.txt
-           apt-get install -y docker
-           usermod -aG docker $USER
+           python3.8 -m pip install -r image_requirements.txt
+           python3.8 -m pip install -r text_requirements.txt
+           apt-get install -y docker docker.io
+           usermod -aG docker ubuntu
            reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource crafterInstance --configsets jina_install --region ${AWS::Region}
@@ -269,20 +277,23 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 60
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
            cd /home/ubuntu
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > image_requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/text/requirements.txt  > text_requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           python3.8 -m pip install -r requirements.txt
-           apt-get install -y docker
-           usermod -aG docker $USER
-           reboot
+           python3.8 -m pip install -r image_requirements.txt
+           python3.8 -m pip install -r text_requirements.txt
+           apt-get install -y docker docker.io
+           usermod -aG docker ubuntu
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
+           reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource indexerInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -337,20 +348,23 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 32
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
            cd /home/ubuntu
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > image_requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/text/requirements.txt  > text_requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           python3.8 -m pip install -r requirements.txt
-           apt-get install -y docker
-           usermod -aG docker $USER
-           reboot
+           python3.8 -m pip install -r image_requirements.txt
+           python3.8 -m pip install -r text_requirements.txt
+           apt-get install -y docker docker.io
+           usermod -aG docker ubuntu
            apt-get install -y redis-server && redis-server --bind 0.0.0.0 --port 6379:6379 --daemonize yes
+           reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource rankerInstance --configsets jina_install --region ${AWS::Region}
       Tags:
@@ -404,18 +418,21 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 32
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
            cd /home/ubuntu
            curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/scripts/deb-systemd.sh > cfn-init-script.sh
-           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/image/requirements.txt  > image_requirements.txt
+           curl -L https://raw.githubusercontent.com/jina-ai/cloud-ops/master/stress-example/text/requirements.txt  > text_requirements.txt
            chmod +x cfn-init-script.sh
            ./cfn-init-script.sh
-           python3.8 -m pip install -r requirements.txt
-           apt-get install -y docker
-           usermod -aG docker $USER
+           python3.8 -m pip install -r image_requirements.txt
+           python3.8 -m pip install -r text_requirements.txt
+           apt-get install -y docker docker.io
+           usermod -aG docker ubuntu
            reboot
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource flowInstance --configsets jina_install --region ${AWS::Region}
@@ -472,14 +489,16 @@ Resources:
       BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-            VolumeSize: 32
+            VolumeSize:
+              Ref: VolumeSizeParam
       UserData:
         Fn::Base64: !Sub |
            #!/bin/bash -xe
+           cd /home/ubuntu
            apt-get update && apt-get -y install python3.8 python3.8-dev python3.8-distutils python3.8-venv python3-pip git-all
            python3 -m pip install --pre jina[cv,http]
            python3 -m pip install nltk
-           git clone https://github.com/jina-ai/cloud-ops.git
+           git clone https://github.com/jina-ai/cloud-ops.git /home/ubuntu/cloud-ops
            /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource clientInstance --configsets jina_install --region ${AWS::Region}
       Tags:
