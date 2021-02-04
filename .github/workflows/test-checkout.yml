@@ -41,6 +41,7 @@ jobs:
           cp rest.html schema/rest/master.html
           rm schema/gateway.json
           rm -rf schema/rest
+          cd schema
           git config --local user.email "dev-bot@jina.ai"
           git config --local user.name "Jina Dev Bot"
           git add . && git commit -m "update ${{env.JINA_VERSION}} due to ${{github.event_name}} on ${{github.repository}}" && git push
