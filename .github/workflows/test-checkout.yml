@@ -27,7 +27,22 @@ jobs:
           pip install .[daemon] --no-cache-dir
           JINA_VERSION=$(sed -n '/^__version__/p' ./jina/__init__.py | cut -d \' -f2)-master
           echo "JINA_VERSION=${JINA_VERSION}" >> $GITHUB_ENV
+          cd schema
           python scripts/get-gateway-openapi.py
           ls -l 
           ls -l scripts
- 
+          cd -
+      - name: redoc-cli-gateway
+        uses: seeebiii/redoc-cli-github-action@v10
+        with:
+          args: 'bundle schema/gateway.json -o rest.html'
+      - name: push-to-api-repo
+        run: |
+          mkdir -p schema/rest/
+          cp rest.html schema/rest/master.html
+          rm schema/gateway.json
+          rm -rf schema/rest
+          git config --local user.email "dev-bot@jina.ai"
+          git config --local user.name "Jina Dev Bot"
+          git add . && git commit -m "update ${{env.JINA_VERSION}} due to ${{github.event_name}} on ${{github.repository}}" && git push
+          
