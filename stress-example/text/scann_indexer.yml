@@ -1,23 +1,14 @@
-!CompoundIndexer
-components:
-  - !ScannIndexer
-    with:
-      distance_measure: 'squared_l2'
-      #index_filename: 'vec.gz' # Should be overwritten by ref_indexer index filename
-      ref_indexer:
-        !NumpyIndexer
-        metas:
-          workspace: '/docker_workspace'
-          name: vec_idx
-        with:
-          index_filename: 'vec.gz'
+!ScannIndexer
+with:
+  distance_measure: 'squared_l2'
+  #index_filename: 'vec.gz' # Should be overwritten by ref_indexer index filename
+  ref_indexer:
+    !NumpyIndexer
     metas:
-      name: scannidx
-  - !BinaryPbIndexer
+      workspace: '/docker_workspace'
+      name: vec_idx
     with:
-      index_filename: chunk.gz
-    metas:
-      name: chunk_idx
+      index_filename: 'vec.gz'
 metas:
   name: chunk_compound_indexer
   py_modules:
@@ -28,20 +19,10 @@ requests:
     IndexRequest:
       - !VectorIndexDriver
         with:
-          executor: scannidx
-          traversal_paths: ['c']
-      - !KVIndexDriver
-        with:
-          executor: chunk_idx
           traversal_paths: ['c']
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: scannidx
           traversal_paths: ['c']
-      - !KVSearchDriver
-        with:
-          executor: chunk_idx
-          traversal_paths: ['cm']
     ControlRequest:
       - !ControlReqDriver {}

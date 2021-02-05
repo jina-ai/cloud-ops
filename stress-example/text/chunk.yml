@@ -1,36 +1,37 @@
-!CompoundIndexer
-components:
-  - !NumpyIndexer
-    with:
-      index_filename: vec.gz
-      metric: euclidean
-    metas:
-      name: vec_idx  # a customized name
-  - !BinaryPbIndexer
-    with:
-      index_filename: chunk.gz
-    metas:
-      name: chunk_idx
+!NumpyIndexer
+with:
+  index_filename: vec.gz
+  metric: euclidean
 metas:
-  name: chunk_compound_indexer
+  name: vec_idx  # a customized name
   workspace: $JINA_WORKSPACE
 requests:
   on:
     IndexRequest:
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['c']
       - !VectorIndexDriver
         with:
-          executor: vec_idx
           traversal_paths: ['c']
-      - !KVIndexDriver
-        with:
-          executor: chunk_idx
-          traversal_paths: ['c']
+      - !ExcludeQL
+          with:
+            fields:
+              - embedding
+            traversal_paths: ['c']
     SearchRequest:
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['c']
       - !VectorSearchDriver
         with:
-          executor: vec_idx
           traversal_paths: ['c']
-      - !KVSearchDriver
+      - !ExcludeQL
         with:
-          executor: chunk_idx
+          fields:
+            - embedding
           traversal_paths: ['cm']

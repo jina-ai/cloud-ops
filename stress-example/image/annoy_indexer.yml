@@ -20,7 +20,13 @@ requests:
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: annoyidx
+          traversal_paths: ['r']
+      - !ExcludeQL
+        with:
+          fields:
+            - chunks
+            - embedding
+            - content
           traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

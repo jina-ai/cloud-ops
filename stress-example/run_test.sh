@@ -78,4 +78,7 @@ $PYTHON_EXEC app.py --jinad remove --flow-id $flow && \
 sleep $SLEEP_TIME && \
 $PYTHON_EXEC app.py --jinad query_faiss --dataset $DATASET --ws $workspace && \
 sleep $SLEEP_TIME && \
-$PYTHON_EXEC client.py --dataset $DATASET -t query -n $DOCS_QUERY -l $TIME_LOAD_QUERY -c $CONCURRENCY -r $REQ_SIZE
+$PYTHON_EXEC client.py --dataset $DATASET -t query -n $DOCS_QUERY -l $TIME_LOAD_QUERY -c $CONCURRENCY -r $REQ_SIZE && \
+sleep $SLEEP_TIME && \
+export flow=`cat flow.txt` && \
+$PYTHON_EXEC app.py --jinad remove --flow-id $flow

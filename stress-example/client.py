@@ -108,7 +108,6 @@ def validate_text(resp):
 
 
 def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: int, dataset: str, nr_docs: int):
-    print(f' heeey query')
     on_done = validate_img
     if dataset == 'text':
         on_done = validate_text

@@ -19,8 +19,6 @@ requests:
       with:
         fields:
           - chunks  # we don't want to save nested structure
-          - buffer
-          - embedding
         traversal_paths: ['r']
     - !KVIndexDriver
       with:
