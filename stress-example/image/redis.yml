@@ -15,6 +15,13 @@ requests:
         with:
           traversal_paths: ['m']
     [IndexRequest, UpdateRequest, DeleteRequest]:
+    - !ExcludeQL
+      with:
+        fields:
+          - content
+          - embedding
+          - buffer
+        traversal_paths: ['r']
     - !KVIndexDriver
       with:
         traversal_paths: ['r']

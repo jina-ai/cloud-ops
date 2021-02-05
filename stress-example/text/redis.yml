@@ -18,6 +18,9 @@ requests:
     - !ExcludeQL
       with:
         fields:
+          - content
+          - embedding
+          - buffer
           - chunks  # we don't want to save nested structure
         traversal_paths: ['r']
     - !KVIndexDriver
