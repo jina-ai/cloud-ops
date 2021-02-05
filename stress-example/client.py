@@ -26,6 +26,21 @@ if FLOW_HOST is None or FLOW_PORT_GRPC is None:
         f'Make sure you set both FLOW_HOST and FLOW_PORT_GRPC. \
         Current FLOW_HOST = {FLOW_HOST}; FLOW_PORT_GRPC = {FLOW_PORT_GRPC}')
 
+_random_names = ('first', 'great', 'local', 'small', 'right', 'large', 'young', 'early', 'major', 'clear', 'black',
+                 'whole', 'third', 'white', 'short', 'human', 'royal', 'wrong', 'legal', 'final', 'close', 'total',
+                 'prime', 'happy', 'sorry', 'basic', 'aware', 'ready', 'green', 'heavy', 'extra', 'civil', 'chief',
+                 'usual', 'front', 'fresh', 'joint', 'alone', 'rural', 'light', 'equal', 'quiet', 'quick', 'daily',
+                 'urban', 'upper', 'moral', 'vital', 'empty', 'brief', 'world', 'house', 'place', 'group', 'party',
+                 'money', 'point', 'state', 'night', 'water', 'thing', 'order', 'power', 'court', 'level', 'child',
+                 'south', 'staff', 'woman', 'north', 'sense', 'death', 'range', 'table', 'trade', 'study', 'other',
+                 'price', 'class', 'union', 'value', 'paper', 'right', 'voice', 'stage', 'light', 'march', 'board',
+                 'month', 'music', 'field', 'award', 'issue', 'basis', 'front', 'heart', 'force', 'model', 'space',
+                 'peter')
+
+
+def random_sentence(length) -> str:
+    return ' '.join(random.choice(_random_names) for _ in range(length))
+
 
 def create_random_img_array(img_height, img_width):
     return np.random.randint(0, 256, (img_height, img_width, 3))
@@ -118,11 +133,11 @@ def query(client: Client, docs_gen_func: Callable[[int], Generator], req_size: i
 def document_generator(num_docs):
     for idx in range(num_docs):
         with Document() as doc:
-            doc.text = 'some text'
+            doc.text = random_sentence(random.randint(1, 20))
             doc.tags['filename'] = f'filename {idx}'
             num_chunks = random.randint(1, 10)
-            for chunk_idx in range(num_chunks):
-                doc.text += ". some text"
+            for _ in range(num_chunks):
+                doc.text += '. ' + random_sentence(random.randint(1, 20))
         yield doc
 
 
