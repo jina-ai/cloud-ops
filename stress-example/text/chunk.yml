@@ -17,10 +17,10 @@ requests:
         with:
           traversal_paths: ['c']
       - !ExcludeQL
-          with:
-            fields:
-              - embedding
-            traversal_paths: ['c']
+        with:
+          fields:
+            - embedding
+          traversal_paths: ['c']
     SearchRequest:
       - !ExcludeQL
         with:
