@@ -1,18 +1,27 @@
-!FaissIndexer
-with:
-  index_key: 'IVF50,Flat' #TODO: Find suitable index
-  max_num_training_points: 50000
-  #train_filepath: None
-  #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
-  ref_indexer:
-    !NumpyIndexer
-    metas:
-      workspace: '/docker_workspace'
-      name: vec_idx
+!CompoundIndexer
+components:
+  !FaissIndexer
+  with:
+    index_key: 'IVF50,Flat' #TODO: Find suitable index
+    max_num_training_points: 50000
+    #train_filepath: None
+    #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
+    ref_indexer:
+      !NumpyIndexer
+      metas:
+        workspace: '/docker_workspace'
+        name: vec_idx
+      with:
+        index_filename: 'vec.gz'
+  metas:
+    name: faissidx
+  - !BinaryPbIndexer
     with:
-      index_filename: 'vec.gz'
+      index_filename: chunk.gz
+    metas:
+      name: chunk_idx
 metas:
-  name: faissidx
+  name: chunk_compound_indexer
   py_modules:
     - workspace/__init__.py
   workspace: '/docker_workspace'
@@ -21,10 +30,34 @@ requests:
     IndexRequest:
       - !VectorIndexDriver
         with:
+          executor: faissidx
+          traversal_paths: ['c']
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+            - embedding
+          traversal_paths: ['c']
+      - !KVIndexDriver
+        with:
+          executor: chunk_idx
           traversal_paths: ['c']
     SearchRequest:
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['c']
       - !VectorSearchDriver
         with:
+          executor: faissidx
           traversal_paths: ['c']
-    ControlRequest:
-      - !ControlReqDriver {}
+      - !KVSearchDriver
+        with:
+          executor: chunk_idx
+          traversal_paths: ['cm']
+      - !ExcludeQL
+        with:
+          fields:
+            - embedding
+          traversal_paths: ['cm']
