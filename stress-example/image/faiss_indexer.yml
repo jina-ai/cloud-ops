@@ -21,7 +21,13 @@ requests:
     SearchRequest:
       - !VectorSearchDriver
         with:
-          executor: faissidx
+          traversal_paths: ['r']
+      - !ExcludeQL
+        with:
+          fields:
+            - chunks
+            - embedding
+            - content
           traversal_paths: ['r']
     ControlRequest:
       - !ControlReqDriver {}

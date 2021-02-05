@@ -32,11 +32,22 @@ requests:
         with:
           executor: faissidx
           traversal_paths: ['c']
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+            - embedding
+          traversal_paths: ['c']
       - !KVIndexDriver
         with:
           executor: chunk_idx
           traversal_paths: ['c']
     SearchRequest:
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['c']
       - !VectorSearchDriver
         with:
           executor: faissidx
@@ -45,5 +56,8 @@ requests:
         with:
           executor: chunk_idx
           traversal_paths: ['cm']
-    ControlRequest:
-      - !ControlReqDriver {}
+      - !ExcludeQL
+        with:
+          fields:
+            - embedding
+          traversal_paths: ['cm']

@@ -12,12 +12,13 @@ requests:
       - !VectorSearchDriver
         with:
           traversal_paths: ['r']
-    IndexRequest:
       - !ExcludeQL
         with:
           fields:
-            - buffer
-            - chunks
+            - embedding
+            - content
+          traversal_paths: ['r']
+    IndexRequest:
       - !VectorIndexDriver
         with:
           traversal_paths: ['r']

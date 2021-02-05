@@ -12,7 +12,7 @@ pods:
     shards: $JINA_SHARDS_ENCODER
     host: $JINA_ENCODER_HOST
     port_expose: 8000
-    timeout_ready: -1
+    timeout_ready: 10000
   - name: encoder
     polling: any
     scheduling: $SCHEDULING
@@ -20,7 +20,7 @@ pods:
     host: $JINA_ENCODER_HOST
     port_expose: 8000
     uses: encoder.yml
-    timeout_ready: -1
+    timeout_ready: 10000
     read_only: true
   - name: chunk_idx
     polling: any
@@ -29,7 +29,7 @@ pods:
     shards: $JINA_SHARDS_INDEXERS
     host: $JINA_VEC_INDEXER_HOST
     port_expose: 8000
-    timeout_ready: -1
+    timeout_ready: 10000
   - name: redis
     polling: any
     scheduling: $SCHEDULING
@@ -37,7 +37,7 @@ pods:
     shards: $JINA_SHARDS_REDIS
     host: $JINA_REDIS_INDEXER_HOST
     port_expose: 8000
-    timeout_ready: -1
+    timeout_ready: 10000
     needs: gateway
   - name: join_all
     method: needs

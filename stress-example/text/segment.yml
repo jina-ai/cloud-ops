@@ -1,3 +1,18 @@
 !Sentencizer
 with:
   min_sent_len: 6
+requests:
+  on:
+    IndexRequest:
+      - !SegmentDriver
+        with:
+          traversal_paths: ['r']
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['r']
+    SearchRequest:
+      - !SegmentDriver
+        with:
+          traversal_paths: ['r']

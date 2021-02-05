@@ -31,11 +31,22 @@ requests:
         with:
           executor: annoyidx
           traversal_paths: ['c']
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+            - embedding
+          traversal_paths: ['c']
       - !KVIndexDriver
         with:
           executor: chunk_idx
           traversal_paths: ['c']
     SearchRequest:
+      - !ExcludeQL
+        with:
+          fields:
+            - content
+          traversal_paths: ['c']
       - !VectorSearchDriver
         with:
           executor: annoyidx
@@ -43,4 +54,9 @@ requests:
       - !KVSearchDriver
         with:
           executor: chunk_idx
+          traversal_paths: ['cm']
+      - !ExcludeQL
+        with:
+          fields:
+            - embedding
           traversal_paths: ['cm']
