@@ -2,6 +2,9 @@ name: Test Dashboard version sync
 
 on:
   workflow_dispatch:
+  push:
+    tags:
+      - "v*"  # push to version tags trigger the build
 
 jobs:
   build:
@@ -9,7 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: |
-          echo "JINA_VERSION=0.9.0" >> $GITHUB_ENV 
+          JINA_VERSION=${GITHUB_REF/refs\/tags\/v/}
+          echo "JINA_VERSION={JINA_VERSION}" >> $GITHUB_ENV 
       - name: Dashboard version update
         uses: benc-uk/workflow-dispatch@v1
         with:
