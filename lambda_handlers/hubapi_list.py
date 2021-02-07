@@ -120,13 +120,13 @@ def configure_matches_stage(**kwargs):
 
     for field in ['kind', 'type']:
         if field in kwargs:
-            matches_stage['$match'][f'manifest_info.{field}'] = kwargs[field]
+            matches_stage['$match'][f'manifest_info.{field}'] = kwargs[field].lower()
 
     if isinstance(kwargs.get('keywords', None), list):
-        matches_stage['$match'][f'manifest_info.keywords'] = {'$in': kwargs['keywords']}
+        matches_stage['$match'][f'manifest_info.keywords'] = {'$in': [i.lower() for i in kwargs['keywords']]}
 
     if isinstance(kwargs.get('name', None), str):
-        matches_stage['$match']['name'] = {'$regex': f'.*{kwargs["name"]}.*'}
+        matches_stage['$match']['name'] = {'$regex': f'.*{kwargs["name"].lower()}.*'}
 
     if matches_stage['$match']:
         return matches_stage
