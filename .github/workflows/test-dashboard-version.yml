@@ -22,5 +22,5 @@ jobs:
           workflow: Sync version with Jina core
           repo: jina-ai/dashboard
           token: ${{ secrets.JINA_DEV_BOT }}
-          ref: ${{ github.event.tag.head.ref }}
+          ref: $GITHUB_SHA
           inputs: '{ "version": "${{ env.JINA_VERSION }}" }'
