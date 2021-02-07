@@ -126,7 +126,20 @@ def configure_matches_stage(**kwargs):
         matches_stage['$match'][f'manifest_info.keywords'] = {'$in': [i.lower() for i in kwargs['keywords']]}
 
     if isinstance(kwargs.get('name', None), str):
-        matches_stage['$match']['name'] = {'$regex': f'.*{kwargs["name"].lower()}.*'}
+        matches_stage['$match']['$or'] = [
+            {
+                'name': {
+                    '$regex': f'.*{kwargs["name"]}.*',
+                    '$options': 'i'
+                }
+            },
+            {
+                'manifest_info.name': {
+                    '$regex': f'.*{kwargs["name"]}.*',
+                    '$options': 'i'
+                }
+            }
+        ]
 
     if matches_stage['$match']:
         return matches_stage
