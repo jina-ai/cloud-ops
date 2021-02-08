@@ -2,8 +2,7 @@
 # for each file with *.yml
 # substitute envs
 echo "env vars found in .env"
-cat .env
-export $(xargs <.env)
+export $(egrep -v '^#' .env | xargs)
 #
 #cat .env | while read line; do
 #  echo $line && export $line

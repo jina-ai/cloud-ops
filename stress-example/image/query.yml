@@ -3,7 +3,7 @@ version: '1'
 with:
   read_only: true  # better add this in the query time
   rest_api: false
-  port_expose: $JINA_PORT
+  port_expose: 45678
 pods:
   - name: encoder
     uses: encoder.yml
@@ -13,7 +13,6 @@ pods:
     timeout_ready: 600000
   - name: vec_idx
     uses: vec.yml
-    uses_internal: ''
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: _merge_matches

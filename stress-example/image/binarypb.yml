@@ -3,7 +3,7 @@ with:
   index_filename: doc.gz
 metas:
   name: kvidx
-  workspace: $JINA_WORKSPACE
+  workspace: ./workspace
 requests:
   on:
     ControlRequest:

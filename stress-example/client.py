@@ -12,14 +12,12 @@ from jina import Client, Document
 from jina.parsers import set_client_cli_parser
 
 DEFAULT_NUM_DOCS = 500
-TOP_K = 3
-REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 FILE_PREFIX = 'stats'
-TOP_K = os.environ.get('TOP_K', 50)
+TOP_K = int(os.environ.get('TOP_K'))
 FLOW_HOST = os.environ.get('FLOW_HOST')
-FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
+FLOW_PORT_GRPC = 45678
 
 if FLOW_HOST is None or FLOW_PORT_GRPC is None:
     raise ValueError(
@@ -49,7 +47,7 @@ def create_random_img_array(img_height, img_width):
 def validate_img(resp):
     for d in resp.search.docs:
         if len(d.matches) != TOP_K:
-            print(f' MATCHES LENGTH IS NOT TOP_K but {len(d.matches)}')
+            print(f' MATCHES LENGTH IS NOT TOP_K {TOP_K} but {len(d.matches)}')
         for m in d.matches:
             if 'filename' not in m.tags.keys():
                 print(f'filename not in tags: {m.tags}')
@@ -76,6 +74,7 @@ def wrapper(
         docs_gen_func: Callable[[int], Generator],
         id,
         function: ClientFunction,
+        time_start: int,
         time_end: int,
         req_size: int,
         dataset: str,
@@ -90,7 +89,8 @@ def wrapper(
         client.check_input(docs_gen_func(nr_docs))
         function(client, docs_gen_func, req_size, dataset, nr_docs)
         total_docs += nr_docs
-        if time.time() >= time_end:
+        done_time = time.time()
+        if done_time >= time_end:
             print(f'Process {id}: end reached')
             fname = os.path.join(f'{FILE_PREFIX}-{time_end}-{function.__name__}-{id}.txt')
             print(f'process {id}: logging stats to {fname}')
@@ -149,14 +149,14 @@ def get_dataset_docs_gens(dataset) -> Callable[[int], Generator]:
         return document_generator
 
 
-def read_stats(time_end, op, load):
+def read_stats(time_end, op, time_spent):
     files = glob(f'{FILE_PREFIX}-{time_end}*.txt')
     total = 0
     for f in files:
         with open(f, 'r') as f_h:
             count = int(f_h.readline())
         total += count
-    print(f'TOTAL: Ran operation {op} for {load} seconds on {total} documents')
+    print(f'TOTAL: Ran operation {op} for {time_spent} seconds on {total} documents => {total/time_spent} Docs/s')
 
 
 @click.command()
@@ -164,7 +164,7 @@ def read_stats(time_end, op, load):
 @click.option('--load', '-l', default=60)  # time (seconds)
 @click.option('--nr', '-n', default=DEFAULT_NUM_DOCS)
 @click.option('--concurrency', '-c', default=1)
-@click.option('--req_size', '-r', default=REQUEST_SIZE)
+@click.option('--req_size', '-r')
 @click.option('--dataset', default=None, type=click.Choice(['image', 'text']))
 def main(task, load, nr, concurrency, req_size, dataset):
     print(f'task = {task}; load = {load}; nr = {nr}; concurrency = {concurrency}; \
@@ -178,23 +178,26 @@ req_size = {req_size}; dataset = {dataset}')
     if task == 'query':
         function = query
 
+    int_req_size = int(req_size)
+
     grpc_args = set_client_cli_parser().parse_args(
         ['--host', FLOW_HOST, '--port-expose', str(FLOW_PORT_GRPC)])
 
-    time_end = time.time() + load
+    start_time = time.time()
+    time_end = start_time + load
     print(f'Will end at {datetime.fromtimestamp(time_end).isoformat()}')
 
     docs_generator = get_dataset_docs_gens(dataset)
 
     if concurrency == 1:
         print(f'Starting only one process. Not using multiprocessing...')
-        wrapper(grpc_args, docs_generator, 1, function, time_end, req_size, dataset, nr)
+        wrapper(grpc_args, docs_generator, 1, function, start_time, time_end, int_req_size, dataset, nr)
     else:
         print(f'Using multiprocessing to start {concurrency} processes...')
         processes = [
             mp.Process(
                 target=wrapper,
-                args=(grpc_args, docs_generator, id, function, time_end, req_size, dataset, nr),
+                args=(grpc_args, docs_generator, id, function, start_time, time_end, int_req_size, dataset, nr),
                 name=f'{function.__name__}-{id}'
             )
             for id in range(concurrency)
@@ -213,7 +216,8 @@ req_size = {req_size}; dataset = {dataset}')
 
     # glob process logs file and sum the total processed
     # by indexing and querying
-    read_stats(time_end, op=task, load=load)
+    end_time = time.time()
+    read_stats(time_end, op=task, time_spent=end_time - start_time)
 
 
 if __name__ == '__main__':

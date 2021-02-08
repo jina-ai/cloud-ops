@@ -1,7 +1,6 @@
 !ScannIndexer
 with:
   distance_measure: 'squared_l2'
-  #index_filename: 'vec.gz' # Should be overwritten by ref_indexer index filename
   ref_indexer:
     !NumpyIndexer
     metas:

@@ -2,7 +2,7 @@
 version: '1'
 with:
   rest_api: false
-  port_expose: $JINA_PORT
+  port_expose: 45678
 pods:
   - name: encoder
     polling: any

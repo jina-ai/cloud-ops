@@ -1,8 +1,8 @@
 !AnnoyIndexer
 with:
   #index_filename: 'vec.gz' # Should be overwriten by ref_indexer index filename
-  n_trees: 100
-  search_k: -1
+  n_trees: $JINA_ANNOY_NUM_TREES
+  search_k: $JINA_ANNOY_SEARCH_K
   ref_indexer:
     !NumpyIndexer
     metas:
