@@ -24,8 +24,8 @@ pods:
     docker_kwargs:
       environment:
         OMP_NUM_THREADS: $OMP_NUM_THREADS
-  - name: redis_idx
-    uses: redis.yml
+  - name: doc_idx
+    uses: binarypb.yml
     shards: $JINA_SHARDS_REDIS
     polling: all
     uses_after: merge_and_topk.yml

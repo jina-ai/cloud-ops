@@ -1,9 +1,8 @@
-!RedisDBIndexer
+!BinaryPbIndexer
 with:
-  db: 0
-  port: 6379
+  index_filename: doc.gz
 metas:
-  name: redis_idx
+  name: kvidx
   workspace: $JINA_WORKSPACE
 requests:
   on:

@@ -1,0 +1,36 @@
+!Flow
+version: '1'
+with:
+  rest_api: false
+  port_expose: $JINA_PORT
+pods:
+  - name: encoder
+    polling: any
+    scheduling: $SCHEDULING
+    uses: encoder.yml
+    shards: $JINA_SHARDS_ENCODER
+    host: $JINA_ENCODER_HOST
+    port_expose: 8000
+    timeout_ready: 10000
+    read_only: true
+  - name: vec_idx
+    polling: any
+    scheduling: $SCHEDULING
+    uses: vec.yml
+    shards: $JINA_SHARDS_INDEXERS
+    host: $JINA_VEC_INDEXER_HOST
+    port_expose: 8000
+    timeout_ready: 10000 # larger timeout as in query time will read all the data
+  - name: doc_idx
+    uses: binarypb.yml
+    scheduling: $SCHEDULING
+    shards: $JINA_SHARDS_REDIS
+    host: $JINA_REDIS_INDEXER_HOST
+    port_expose: 8000
+    timeout_ready: 10000 # larger timeout as in query time will read all the data
+    needs: gateway
+  - name: join_all
+    method: needs
+    uses: _merge
+    needs: [doc_idx, vec_idx]
+    read_only: true
