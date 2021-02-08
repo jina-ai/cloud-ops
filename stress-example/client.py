@@ -17,7 +17,7 @@ REQUEST_SIZE = 4
 IMG_HEIGHT = 224
 IMG_WIDTH = 224
 FILE_PREFIX = 'stats'
-
+TOP_K = os.environ.get('TOP_K', 50)
 FLOW_HOST = os.environ.get('FLOW_HOST')
 FLOW_PORT_GRPC = os.environ.get('FLOW_PORT_GRPC')
 

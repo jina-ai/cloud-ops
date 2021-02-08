@@ -12,8 +12,8 @@ pods:
     port_expose: 8000
     timeout_ready: 600000
   - name: vec_idx
-    uses: $JINA_FAISS_IMAGE
-    uses_internal: faiss_indexer.yml
+    uses: vec.yml
+    uses_internal: ''
     shards: $JINA_SHARDS_INDEXERS
     polling: all
     uses_after: _merge_matches
@@ -24,8 +24,8 @@ pods:
     docker_kwargs:
       environment:
         OMP_NUM_THREADS: $OMP_NUM_THREADS
-  - name: redis_idx
-    uses: redis.yml
+  - name: doc_idx
+    uses: doc_idx.yml
     shards: $JINA_SHARDS_REDIS
     polling: all
     uses_after: merge_and_topk.yml
