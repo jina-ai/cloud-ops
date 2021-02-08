@@ -4,7 +4,7 @@ with:
   port: 6379
 metas:
   name: redis_idx
-  workspace: $JINA_WORKSPACE
+  workspace: ./workspace
 requests:
   on:
     ControlRequest:
