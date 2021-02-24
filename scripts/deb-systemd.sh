@@ -29,6 +29,7 @@ After=network.target
 
 [Service]
 User=ubuntu
+WorkingDirectory=/home/ubuntu
 ExecStart=/usr/local/bin/jinad
 Restart=always
 
