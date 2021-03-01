@@ -10,7 +10,7 @@ jobs:
     steps:
       - uses: benc-uk/workflow-dispatch@v1
         with:
-          workflow: Destroy & Deploy cloud.jina.ai
+          workflow: Destroy previous & Deploy new JinaD
           repo: jina-ai/jina-terraform
           token: ${{ secrets.JINA_DEV_BOT }}
           ref: refs/heads/master
