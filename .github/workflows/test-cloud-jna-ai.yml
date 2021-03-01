@@ -1,0 +1,17 @@
+name: Test cloud.jina.ai deployment
+
+on:
+  pull_request:
+
+
+jobs:
+  deploy-jinad-cloud_jina_ai:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Destroy & Deploy cloud.jina.ai
+          repo: jina-ai/jina-terraform
+          token: ${{ secrets.JINA_DEV_BOT }}
+          inputs: '{ "TFID": "cloud.jina.ai", "instance_type": "t2.micro", "region": "us-east-1", "cloudflare_record_name": "cloud" }' 
+  
