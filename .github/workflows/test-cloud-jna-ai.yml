@@ -14,6 +14,6 @@ jobs:
           workflow: Destroy previous & Deploy new JinaD
           repo: jina-ai/jina-terraform
           token: ${{ secrets.JINA_DEV_BOT }}
-          ref: refs/heads/master
+#           ref: refs/heads/master
           inputs: '{ "TFID": "cloud.jina.ai", "instance_type": "t2.micro", "region": "us-east-1", "cloudflare_record_name": "cloud" }' 
   
