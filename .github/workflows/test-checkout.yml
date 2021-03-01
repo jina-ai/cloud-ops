@@ -2,6 +2,10 @@ name: TEST CHECKOUT
 
 on:
   workflow_dispatch:
+    inputs:
+      ABC:
+        description: 'abc desc'
+        required: true
   
 jobs:
   clone1:
@@ -12,53 +16,4 @@ jobs:
           repository: jina-ai/jina
           submodules: true
           fetch-depth: 100
-      - uses: actions/checkout@v2
-        with:
-          repository: jina-ai/api
-          path: schema
-          token: ${{ secrets.JINA_DEV_BOT }}
-      - uses: actions/setup-python@v1
-        with:
-          python-version: 3.7
-      - run: |
-          echo $PWD
-          ls -l
-          pip install .[daemon] --no-cache-dir
-          JINA_VERSION=$(sed -n '/^__version__/p' ./jina/__init__.py | cut -d \' -f2)-master
-          echo "JINA_VERSION=${JINA_VERSION}" >> $GITHUB_ENV
-          pip install css-html-js-minify
-          css-html-js-minify ./jina/resources/hub-builder-success
-          cp ./jina/resources/hub-builder-success/index.html ./schema/hub
-          cp ./jina/resources/hub-builder-success/script.min.js ./schema/hub
-          cp ./jina/resources/hub-builder-success/style.min.css ./schema/hub
-          cd schema
-          jina export-api --yaml-path "$JINA_VERSION.yml" master.yml --json-path "$JINA_VERSION.json" master.json master
-          python -c "from daemon import _write_openapi_schema; _write_openapi_schema()"
-          python ../scripts/get-gateway-openapi.py
-          ls -l
-          cd -
-      - name: redoc-cli-jinad
-        uses: seeebiii/redoc-cli-github-action@v10
-        with:
-          args: 'bundle schema/daemon.json -o jinad.html'
-      - name: redoc-cli-gateway
-        uses: seeebiii/redoc-cli-github-action@v10
-        with:
-          args: 'bundle schema/gateway.json -o rest.html'
-      - name: push-to-api-repo
-        run: |
-          ls -l
-          mkdir -p schema/daemon/
-          cp jinad.html schema/daemon/master.html
-          rm schema/daemon.json
-          rm -rf schema/jinad
-          mkdir -p schema/rest/
-          cp rest.html schema/rest/master.html
-          rm schema/gateway.json
-          cd schema
-          ls -lR
-          git status
-          # git config --local user.email "dev-bot@jina.ai"
-          # git config --local user.name "Jina Dev Bot"
-          # git add . && git commit -m "update ${{env.JINA_VERSION}} due to ${{github.event_name}} on ${{github.repository}}" && git push
-          
+      
