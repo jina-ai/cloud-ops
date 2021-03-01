@@ -1,6 +1,7 @@
 name: Test cloud.jina.ai deployment
 
 on:
+  workflow_dispatch:
   pull_request:
 
 
