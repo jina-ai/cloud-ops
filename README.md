@@ -1,6 +1,6 @@
 # cloud-ops
 
-## 🚀 Terraform 
+## 🚀 Terraform
 
 ### Getting started with setting up AWS resources with Terraform
 
@@ -24,10 +24,10 @@ This spots any errors before actually applying changes
 
 Following terraform script spins up:
 1. Configure the AWS Provider
-2. Creates VPC 
+2. Creates VPC
 3. Creates a Gateway
 4. Creates Route table
-5. Associate subnet with Route table 
+5. Associate subnet with Route table
 6. Create security group to allow all ports<br/>
 7. Create network interface with an IP from subnet <br/>
 8. Create elastic IP addres<br/>
@@ -39,6 +39,7 @@ This will create the .terraform and you can run it now wih the command `terrafor
 Also you can run `terraform plan` first to see what the changes will be as well as to update the state.
 
 ## 🚀 Hub api deployment
+
 
 ## 🚀 Lambda handlres
 
@@ -52,7 +53,7 @@ Creates [Cloudformation](https://aws.amazon.com/cloudformation/) stack on AWS (F
 - EC2 instance
 - Volume
 - Elastic IP
-  
+
 #### SSM Document
 
 Creates [SSM Document](https://docs.aws.amazon.com/systems-manager/latest/userguide/ssm-agent.html) (Way to run long-running commands on ec2)
