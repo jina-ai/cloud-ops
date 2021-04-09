@@ -16,7 +16,9 @@ sudo bash <<INIT
     apt-get update && apt-get -y install python3.8 python3.8-dev python3.8-distutils python3.8-venv python3-pip && \
         apt-get install --no-install-recommends -y ruby-dev build-essential && \
         gem install fluentd --no-doc
-
+        
+    # install python packages except jinad
+    python3.8 -m pip install $*
     # install jinad
     python3.8 -m pip install --prefix /usr/local --pre "jina[daemon]"
 INIT
