@@ -13,5 +13,5 @@ jobs:
           repo: jina-ai/jina-terraform
           token: ${{ secrets.JINA_DEV_BOT }}
           ref: refs/heads/main
-          inputs: '{ "TFID": "cloud.jina.ai", "instances": { "cloud.jina.ai" = { "type" = "t2.micro", "pip" = [ ], "command" = "sudo echo \"Hello from instance1\""} }, "region": "us-east-1", "cloudflare_record_name": "cloud" }' 
+          inputs: '{ "TFID": "cloud.jina.ai", "instances": { "cloud.jina.ai": { "type": "t2.micro", "pip": [], "command": "sudo echo \"Hello from instance1\""} }, "region": "us-east-1", "cloudflare_record_name": "cloud" }' 
   
