@@ -18,9 +18,9 @@ sudo bash <<INIT
         gem install fluentd --no-doc
         
     # install python packages except jinad
-    python3.8 -m pip install $*
+    python3.8 -m pip install --prefix /usr/local/jina $*
     # install jinad
-    python3.8 -m pip install --prefix /usr/local --pre "jina[daemon]"
+    python3.8 -m pip install --prefix /usr/local/jina --pre "jina[daemon]"
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
@@ -32,7 +32,7 @@ After=network.target
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu
-ExecStart=/usr/local/bin/jinad
+ExecStart=/usr/local/jina/bin/jinad --workspace /usr/local/jina/tmp
 Restart=always
 
 [Install]
