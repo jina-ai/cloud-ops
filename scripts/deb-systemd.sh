@@ -32,7 +32,7 @@ After=network.target
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu
-ExecStart=/usr/local/jina/bin/jinad
+ExecStart=/usr/local/jina/bin/jinad --workspace /usr/local/jina/tmp
 Restart=always
 
 [Install]
