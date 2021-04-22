@@ -21,7 +21,7 @@ sudo bash <<INIT
     # install python packages except jinad
     python3.8 -m pip install --target /usr/local/jina $*
     # install jinad
-    python3.8 -m pip install --target /usr/local/jina --pre "jina[daemon]"
+    python3.8 -m pip install --upgrade --target /usr/local/jina --pre "jina[daemon]"
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
