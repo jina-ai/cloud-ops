@@ -17,6 +17,7 @@ sudo bash <<INIT
         apt-get install --no-install-recommends -y ruby-dev build-essential && \
         gem install fluentd --no-doc
         
+    chmod -R 777 /usr/local/jina
     # install python packages except jinad
     python3.8 -m pip install --prefix /usr/local/jina $*
     # install jinad
@@ -32,6 +33,7 @@ After=network.target
 [Service]
 User=ubuntu
 WorkingDirectory=/home/ubuntu
+Environment="PYTHONPATH=/usr/local/jina"
 ExecStart=/usr/local/jina/bin/jinad --workspace /usr/local/jina/tmp
 Restart=always
 
@@ -55,6 +57,7 @@ status_code=$(curl -s -o /dev/null -w "%{http_code}" http://${JINAD_IP}:${JINAD_
 if [[ $status_code -eq 200 ]]; then
     echo -e "\nJinaD started successfully as a daemon. please go to ${JINAD_IP}:${JINAD_PORT}/docs for more info"
 else
-    echo -e "\nJinaD server is not up. something went wrong! Exiting.."
-    exit 1
+    echo -e "\nJinaD server is not up yet. Something might be wrong! Maybe wait for some more time?"
+    # Let's not fail the script here. Add a retry logic in a later step?
+    exit 0
 fi
