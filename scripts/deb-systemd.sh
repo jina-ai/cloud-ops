@@ -19,9 +19,9 @@ sudo bash <<INIT
         
     chmod -R 777 /usr/local/jina
     # install python packages except jinad
-    python3.8 -m pip install --prefix /usr/local/jina $*
+    python3.8 -m pip install --target /usr/local/jina $*
     # install jinad
-    python3.8 -m pip install --prefix /usr/local/jina --pre "jina[daemon]"
+    python3.8 -m pip install --target /usr/local/jina --pre "jina[daemon]"
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
