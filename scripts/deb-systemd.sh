@@ -19,7 +19,8 @@ sudo bash <<INIT
         
     chmod -R 777 /usr/local/jina
     # install python packages except jinad
-    python3.8 -m pip install --target /usr/local/jina $*
+    mkdir /usr/local/jina/tmp
+    TMPDIR=/usr/local/jina/tmp python3.8 -m pip install --upgrade --no-cache-dir --target /usr/local/jina $*
     # install jinad
     python3.8 -m pip install --upgrade --target /usr/local/jina --pre "jina[daemon]"
 INIT
