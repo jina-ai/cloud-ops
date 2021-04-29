@@ -16,13 +16,13 @@ sudo bash <<INIT
     apt-get update && apt-get -y install python3.8 python3.8-dev python3.8-distutils python3.8-venv python3-pip && \
         apt-get install --no-install-recommends -y ruby-dev build-essential && \
         gem install fluentd --no-doc
-        
-    chmod -R 777 /usr/local/jina
+    
     # install python packages except jinad
     mkdir /usr/local/jina/tmp
     TMPDIR=/usr/local/jina/tmp python3.8 -m pip install --upgrade --no-cache-dir --target /usr/local/jina --progress-bar off $*
     # install jinad
     python3.8 -m pip install --upgrade --target /usr/local/jina --progress-bar off --pre "jina[daemon]"
+    chmod -R 777 /usr/local/jina
 INIT
 
 echo -e "\n\nInstalling jinad as daemon\n"
@@ -41,7 +41,6 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOF'
-
 
 echo -e "\n\nStarting jinad service\n"
 sudo bash <<JINAD_START
