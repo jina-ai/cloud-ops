@@ -1,4 +1,4 @@
-jina[cv,http]
+git+https://github.com/jina-ai/jina.git@v1.2.0#egg=jina[cv, http]
 torch==1.7.1
 torchvision>=0.3.0
 docker==4.4.1
