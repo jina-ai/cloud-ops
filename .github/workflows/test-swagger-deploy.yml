@@ -28,7 +28,9 @@ jobs:
       - name: Install Packages
         run: npm ci
       - name: Create Build
-        run: PUBLIC_URL=https://api.jina.ai/swagger && npm run build-swagger
+        run: |
+          npx browserslist@latest --update-db
+          PUBLIC_URL=https://api.jina.ai/swagger && npm run build-swagger
       - name: Push to API
         run: |
           ls -l api
