@@ -33,5 +33,10 @@ jobs:
           PUBLIC_URL=https://api.jina.ai/swagger && npm run build-swagger
       - name: Push to API
         run: |
-          ls -l api
-          ls -l
+          rm -rf api/swagger
+          cp -R build api/swagger
+          cd api
+          git status
+          git config --local user.email "dev-bot@jina.ai"
+          git config --local user.name "Jina Dev Bot"
+          # git add . && git commit -m "update swagger build" && git push
