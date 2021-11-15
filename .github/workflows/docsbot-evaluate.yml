@@ -1,0 +1,132 @@
+name: Docsbot Evaluate
+
+on: 
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-docs-bot branch name
+        default: main
+        required: false
+      pr_number:
+        description: Pass the pull request number that's triggering this job
+        default: '0'
+        required: false
+
+jobs:
+  evaluate-on-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-docs-bot
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: 0.14.7
+      - run: |
+          pip install -r src/requirements.txt
+          pip install -r src/requirements-deploy.txt
+          pip install -r tests/requirements.txt
+          pip install prettytable
+          sudo apt-get update && sudo apt-get install -y jq
+      - name: Run evaluation
+        run: |
+          terraform init
+          terraform apply -auto-approve
+          bash evaluate-on-pr.sh
+        working-directory: aws-deployment
+        timeout-minutes: 30
+      
+      - name: Extract Evaluations
+        id: get-comment-eval-body
+        run: |
+          body=$(python prettify.py eval eval-results/2.1.8/main.json current.json)
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+          echo ::set-output name=body::$body
+        working-directory: src
+      - name: Find Comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' }}
+        uses: peter-evans/find-comment@v1
+        id: fc
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Evaluation results'
+      - name: Create comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          body: ${{ steps.get-comment-eval-body.outputs.body }}
+          reaction-type: "eyes"
+      - name: Update comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id != 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: ${{ steps.get-comment-eval-body.outputs.body }}
+          reaction-type: "rocket"
+          edit-mode: replace
+      
+      - name: Extract Answers
+        id: get-comment-answers-body
+        run: |
+          body=$(python prettify.py answers current_answers.json)
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+          echo ::set-output name=body::$body
+        working-directory: src
+      - name: Find Comment (Answers)
+        if: ${{ github.event.inputs.pr_number != '0' }}
+        uses: peter-evans/find-comment@v1
+        id: fc2
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: 'Answers to GT'
+      - name: Create comment (Answers)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id == 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          body: ${{ steps.get-comment-answers-body.outputs.body }}
+          reaction-type: "eyes"
+      - name: Update comment (Answers)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id != 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          comment-id: ${{ steps.fc2.outputs.comment-id }}
+          body: ${{ steps.get-comment-answers-body.outputs.body }}
+          reaction-type: "rocket"
+          edit-mode: replace
+      
+      - name: Destroy instances
+        if: always()
+        run: terraform destroy -auto-approve
+        working-directory: aws-deployment
