@@ -36,7 +36,7 @@ jobs:
           terraform_version: 0.14.7
       - run: |
           pip install -r src/requirements.txt
-          pip install -r src/requirements-deploy.txt
+          pip install -r deployment/requirements.txt
           pip install -r tests/requirements.txt
           pip install prettytable
           sudo apt-get update && sudo apt-get install -y jq
@@ -45,7 +45,7 @@ jobs:
           terraform init
           terraform apply -auto-approve
           bash evaluate-on-pr.sh
-        working-directory: aws-deployment
+        working-directory: deployment/aws
         timeout-minutes: 30
       
       - name: Extract Evaluations
@@ -56,7 +56,7 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo ::set-output name=body::$body
-        working-directory: src
+        working-directory: deployment
       - name: Find Comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' }}
         uses: peter-evans/find-comment@v1
@@ -96,7 +96,7 @@ jobs:
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo ::set-output name=body::$body
-        working-directory: src
+        working-directory: deployment
       - name: Find Comment (Answers)
         if: ${{ github.event.inputs.pr_number != '0' }}
         uses: peter-evans/find-comment@v1
@@ -131,4 +131,4 @@ jobs:
       - name: Destroy instances
         if: always()
         run: terraform destroy -auto-approve
-        working-directory: aws-deployment
+        working-directory: deployment/aws
