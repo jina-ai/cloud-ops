@@ -51,7 +51,7 @@ jobs:
       - name: Extract Evaluations
         id: get-comment-eval-body
         run: |
-          body=$(python prettify.py eval eval-results/2.1.8/main.json current.json)
+          body=$(python prettify.py eval ../src/files/eval-results/2.1.8/main.json current.json)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
