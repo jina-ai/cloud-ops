@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: jina-ai/jina-docs-bot
+          ref: ${{ github.event.inputs.branch }}
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
