@@ -1,0 +1,110 @@
+name: E2E pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Pass the project name (JINA/FINETUNER)
+        default: JINA
+        required: false
+      environment:
+        description: Pass the environment (prod/stage)
+        default: stage
+        required: false
+      branch:
+        description: Pass the jina-docs-bot branch/tag name
+        default: main
+        required: false
+
+jobs:
+  reindex-and-redeploy-query:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-docs-bot
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Prepare client for deployment
+        run: |
+          python -m pip install --upgrade pip
+          pip install --no-cache-dir -r deployment/requirements.txt
+      - name: Start index Flow, reindex & redeploy query Flow
+        run: |
+          if [[ ${{ github.event.inputs.environment }} == 'prod' ]] ; then 
+            HOST=${{ env.PROD_HOST }}
+          else 
+            HOST=${{ env.STAGING_HOST }}
+          fi
+          python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+        working-directory: ./deployment
+      
+  redeploy-docs-staging:
+    needs: [reindex-and-redeploy-query]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == 'stage'
+    steps:
+      - run: |
+          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+            echo "REPOSITORY=jina-ai/jina" >> $GITHUB_ENV
+          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then 
+            echo "REPOSITORY=jina-ai/finetuner" >> $GITHUB_ENV
+          fi
+      - uses: actions/checkout@v2
+        with:
+          repository: ${{ env.REPOSITORY }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 14
+      - name: Deploy docs from jina[master] and use new host as backend
+        run: |
+          npm i -g netlify-cli
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+            export JINA_DOCSBOT_SERVER=https://docsbot-stage.jina.ai
+          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
+            export FINETUNER_DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai
+          fi
+          export NUM_RELEASES=1
+          bash makedoc.sh
+          RANDOM_DNS=$(openssl rand -hex 5)
+          echo "RANDOM_DNS=$RANDOM_DNS" >> $GITHUB_ENV
+          # TODO(Deepankar): verify for finetuner
+          netlify deploy --dir=_build/dirhtml --alias=docsbot-${RANDOM_DNS}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        working-directory: docs
+      - name: Send message to Slack
+        if: success()
+        run: >
+          curl -X POST -H 'Content-type: application/json' --data 
+          '{
+              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://${{ env.RANDOM_DNS }}--jina-docs.netlify.app with stage backend :tada:"
+          }' ${{ env.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
+
+  send-slack-message-prod:
+    needs: [reindex-and-redeploy-query]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == 'prod'
+    steps:
+      - name: Send message to Slack
+        run: >
+          curl -X POST -H 'Content-type: application/json' --data 
+          '{
+              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://docsbot.jina.ai :tada:"
+          }' ${{ env.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
