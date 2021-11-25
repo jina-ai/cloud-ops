@@ -1,4 +1,4 @@
-name: E2E pipeline
+name: Docsbot Deployment Pipeline
 
 on:
   workflow_dispatch:
