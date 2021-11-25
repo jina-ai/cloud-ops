@@ -17,13 +17,13 @@ jobs:
   stage:
     needs: [first]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment }} == 'stage'
+    if: ${{ github.event.inputs.environment == 'stage' }}
     steps:
-      - run: echo "Hi stage"
+      - run: echo "Hi stage ${{ github.event.inputs.environment }}"
 
   prod:
     needs: [first]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment }} == 'prod'
+    if: ${{ github.event.inputs.environment == 'prod' }}
     steps:
-      - run: echo "Hi prod"
+      - run: echo "Hi prod ${{ github.event.inputs.environment }}"
