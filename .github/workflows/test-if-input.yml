@@ -1,0 +1,29 @@
+name: Validate if clause
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Pass the environment (prod/stage)
+        default: stage
+        required: false
+
+jobs:
+  first:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Hi"
+      
+  stage:
+    needs: [first]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == 'stage'
+    steps:
+      - run: echo "Hi stage"
+
+  prod:
+    needs: [first]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == 'prod'
+    steps:
+      - run: echo "Hi prod"
