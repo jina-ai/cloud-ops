@@ -39,6 +39,7 @@ jobs:
           else 
             HOST=${{ env.STAGING_HOST }}
           fi
+          export JINA_LOG_LEVEL=DEBUG
           python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create
         env:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
@@ -75,6 +76,7 @@ jobs:
           elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
             export FINETUNER_DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai
           fi
+          git fetch origin
           export NUM_RELEASES=1
           bash makedoc.sh
           RANDOM_DNS=$(openssl rand -hex 5)
