@@ -16,6 +16,10 @@ on:
         default: main
         required: false
 
+# At a time only one job is allowed to run for an environment to control the load.
+# e.g.- 2 jobs with `prod-jina` & `prod-finetuner` cannot run at the same time. 2nd one waits for the 1st.
+concurrency: deployment-${{ github.event.inputs.environment }}
+
 jobs:
   reindex-and-redeploy-query:
     runs-on: ubuntu-latest
@@ -79,10 +83,9 @@ jobs:
           git fetch origin --tags
           export NUM_RELEASES=1
           bash makedoc.sh
-          RANDOM_DNS=$(openssl rand -hex 5)
-          echo "RANDOM_DNS=$RANDOM_DNS" >> $GITHUB_ENV
-          # TODO(Deepankar): verify for finetuner
-          netlify deploy --dir=_build/dirhtml --alias=docsbot-${RANDOM_DNS}
+          LOWER_CASE_PROJECT=${{ github.event.inputs.project }} | tr '[:upper:]' '[:lower:]'
+          echo "PROJECT=$LOWER_CASE_PROJECT" >> $GITHUB_ENV
+          netlify deploy --dir=_build/dirhtml --alias=docsbot-${LOWER_CASE_PROJECT}-stage
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
@@ -92,7 +95,7 @@ jobs:
         run: >
           curl -X POST -H 'Content-type: application/json' --data 
           '{
-              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://docsbot-${{ env.RANDOM_DNS }}--jina-docs.netlify.app with stage backend :tada:"
+              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://docsbot-${{ env.PROJECT }}-stage--jina-docs.netlify.app with stage backend :tada:"
           }' ${{ env.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
@@ -102,11 +105,17 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.environment == 'prod' }}
     steps:
+      - run: |
+          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+            echo "DOCSBOT_SERVER=https://docsbot.jina.ai" >> $GITHUB_ENV
+          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
+            echo "DOCSBOT_SERVER=https://finetuner-docsbot.jina.ai" >> $GITHUB_ENV
+          fi
       - name: Send message to Slack
         run: >
           curl -X POST -H 'Content-type: application/json' --data 
           '{
-              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://docsbot.jina.ai :tada:"
+              "text": ":jina-robot-logo: reindexed & redeployed :memo: on ${{ env.DOCSBOT_SERVER }} :tada:"
           }' ${{ env.SLACK_WEBHOOK_URL }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
