@@ -1,12 +1,18 @@
-name: Validate if clause
+name: Validate concurrency
 
 on:
   workflow_dispatch:
     inputs:
+      project:
+        description: Pass the project name (JINA/FINETUNER)
+        default: JINA
+        required: false
       environment:
         description: Pass the environment (prod/stage)
         default: stage
         required: false
+
+concurrency: deployment-${{ github.event.inputs.environment }}-${{ github.event.inputs.project }}
 
 jobs:
   first:
@@ -19,11 +25,15 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.environment == 'stage' }}
     steps:
-      - run: echo "Hi stage ${{ github.event.inputs.environment }}"
+      - run: |
+          echo "Hi stage ${{ github.event.inputs.environment }}"
+          sleep 5
 
   prod:
     needs: [first]
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.environment == 'prod' }}
     steps:
-      - run: echo "Hi prod ${{ github.event.inputs.environment }}"
+      - run: |
+          echo "Hi prod ${{ github.event.inputs.environment }}"
+          sleep 10
