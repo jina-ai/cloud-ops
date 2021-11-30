@@ -28,7 +28,7 @@ jobs:
       - run: |
           echo "Hi stage ${{ github.event.inputs.environment }}"
           sleep 5
-          LOWER_CASE_PROJECT=echo "${{ github.event.inputs.project }}" | tr '[:upper:]' '[:lower:]'
+          LOWER_CASE_PROJECT=$(echo "${{ github.event.inputs.project }}" | tr '[:upper:]' '[:lower:]')
           echo "PROJECT=$LOWER_CASE_PROJECT" >> $GITHUB_ENV
           echo $LOWER_CASE_PROJECT
 
