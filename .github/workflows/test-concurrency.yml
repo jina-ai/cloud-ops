@@ -23,7 +23,7 @@ jobs:
   stage:
     needs: [first]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'stage' && github.event.inputs.description != 'JINA' }}
+    if: ${{ github.event.inputs.environment == 'stage' && github.event.inputs.project != 'JINA' }}
     steps:
       - run: |
           echo "Hi stage ${{ github.event.inputs.environment }}"
