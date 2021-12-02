@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       project:
-        description: Pass the project name (JINA/FINETUNER)
+        description: Pass the project name (JINA | FINETUNER | FASTAPI)
         default: JINA
         required: false
       environment:
-        description: Pass the environment (prod/stage)
+        description: Pass the environment (prod | stage)
         default: stage
         required: false
       branch:
@@ -53,7 +53,7 @@ jobs:
   redeploy-docs-staging:
     needs: [reindex-and-redeploy-query]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'stage' }}
+    if: ${{ github.event.inputs.environment == 'stage' && github.event.inputs.project != 'FASTAPI' }}
     steps:
       - run: |
           if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
@@ -103,7 +103,7 @@ jobs:
   send-slack-message-prod:
     needs: [reindex-and-redeploy-query]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'prod' }}
+    if: ${{ github.event.inputs.environment == 'prod' && github.event.inputs.project != 'FASTAPI' }}
     steps:
       - run: |
           if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
