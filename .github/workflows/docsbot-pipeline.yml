@@ -49,6 +49,35 @@ jobs:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           PROD_HOST: ${{ secrets.PROD_HOST }}
         working-directory: ./deployment
+      - run: |
+          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+            if [[ ${{ github.event.inputs.stage }} == 'prod' ]] ; then
+              echo "DOCSBOT_SERVER=https://docsbot.jina.ai" >> $GITHUB_ENV
+            elif [[ ${{ github.event.inputs.stage }} == 'stage' ]] ; then
+              echo "DOCSBOT_SERVER=https://docsbot-stage.jina.ai" >> $GITHUB_ENV
+            fi
+          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
+            if [[ ${{ github.event.inputs.stage }} == 'prod' ]] ; then
+              echo "DOCSBOT_SERVER=https://finetuner-docsbot.jina.ai" >> $GITHUB_ENV
+            elif [[ ${{ github.event.inputs.stage }} == 'stage' ]] ; then
+              echo "DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai" >> $GITHUB_ENV
+            fi
+          elif [[ ${{ github.event.inputs.project }} == 'FASTAPI' ]] ; then
+            if [[ ${{ github.event.inputs.stage }} == 'stage' ]] ; then
+              echo "DOCSBOT_SERVER=https://fastapi-docsbot-stage.jina.ai" >> $GITHUB_ENV
+            elif [[ ${{ github.event.inputs.stage }} == 'prod' ]] ; then
+              echo "DOCSBOT_SERVER=NOTSUPPORTEDYET" >> $GITHUB_ENV
+            fi
+          fi
+      - name: Send message to Slack
+        if: success()
+        run: >
+          curl -X POST -H 'Content-type: application/json' --data 
+          '{
+              "text": ":jina-robot-logo: reindexed & redeployed :memo: on ${{ env.DOCSBOT_SERVER }} :tada:"
+          }' ${{ env.SLACK_WEBHOOK_URL }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
       
   redeploy-docs-staging:
     needs: [reindex-and-redeploy-query]
@@ -90,32 +119,3 @@ jobs:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         working-directory: docs
-      - name: Send message to Slack
-        if: success()
-        run: >
-          curl -X POST -H 'Content-type: application/json' --data 
-          '{
-              "text": ":jina-robot-logo: reindexed & redeployed :memo: on https://docsbot-${{ env.PROJECT }}-stage--jina-docs.netlify.app with stage backend :tada:"
-          }' ${{ env.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
-
-  send-slack-message-prod:
-    needs: [reindex-and-redeploy-query]
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'prod' && github.event.inputs.project != 'FASTAPI' }}
-    steps:
-      - run: |
-          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
-            echo "DOCSBOT_SERVER=https://docsbot.jina.ai" >> $GITHUB_ENV
-          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
-            echo "DOCSBOT_SERVER=https://finetuner-docsbot.jina.ai" >> $GITHUB_ENV
-          fi
-      - name: Send message to Slack
-        run: >
-          curl -X POST -H 'Content-type: application/json' --data 
-          '{
-              "text": ":jina-robot-logo: reindexed & redeployed :memo: on ${{ env.DOCSBOT_SERVER }} :tada:"
-          }' ${{ env.SLACK_WEBHOOK_URL }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
