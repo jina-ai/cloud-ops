@@ -51,21 +51,21 @@ jobs:
         working-directory: ./deployment
       - run: |
           if [[ "${{ github.event.inputs.project }}" == "JINA" ]] ; then 
-            if [[ "${{ github.event.inputs.stage }}" == "prod" ]] ; then
+            if [[ "${{ github.event.inputs.environment }}" == "prod" ]] ; then
               echo "DOCSBOT_SERVER=https://docsbot.jina.ai" >> $GITHUB_ENV
-            elif [[ "${{ github.event.inputs.stage }}" == "stage" ]] ; then
+            elif [[ "${{ github.event.inputs.environment }}" == "stage" ]] ; then
               echo "DOCSBOT_SERVER=https://docsbot-stage.jina.ai" >> $GITHUB_ENV
             fi
           elif [[ "${{ github.event.inputs.project }}" == "FINETUNER" ]] ; then
-            if [[ "${{ github.event.inputs.stage }}" == "prod" ]] ; then
+            if [[ "${{ github.event.inputs.environment }}" == "prod" ]] ; then
               echo "DOCSBOT_SERVER=https://finetuner-docsbot.jina.ai" >> $GITHUB_ENV
-            elif [[ "${{ github.event.inputs.stage }}" == "stage" ]] ; then
+            elif [[ "${{ github.event.inputs.environment }}" == "stage" ]] ; then
               echo "DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai" >> $GITHUB_ENV
             fi
           elif [[ "${{ github.event.inputs.project }}" == "FASTAPI" ]] ; then
-            if [[ "${{ github.event.inputs.stage }}" == "stage" ]] ; then
+            if [[ "${{ github.event.inputs.environment }}" == "stage" ]] ; then
               echo "DOCSBOT_SERVER=https://fastapi-docsbot-stage.jina.ai" >> $GITHUB_ENV
-            elif [[ "${{ github.event.inputs.stage }}" == "prod" ]] ; then
+            elif [[ "${{ github.event.inputs.environment }}" == "prod" ]] ; then
               echo "DOCSBOT_SERVER=NOTSUPPORTEDYET" >> $GITHUB_ENV
             fi
           fi
