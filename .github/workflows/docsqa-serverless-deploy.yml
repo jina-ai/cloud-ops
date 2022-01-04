@@ -9,7 +9,7 @@ on:
         required: false
         
 jobs:
-  reindex-and-redeploy-query:
+  serverless-deploy-functions:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
