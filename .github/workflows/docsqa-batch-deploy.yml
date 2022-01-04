@@ -1,0 +1,41 @@
+name: Deploy Batch Function (docsqa)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-docs-bot branch/tag name
+        default: main
+        required: false
+        
+jobs:
+  deploy-batch-function:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-docs-bot
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy batch function
+        run: bash batch-deploy.sh
+        env:
+          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
+          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
+          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
+          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
+          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
+          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+          DOCSQA_BATCH_JOB_QUEUE: ${{ secrets.DOCSQA_BATCH_JOB_QUEUE }}
+          DOCSQA_BATCH_JOB_DEFINITION: ${{ secrets.DOCSQA_BATCH_JOB_DEFINITION }}
+          DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+        working-directory: ./deployment2/cloud
