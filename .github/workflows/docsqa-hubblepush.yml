@@ -1,4 +1,4 @@
-name: Push Executors to Hubble & ECR (docsqa)
+name:  (docsqa) Push Executors to Hubble & ECR
 
 on:
   workflow_dispatch:
