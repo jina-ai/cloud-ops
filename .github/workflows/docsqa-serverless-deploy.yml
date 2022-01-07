@@ -35,6 +35,8 @@ jobs:
           pip install -r serverless-requirements.txt
           bash serverless-deploy.sh node_modules/serverless/bin/serverless.js
         env:
+          JINA_CLOUDFLARE_ZONE: ${{ secrets.JINA_CLOUDFLARE_ZONE }}
+          JINA_CLOUDFLARE_TOKEN: ${{ secrets.JINA_CLOUDFLARE_TOKEN }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
           DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
