@@ -42,6 +42,7 @@ jobs:
             HOST=${{ env.PROD_HOST }}
           else 
             HOST=${{ env.STAGING_HOST }}
+            export DEVICE=cpu # stage server runs on cpu
           fi
           export JINA_LOG_LEVEL=DEBUG
           python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create
