@@ -5,7 +5,7 @@ on:
     inputs:
       branch:
         description: Pass the jina-docs-bot branch/tag name
-        default: main
+        default: docsqa-as-a-service
         required: false
         
 jobs:
