@@ -46,7 +46,7 @@ jobs:
           fi
           export JINA_LOG_LEVEL=DEBUG
           if [[ "${{ github.event.inputs.project }}" == "JINA" ]] ; then 
-            python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create --tag 2.6.4
+            python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create --tag v2.6.4
           else
             python deploy.py --project ${{ github.event.inputs.project }} --host $HOST --port 8000 --index --query create
           fi
