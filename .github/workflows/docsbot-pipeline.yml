@@ -84,44 +84,44 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_NIGHTLY_TESTS_WEBHOOK }}
       
-  redeploy-docs-staging:
-    needs: [reindex-and-redeploy-query]
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'stage' && github.event.inputs.project != 'FASTAPI' }}
-    steps:
-      - run: |
-          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
-            echo "REPOSITORY=jina-ai/jina" >> $GITHUB_ENV
-          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then 
-            echo "REPOSITORY=jina-ai/finetuner" >> $GITHUB_ENV
-          fi
-      - uses: actions/checkout@v2
-        with:
-          repository: ${{ env.REPOSITORY }}
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-      - uses: actions/setup-node@v2
-        with:
-          node-version: 14
-      - name: Deploy docs from ${{ github.event.inputs.project }} and use new host as backend
-        run: |
-          npm i -g netlify-cli
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
-            export JINA_DOCSBOT_SERVER=https://docsbot-stage.jina.ai
-          elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
-            export FINETUNER_DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai
-          fi
-          git fetch origin --tags
-          export NUM_RELEASES=1
-          bash makedoc.sh
-          LOWER_CASE_PROJECT=$(echo "${{ github.event.inputs.project }}" | tr '[:upper:]' '[:lower:]')
-          echo "PROJECT=$LOWER_CASE_PROJECT" >> $GITHUB_ENV
-          netlify deploy --dir=_build/dirhtml --alias=docsbot-${LOWER_CASE_PROJECT}-stage
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        working-directory: docs
-        timeout-minutes: 15
+#   redeploy-docs-staging:
+#     needs: [reindex-and-redeploy-query]
+#     runs-on: ubuntu-latest
+#     if: ${{ github.event.inputs.environment == 'stage' && github.event.inputs.project != 'FASTAPI' }}
+#     steps:
+#       - run: |
+#           if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+#             echo "REPOSITORY=jina-ai/jina" >> $GITHUB_ENV
+#           elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then 
+#             echo "REPOSITORY=jina-ai/finetuner" >> $GITHUB_ENV
+#           fi
+#       - uses: actions/checkout@v2
+#         with:
+#           repository: ${{ env.REPOSITORY }}
+#       - uses: actions/setup-python@v2
+#         with:
+#           python-version: 3.7
+#       - uses: actions/setup-node@v2
+#         with:
+#           node-version: 14
+#       - name: Deploy docs from ${{ github.event.inputs.project }} and use new host as backend
+#         run: |
+#           npm i -g netlify-cli
+#           python -m pip install --upgrade pip
+#           pip install -r requirements.txt
+#           if [[ ${{ github.event.inputs.project }} == 'JINA' ]] ; then 
+#             export JINA_DOCSBOT_SERVER=https://docsbot-stage.jina.ai
+#           elif [[ ${{ github.event.inputs.project }} == 'FINETUNER' ]] ; then
+#             export FINETUNER_DOCSBOT_SERVER=https://finetuner-docsbot-stage.jina.ai
+#           fi
+#           git fetch origin --tags
+#           export NUM_RELEASES=1
+#           bash makedoc.sh
+#           LOWER_CASE_PROJECT=$(echo "${{ github.event.inputs.project }}" | tr '[:upper:]' '[:lower:]')
+#           echo "PROJECT=$LOWER_CASE_PROJECT" >> $GITHUB_ENV
+#           netlify deploy --dir=_build/dirhtml --alias=docsbot-${LOWER_CASE_PROJECT}-stage
+#         env:
+#           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+#           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+#         working-directory: docs
+#         timeout-minutes: 15
