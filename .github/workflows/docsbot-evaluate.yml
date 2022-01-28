@@ -25,38 +25,61 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 0.14.7
-      - run: |
-          pip install -r src/requirements.txt
+      - name: install
+        run: |
           pip install -r deployment/requirements.txt
+          pip install -r src/requirements.txt
           pip install -r tests/requirements.txt
           pip install prettytable
           sudo apt-get update && sudo apt-get install -y jq
-      - name: Run evaluation
+          # TODO. remove. testing branches
+          git fetch --all
+          branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+          git checkout main
+          git checkout $branch
+      - name: download dpr models
         run: |
-          terraform init
-          terraform apply -auto-approve
-          bash evaluate-on-pr.sh
-        working-directory: deployment/aws
-        timeout-minutes: 30
-      
+          wget https://github.com/git-lfs/git-lfs/releases/download/v2.9.0/git-lfs-linux-amd64-v2.9.0.tar.gz
+          tar -xf git-lfs-linux-amd64-v2.9.0.tar.gz
+          chmod 775 install.sh
+          sudo ./install.sh
+          git clone https://huggingface.co/facebook/dpr-ctx_encoder-single-nq-base ~/dpr_index
+          cd ~/dpr_index
+          git lfs install
+          git lfs pull
+          cd ..
+          git clone https://huggingface.co/facebook/dpr-question_encoder-single-nq-base ~/dpr_query
+          cd ~/dpr_query
+          git lfs install
+          git lfs pull
+
+      - name: evaluate
+        run: |
+          echo $(ls -la)
+          bash scripts/prepare_repos.sh
+          mkdir results
+          cd src
+          export DPR_MODEL_INDEX=~/dpr_index
+          export DPR_MODEL_QUERY=~/dpr_query
+          bash ../scripts/evaluate_all.sh your_branch
+          cd ..
+          git fetch --all
+          git checkout main
+          cd src
+          bash ../scripts/evaluate_all.sh main
+          cp *.json ../results
+          cd ..
+          pip install pandas
+          python scripts/evaluation_data.py
+
       - name: Extract Evaluations
         id: get-comment-eval-body
         run: |
-          body=$(python prettify.py eval ../src/files/eval-results/2.1.8/main.json current.json)
+          body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo ::set-output name=body::$body
-        working-directory: deployment
       - name: Find Comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' }}
         uses: peter-evans/find-comment@v1
@@ -87,48 +110,3 @@ jobs:
           body: ${{ steps.get-comment-eval-body.outputs.body }}
           reaction-type: "rocket"
           edit-mode: replace
-      
-      - name: Extract Answers
-        id: get-comment-answers-body
-        run: |
-          body=$(python prettify.py answers current_answers.json)
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-          echo ::set-output name=body::$body
-        working-directory: deployment
-      - name: Find Comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' }}
-        uses: peter-evans/find-comment@v1
-        id: fc2
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'Answers to GT'
-      - name: Create comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id == 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          body: ${{ steps.get-comment-answers-body.outputs.body }}
-          reaction-type: "eyes"
-      - name: Update comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id != 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          comment-id: ${{ steps.fc2.outputs.comment-id }}
-          body: ${{ steps.get-comment-answers-body.outputs.body }}
-          reaction-type: "rocket"
-          edit-mode: replace
-      
-      - name: Destroy instances
-        if: always()
-        run: terraform destroy -auto-approve
-        working-directory: deployment/aws
