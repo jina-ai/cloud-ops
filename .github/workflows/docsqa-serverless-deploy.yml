@@ -33,7 +33,7 @@ jobs:
           npm install -g serverless@2.72.2 serverless-python-requirements serverless-domain-manager
           python -m pip install --upgrade pip
           pip install -r serverless-requirements.txt
-          bash serverless-deploy.sh node_modules/serverless/bin/serverless.js
+          bash serverless-deploy.sh
         env:
           JINA_CLOUDFLARE_ZONE: ${{ secrets.JINA_CLOUDFLARE_ZONE }}
           JINA_CLOUDFLARE_TOKEN: ${{ secrets.JINA_CLOUDFLARE_TOKEN }}
