@@ -30,7 +30,7 @@ jobs:
           aws-region: us-east-1
       - name: Install Serverless & Deploy App
         run: |
-          npm install serverless serverless-python-requirements serverless-domain-manager
+          npm install serverless@2.72.2 serverless-python-requirements serverless-domain-manager
           python -m pip install --upgrade pip
           pip install -r serverless-requirements.txt
           bash serverless-deploy.sh node_modules/serverless/bin/serverless.js
