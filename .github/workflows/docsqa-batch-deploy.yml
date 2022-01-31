@@ -38,4 +38,4 @@ jobs:
           DOCSQA_BATCH_JOB_QUEUE: ${{ secrets.DOCSQA_BATCH_JOB_QUEUE }}
           DOCSQA_BATCH_JOB_DEFINITION: ${{ secrets.DOCSQA_BATCH_JOB_DEFINITION }}
           DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
-        working-directory: ./deployment2/cloud
+        working-directory: ./deployment/cloud
