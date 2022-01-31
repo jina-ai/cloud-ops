@@ -32,5 +32,5 @@ jobs:
           pip install -r requirements.txt
           export PATCH_JINA_PREVIEW=true
           python hubblepush.py
-        working-directory: ./deployment2/local
+        working-directory: ./deployment/local
           
