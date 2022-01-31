@@ -1,6 +1,6 @@
 name: Docsbot Evaluate
 
-on: 
+on:
   workflow_dispatch:
     inputs:
       branch:
@@ -25,20 +25,9 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
-      - name: install
-        run: |
-          pip install -r deployment/requirements.txt
-          pip install -r src/requirements.txt
-          pip install -r tests/requirements.txt
-          pip install prettytable
-          sudo apt-get update && sudo apt-get install -y jq
-          # TODO. remove. testing branches
-          git fetch --all
-          branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
-          git checkout main
-          git checkout $branch
       - name: download dpr models
         run: |
+          set -ex
           wget https://github.com/git-lfs/git-lfs/releases/download/v2.9.0/git-lfs-linux-amd64-v2.9.0.tar.gz
           tar -xf git-lfs-linux-amd64-v2.9.0.tar.gz
           chmod 775 install.sh
@@ -53,8 +42,11 @@ jobs:
           git lfs install
           git lfs pull
 
+      - name: install reqs (your branch)
+        run: ./scripts/install_requirements.sh
       - name: evaluate
         run: |
+          set -ex
           echo $(ls -la)
           bash scripts/prepare_repos.sh
           mkdir results
@@ -64,17 +56,32 @@ jobs:
           bash ../scripts/evaluate_all.sh your_branch
           cd ..
           git fetch --all
+          branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
           git checkout main
+
+      - name: install reqs (main)
+        run: |
+          set -ex
+          pip install -r deployment/requirements.txt
+          pip install -r src/requirements.txt
+          pip install -r tests/requirements.txt
+
+      - name: evaluate (contd)
+        run: |
+          set -ex
           cd src
           bash ../scripts/evaluate_all.sh main
           cp *.json ../results
           cd ..
-          pip install pandas
+          git checkout 
+          git checkout $branch
+          pip install -r scripts/requirements.txt
           python scripts/evaluation_data.py
 
       - name: Extract Evaluations
         id: get-comment-eval-body
         run: |
+          set -ex          
           body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
