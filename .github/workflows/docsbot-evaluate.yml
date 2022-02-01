@@ -48,18 +48,21 @@ jobs:
           export DPR_MODEL_INDEX=facebook/dpr-ctx_encoder-single-nq-base
           export DPR_MODEL_QUERY=facebook/dpr-question_encoder-single-nq-base
           bash ../scripts/evaluate_all.sh your_branch
+          mv *.json ../results
+          git clean -xfd
           cd ..
           git fetch --all
           branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
           git checkout main
           deactivate
+          rm -rf ./branchenv
           python -m virtualenv mainenv
           source ./mainenv/bin/activate
           python -m pip install -r src/requirements.txt
           python -m pip install -r tests/requirements.txt
           cd src
           bash ../scripts/evaluate_all.sh main
-          cp *.json ../results
+          mv *.json ../results
           cd ..
           git checkout $branch
           python -m pip install -r scripts/requirements.txt
