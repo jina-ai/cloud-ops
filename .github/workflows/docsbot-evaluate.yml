@@ -1,5 +1,9 @@
 name: Docsbot Evaluate
 
+concurrency:
+  group: deployment-${{ github.event.inputs.branch }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
