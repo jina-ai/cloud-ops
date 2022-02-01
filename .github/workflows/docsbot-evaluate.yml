@@ -87,7 +87,7 @@ jobs:
           repository: jina-ai/jina-docs-bot
           issue-number: ${{ github.event.inputs.pr_number }}
           comment-author: 'github-actions[bot]'
-          body-includes: 'Evaluation results'
+          body-includes: 'reciprocal_rank'
       - name: Create comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@v1
