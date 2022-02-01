@@ -29,28 +29,18 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
-#      - name: download dpr models
-#        run: |
-#          set -ex
-#          wget https://github.com/git-lfs/git-lfs/releases/download/v2.9.0/git-lfs-linux-amd64-v2.9.0.tar.gz
-#          tar -xf git-lfs-linux-amd64-v2.9.0.tar.gz
-#          chmod 775 install.sh
-#          sudo ./install.sh
-#          git clone https://huggingface.co/facebook/dpr-ctx_encoder-single-nq-base ~/dpr_index
-#          cd ~/dpr_index
-#          git lfs install
-#          git lfs pull
-#          cd ..
-#          git clone https://huggingface.co/facebook/dpr-question_encoder-single-nq-base ~/dpr_query
-#          cd ~/dpr_query
-#          git lfs install
-#          git lfs pull
 
       - name: install reqs (your branch)
-        run: ./scripts/install_requirements.sh
+        run: |
+          sudo apt-get update
+          python -m pip install virtualenv
+          python -m virtualenv branchenv
+          source ./branchenv/bin/activate
+          bash ./scripts/install_requirements.sh
       - name: evaluate
         run: |
           set -ex
+          source ./branchenv/bin/activate
           echo $(ls -la)
           bash scripts/prepare_repos.sh
           mkdir results
@@ -62,15 +52,17 @@ jobs:
           git fetch --all
           branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
           git checkout main
-          pip install -r deployment/requirements.txt
-          pip install -r src/requirements.txt
-          pip install -r tests/requirements.txt
+          deactivate
+          python -m virtualenv mainenv
+          source ./mainenv/bin/activate
+          python -m pip install -r src/requirements.txt
+          python -m pip install -r tests/requirements.txt
           cd src
           bash ../scripts/evaluate_all.sh main
           cp *.json ../results
           cd ..
           git checkout $branch
-          pip install -r scripts/requirements.txt
+          python -m pip install -r scripts/requirements.txt
           python scripts/evaluation_data.py
 
       - name: Extract Evaluations
