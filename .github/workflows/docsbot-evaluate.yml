@@ -15,6 +15,9 @@ on:
         description: Pass the pull request number that's triggering this job
         default: '0'
         required: false
+      target_branch:
+        description: the target branch of the PR
+        required: true
 
 jobs:
   evaluate-on-pr:
@@ -30,6 +33,14 @@ jobs:
         with:
           python-version: "3.7"
 
+      - name: target branch echo
+        env:
+          your_branch: ${{ github.event.inputs.branch }}
+          target_branch: ${{ github.event.inputs.target_branch }}
+        run: |
+          set -ex
+          echo "target branch = $target_branch"
+          echo "your branch = $your_branch"
       - name: install reqs (your branch)
         run: |
           sudo apt-get update
@@ -38,8 +49,11 @@ jobs:
           source ./branchenv/bin/activate
           bash ./scripts/install_requirements.sh
       - name: evaluate
+        env:
+          target_branch: ${{ github.event.inputs.target_branch }}
         run: |
           set -ex
+          echo "target branch = $target_branch"
           source ./branchenv/bin/activate
           echo $(ls -la)
           bash scripts/prepare_repos.sh
@@ -53,15 +67,15 @@ jobs:
           cd ..
           git fetch --all
           branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
-          git checkout main
+          git checkout $target_branch
           deactivate
           rm -rf ./branchenv
-          python -m virtualenv mainenv
-          source ./mainenv/bin/activate
+          python -m virtualenv target_branch_env
+          source ./target_branch_env/bin/activate
           python -m pip install -r src/requirements.txt
           python -m pip install -r tests/requirements.txt
           cd src
-          bash ../scripts/evaluate_all.sh main
+          bash ../scripts/evaluate_all.sh target_branch
           mv *.json ../results
           cd ..
           git checkout $branch
