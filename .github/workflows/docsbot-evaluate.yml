@@ -63,6 +63,7 @@ jobs:
           export DPR_MODEL_QUERY=facebook/dpr-question_encoder-single-nq-base
           bash ../scripts/evaluate_all.sh your_branch
           mv *.json ../results
+          mv *report*txt ../results
           git clean -xfd
           cd ..
           git fetch --all
@@ -77,6 +78,7 @@ jobs:
           cd src
           bash ../scripts/evaluate_all.sh target_branch
           mv *.json ../results
+          mv *report*txt ../results
           cd ..
           git checkout $branch
           python -m pip install -r scripts/requirements.txt
@@ -84,8 +86,18 @@ jobs:
 
       - name: Extract Evaluations
         id: get-comment-eval-body
+        env:
+          token: ${{ secrets.JINA_DEV_BOT }}
         run: |
-          set -ex          
+          set -ex
+          wget https://github.com/cli/cli/releases/download/v2.5.0/gh_2.5.0_linux_amd64.deb
+          sudo dpkg -i gh_2.5.0_linux_amd64.deb
+          echo $token > token
+          gh auth login --with-token < token
+          REPORTS=`find results/ | grep "_report_"`
+          GISTS=`gh gist create ${REPORTS[@]}`
+          echo "  \n\n" >> results/table.md 
+          echo GISTS: $GISTS >> results/table.md
           body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
