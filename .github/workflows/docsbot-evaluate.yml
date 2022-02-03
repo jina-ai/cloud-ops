@@ -1,6 +1,10 @@
 name: Docsbot Evaluate
 
-on: 
+concurrency:
+  group: deployment-${{ github.event.inputs.branch }}
+  cancel-in-progress: true
+
+on:
   workflow_dispatch:
     inputs:
       branch:
@@ -11,6 +15,9 @@ on:
         description: Pass the pull request number that's triggering this job
         default: '0'
         required: false
+      target_branch:
+        description: the target branch of the PR
+        required: true
 
 jobs:
   evaluate-on-pr:
@@ -25,38 +32,77 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.7"
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - uses: hashicorp/setup-terraform@v1
-        with:
-          terraform_version: 0.14.7
-      - run: |
-          pip install -r src/requirements.txt
-          pip install -r deployment/requirements.txt
-          pip install -r tests/requirements.txt
-          pip install prettytable
-          sudo apt-get update && sudo apt-get install -y jq
-      - name: Run evaluation
+
+      - name: target branch echo
+        env:
+          your_branch: ${{ github.event.inputs.branch }}
+          target_branch: ${{ github.event.inputs.target_branch }}
         run: |
-          terraform init
-          terraform apply -auto-approve
-          bash evaluate-on-pr.sh
-        working-directory: deployment/aws
-        timeout-minutes: 30
-      
+          set -ex
+          echo "target branch = $target_branch"
+          echo "your branch = $your_branch"
+      - name: install reqs (your branch)
+        run: |
+          sudo apt-get update
+          python -m pip install virtualenv
+          python -m virtualenv branchenv
+          source ./branchenv/bin/activate
+          bash ./scripts/install_requirements.sh
+      - name: evaluate
+        env:
+          target_branch: ${{ github.event.inputs.target_branch }}
+        run: |
+          set -ex
+          echo "target branch = $target_branch"
+          source ./branchenv/bin/activate
+          echo $(ls -la)
+          bash scripts/prepare_repos.sh
+          mkdir results
+          cd src
+          export DPR_MODEL_INDEX=facebook/dpr-ctx_encoder-single-nq-base
+          export DPR_MODEL_QUERY=facebook/dpr-question_encoder-single-nq-base
+          bash ../scripts/evaluate_all.sh your_branch
+          mv *.json ../results
+          mv *report*txt ../results
+          git clean -xfd
+          cd ..
+          git fetch --all
+          branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+          git checkout $target_branch
+          deactivate
+          rm -rf ./branchenv
+          python -m virtualenv target_branch_env
+          source ./target_branch_env/bin/activate
+          python -m pip install -r src/requirements.txt
+          python -m pip install -r tests/requirements.txt
+          cd src
+          bash ../scripts/evaluate_all.sh target_branch
+          mv *.json ../results
+          mv *report*txt ../results
+          cd ..
+          git checkout $branch
+          python -m pip install -r scripts/requirements.txt
+          python scripts/evaluation_data.py
+
       - name: Extract Evaluations
         id: get-comment-eval-body
+        env:
+          token: ${{ secrets.JINA_DEV_BOT }}
         run: |
-          body=$(python prettify.py eval ../src/files/eval-results/2.1.8/main.json current.json)
+          set -ex
+          wget https://github.com/cli/cli/releases/download/v2.5.0/gh_2.5.0_linux_amd64.deb
+          sudo dpkg -i gh_2.5.0_linux_amd64.deb
+          echo $token > token
+          gh auth login --with-token < token
+          REPORTS=`find results/ | grep "_report_"`
+          GISTS=`gh gist create ${REPORTS[@]}`
+          echo "  \n\n" >> results/table.md 
+          echo GISTS: $GISTS >> results/table.md
+          body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
           body="${body//$'\r'/'%0D'}"
           echo ::set-output name=body::$body
-        working-directory: deployment
       - name: Find Comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' }}
         uses: peter-evans/find-comment@v1
@@ -65,8 +111,7 @@ jobs:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-docs-bot
           issue-number: ${{ github.event.inputs.pr_number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'Evaluation results'
+          body-includes: 'hit_at_k_k_is_1'
       - name: Create comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@v1
@@ -87,48 +132,3 @@ jobs:
           body: ${{ steps.get-comment-eval-body.outputs.body }}
           reaction-type: "rocket"
           edit-mode: replace
-      
-      - name: Extract Answers
-        id: get-comment-answers-body
-        run: |
-          body=$(python prettify.py answers current_answers.json)
-          body="${body//'%'/'%25'}"
-          body="${body//$'\n'/'%0A'}"
-          body="${body//$'\r'/'%0D'}"
-          echo ::set-output name=body::$body
-        working-directory: deployment
-      - name: Find Comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' }}
-        uses: peter-evans/find-comment@v1
-        id: fc2
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: 'Answers to GT'
-      - name: Create comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id == 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          body: ${{ steps.get-comment-answers-body.outputs.body }}
-          reaction-type: "eyes"
-      - name: Update comment (Answers)
-        if: ${{ github.event.inputs.pr_number != '0' && steps.fc2.outputs.comment-id != 0 }}
-        uses: peter-evans/create-or-update-comment@v1
-        with:
-          token: ${{ secrets.JINA_DEV_BOT }}
-          repository: jina-ai/jina-docs-bot
-          issue-number: ${{ github.event.inputs.pr_number }}
-          comment-id: ${{ steps.fc2.outputs.comment-id }}
-          body: ${{ steps.get-comment-answers-body.outputs.body }}
-          reaction-type: "rocket"
-          edit-mode: replace
-      
-      - name: Destroy instances
-        if: always()
-        run: terraform destroy -auto-approve
-        working-directory: deployment/aws
