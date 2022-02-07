@@ -98,6 +98,9 @@ jobs:
           GISTS=`gh gist create ${REPORTS[@]}`
           echo "  \n\n" >> results/table.md 
           echo GISTS: $GISTS >> results/table.md
+          # just an identifier for the comment
+          # otherwise it might find a user comment
+          echo "-- signed: Jina Bot" >> results/table.md
           body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
@@ -111,7 +114,7 @@ jobs:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-docs-bot
           issue-number: ${{ github.event.inputs.pr_number }}
-          body-includes: 'hit_at_k_k_is_1'
+          body-includes: '-- signed: Jina Bot'
       - name: Create comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@v1
