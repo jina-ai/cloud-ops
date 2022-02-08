@@ -35,6 +35,7 @@ jobs:
           pip install -r serverless-requirements.txt
           bash serverless-deploy.sh
         env:
+          DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           JINA_CLOUDFLARE_ZONE: ${{ secrets.JINA_CLOUDFLARE_ZONE }}
           JINA_CLOUDFLARE_TOKEN: ${{ secrets.JINA_CLOUDFLARE_TOKEN }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
