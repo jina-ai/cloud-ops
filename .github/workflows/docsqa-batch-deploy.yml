@@ -5,7 +5,7 @@ on:
     inputs:
       branch:
         description: Pass the jina-docs-bot branch/tag name
-        default: main
+        default: daas3.0
         required: false
         
 jobs:
