@@ -36,4 +36,4 @@ jobs:
           pip install -r requirements.txt
           # export PATCH_JINA_PREVIEW=true
           python -m local.hubblepush --version ${{ github.event.inputs.version }}
-        working-directory: ./service/src
+        working-directory: ./daas/src
