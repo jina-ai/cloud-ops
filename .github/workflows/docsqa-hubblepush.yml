@@ -35,6 +35,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           # export PATCH_JINA_PREVIEW=true
-          python hubblepush.py --version ${{ github.event.inputs.version }}
-        working-directory: ./deployment/local
-
+          python -m local.hubblepush --version ${{ github.event.inputs.version }}
+        working-directory: ./service/src
