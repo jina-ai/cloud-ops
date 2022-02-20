@@ -35,4 +35,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r local/requirements.txt
           python -m local.hubblepush --version ${{ github.event.inputs.version }}
-        working-directory: ./daas/src
+        working-directory: ./service/daas
