@@ -33,6 +33,6 @@ jobs:
       - name: Patch & Push to Hubble & ECR
         run: |
           python -m pip install --upgrade pip
-          pip install -r local/requirements.txt
-          python -m local.hubblepush --version ${{ github.event.inputs.version }}
-        working-directory: ./service/daas
+          pip install -r daas/local/requirements.txt
+          python -m daas.local.hubblepush --version ${{ github.event.inputs.version }}
+        working-directory: ./service
