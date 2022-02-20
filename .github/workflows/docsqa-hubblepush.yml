@@ -1,4 +1,4 @@
-name:  (docsqa) Push Executors to Hubble & ECR
+name:  (docsqa) Push Executors to Hubble
 
 on:
   workflow_dispatch:
@@ -34,6 +34,5 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # export PATCH_JINA_PREVIEW=true
           python -m local.hubblepush --version ${{ github.event.inputs.version }}
         working-directory: ./daas/src
