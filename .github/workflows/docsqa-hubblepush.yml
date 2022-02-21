@@ -11,6 +11,10 @@ on:
         description: Pass the version for Executor tagging
         default: daas3
         required: false
+      external:
+        description: True if external deployment is to be done
+        default: 'true'
+        required: false
         
 jobs:
   push-to-hubble-and-ecr:
@@ -34,5 +38,9 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r daas/local/requirements.txt
-          python -m daas.local.hubblepush --version ${{ github.event.inputs.version }}
+          if [[ "${{ github.event.inputs.external }}" == "true" ]] ; then 
+            python -m daas.local.hubblepush --version ${{ github.event.inputs.version }} --external
+          else
+            python -m daas.local.hubblepush --version ${{ github.event.inputs.version }} --no-external
+          fi
         working-directory: ./service
