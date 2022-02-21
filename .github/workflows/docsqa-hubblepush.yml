@@ -43,4 +43,18 @@ jobs:
           else
             python -m daas.local.hubblepush --version ${{ github.event.inputs.version }} --no-external
           fi
+        env:
+          DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
+          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
+          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
+          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
+          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
+          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
+          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+          DOCSQA_PUBLISH_REPO_JD: ${{ secrets.DOCSQA_PUBLISH_REPO_JD }}
+          DOCSQA_PUBLISH_REPO_QUEUE: ${{ secrets.DOCSQA_PUBLISH_REPO_QUEUE }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_JD: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_JD }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE }}
+          DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.JINA_DEV_BOT }}
         working-directory: ./service
