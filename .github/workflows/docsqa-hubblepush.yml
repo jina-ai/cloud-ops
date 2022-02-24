@@ -1,11 +1,18 @@
-name:  (docsqa) Push Executors to Hubble & ECR
+name:  (docsqa) Push Executors to Hubble
 
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: Pass the version for Executor tagging
+        required: true
       branch:
-        description: Pass the jina-docs-bot branch/tag name
+        description: Pass the docsQA branch/tag name (from which Executors will be picked)
         default: main
+        required: false
+      external:
+        description: True if external deployment is to be done
+        default: 'true'
         required: false
         
 jobs:
@@ -29,8 +36,24 @@ jobs:
       - name: Patch & Push to Hubble & ECR
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          export PATCH_JINA_PREVIEW=true
-          python hubblepush.py
-        working-directory: ./deployment/local
-          
+          pip install -r daas/local/requirements.txt
+          if [[ "${{ github.event.inputs.external }}" == "true" ]] ; then 
+            python -m daas.local.hubblepush --version ${{ github.event.inputs.version }} --external
+          else
+            python -m daas.local.hubblepush --version ${{ github.event.inputs.version }} --no-external
+          fi
+        env:
+          DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
+          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
+          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
+          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
+          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
+          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
+          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+          DOCSQA_PUBLISH_REPO_JD: ${{ secrets.DOCSQA_PUBLISH_REPO_JD }}
+          DOCSQA_PUBLISH_REPO_QUEUE: ${{ secrets.DOCSQA_PUBLISH_REPO_QUEUE }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_JD: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_JD }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE }}
+          DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
+        working-directory: ./service

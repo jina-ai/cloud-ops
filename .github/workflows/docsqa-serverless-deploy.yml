@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: Pass the jina-docs-bot branch/tag name
-        default: docsqa-as-a-service
+        description: Pass the docsQA branch/tag name
+        default: main
         required: false
         
 jobs:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          repository: jina-ai/jina-docs-bot
+          repository: jina-ai/docsQA
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: Install Node.js
@@ -35,17 +35,21 @@ jobs:
           pip install -r serverless-requirements.txt
           bash serverless-deploy.sh
         env:
-          DOCSQA_GITHUB_TOKEN: ${{ secrets.DOCSQA_GITHUB_TOKEN }}
-          DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           JINA_CLOUDFLARE_ZONE: ${{ secrets.JINA_CLOUDFLARE_ZONE }}
           JINA_CLOUDFLARE_TOKEN: ${{ secrets.JINA_CLOUDFLARE_TOKEN }}
+          DOCSQA_ADMIN: ${{ secrets.DOCSQA_ADMIN }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
+          DOCSQA_GITHUB_TOKEN: ${{ secrets.DOCSQA_GITHUB_TOKEN }}
+          DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
           DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
           DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
           DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
           DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
-          DOCSQA_BATCH_JOB_QUEUE: ${{ secrets.DOCSQA_BATCH_JOB_QUEUE }}
-          DOCSQA_BATCH_JOB_DEFINITION: ${{ secrets.DOCSQA_BATCH_JOB_DEFINITION }}
-        working-directory: ./deployment/cloud
+          DOCSQA_PUBLISH_REPO_JD: ${{ secrets.DOCSQA_PUBLISH_REPO_JD }}
+          DOCSQA_PUBLISH_REPO_QUEUE: ${{ secrets.DOCSQA_PUBLISH_REPO_QUEUE }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_JD: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_JD }}
+          DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE }}
+        working-directory: ./service
      
