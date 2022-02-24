@@ -3,13 +3,12 @@ name:  (docsqa) Push Executors to Hubble
 on:
   workflow_dispatch:
     inputs:
-      branch:
-        description: Pass the docsQA branch/tag name (from which Executors will be picked)
-        default: daas3.0
-        required: false
       version:
         description: Pass the version for Executor tagging
-        default: daas3
+        required: true
+      branch:
+        description: Pass the docsQA branch/tag name (from which Executors will be picked)
+        default: main
         required: false
       external:
         description: True if external deployment is to be done
