@@ -5,7 +5,7 @@ on:
     inputs:
       branch:
         description: Pass the docsQA branch/tag name
-        default: daas3.0
+        default: main
         required: false
         
 jobs:
