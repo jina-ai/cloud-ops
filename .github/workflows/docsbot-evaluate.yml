@@ -18,6 +18,9 @@ on:
       target_branch:
         description: the target branch of the PR
         required: true
+      project_repo:
+        description: the project for which to run evaluation
+        required: true
 
 jobs:
   evaluate-on-pr:
@@ -51,6 +54,7 @@ jobs:
       - name: evaluate
         env:
           target_branch: ${{ github.event.inputs.target_branch }}
+          project: ${{ github.event.inputs.project_repo }}
         run: |
           set -ex
           echo "target branch = $target_branch"
@@ -76,7 +80,7 @@ jobs:
           python -m pip install -r src/requirements.txt
           python -m pip install -r tests/requirements.txt
           cd src
-          bash ../scripts/evaluate_all.sh target_branch
+          bash ../scripts/evaluate_project.sh target_branch
           mv *.json ../results
           mv *report*txt ../results
           cd ..
