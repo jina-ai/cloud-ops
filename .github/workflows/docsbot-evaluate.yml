@@ -1,7 +1,7 @@
 name: Docsbot Evaluate
 
 concurrency:
-  group: deployment-${{ github.event.inputs.branch }}
+  group: deployment-${{ github.event.inputs.branch }}-${{ github.event.inputs.project_repo }}
   cancel-in-progress: true
 
 on:
@@ -80,7 +80,7 @@ jobs:
           python -m pip install -r src/requirements.txt
           python -m pip install -r tests/requirements.txt
           cd src
-          bash ../scripts/evaluate_project.sh target_branch
+          bash ../scripts/evaluate_project.sh target_branch $project
           mv *.json ../results
           mv *report*txt ../results
           cd ..
@@ -92,6 +92,7 @@ jobs:
         id: get-comment-eval-body
         env:
           token: ${{ secrets.JINA_DEV_BOT }}
+          project: ${{ github.event.inputs.project_repo }}
         run: |
           set -ex
           wget https://github.com/cli/cli/releases/download/v2.5.0/gh_2.5.0_linux_amd64.deb
@@ -104,7 +105,7 @@ jobs:
           echo GISTS: $GISTS >> results/table.md
           # just an identifier for the comment
           # otherwise it might find a user comment
-          echo "-- signed: Jina Bot" >> results/table.md
+          echo "$project -- signed: Jina Bot" >> results/table.md
           body=$(cat results/table.md)
           body="${body//'%'/'%25'}"
           body="${body//$'\n'/'%0A'}"
@@ -114,11 +115,13 @@ jobs:
         if: ${{ github.event.inputs.pr_number != '0' }}
         uses: peter-evans/find-comment@v1
         id: fc
+        env:
+          project: ${{ github.event.inputs.project_repo }}
         with:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-docs-bot
           issue-number: ${{ github.event.inputs.pr_number }}
-          body-includes: '-- signed: Jina Bot'
+          body-includes: '$project -- signed: Jina Bot'
       - name: Create comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@v1
