@@ -122,7 +122,6 @@ jobs:
         with:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-docs-bot
-          branch:
           issue-number: ${{ github.event.inputs.pr_number }}
           body-includes: '$project -- signed: Jina Bot'
       - name: Create comment (Evaluation)
