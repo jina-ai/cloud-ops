@@ -88,7 +88,7 @@ jobs:
           cd ..
           git checkout $branch
           python -m pip install -r scripts/requirements.txt
-          python scripts/evaluation_data.py
+          python scripts/evaluation_data.py $project
 
       - name: Extract Evaluations
         id: get-comment-eval-body
