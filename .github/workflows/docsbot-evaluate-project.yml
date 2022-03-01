@@ -1,0 +1,147 @@
+name: Docsbot Evaluate Project
+
+concurrency:
+  group: deployment-${{ github.event.inputs.branch }}-${{ github.event.inputs.project_repo }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-docs-bot branch name
+        default: main
+        required: false
+      pr_number:
+        description: Pass the pull request number that's triggering this job
+        default: '0'
+        required: false
+      target_branch:
+        description: the target branch of the PR
+        required: true
+      project_repo:
+        description: the project for which to run evaluation
+        required: true
+
+jobs:
+  evaluate-on-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-docs-bot
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+
+      - name: target branch echo
+        env:
+          your_branch: ${{ github.event.inputs.branch }}
+          target_branch: ${{ github.event.inputs.target_branch }}
+        run: |
+          set -ex
+          echo "target branch = $target_branch"
+          echo "your branch = $your_branch"
+      - name: install reqs (your branch)
+        run: |
+          sudo apt-get update
+          python -m pip install virtualenv
+          python -m virtualenv branchenv
+          source ./branchenv/bin/activate
+          bash ./scripts/install_requirements.sh
+      - name: evaluate
+        env:
+          target_branch: ${{ github.event.inputs.target_branch }}
+          project: ${{ github.event.inputs.project_repo }}
+        run: |
+          set -ex
+          echo "target branch = $target_branch"
+          echo "your branch = $your_branch"
+          source ./branchenv/bin/activate
+          echo $(ls -la)
+          bash scripts/prepare_repos.sh
+          mkdir results
+          cd src
+          export DPR_MODEL_INDEX=facebook/dpr-ctx_encoder-single-nq-base
+          export DPR_MODEL_QUERY=facebook/dpr-question_encoder-single-nq-base
+          bash ../scripts/evaluate_project.sh your_branch $project
+          ls
+          mv *.json ../results
+          mv *report*txt ../results
+          git clean -xfd
+          cd ..
+          git fetch --all
+          branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
+          git checkout $target_branch
+          deactivate
+          rm -rf ./branchenv
+          python -m virtualenv target_branch_env
+          source ./target_branch_env/bin/activate
+          python -m pip install -r src/requirements.txt
+          python -m pip install -r tests/requirements.txt
+          cd src
+          bash ../scripts/evaluate_project.sh target_branch $project
+          mv *.json ../results
+          mv *report*txt ../results
+          cd ..
+          git checkout $branch
+          python -m pip install -r scripts/requirements.txt
+          python scripts/evaluation_data.py
+
+      - name: Extract Evaluations
+        id: get-comment-eval-body
+        env:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          project: ${{ github.event.inputs.project_repo }}
+        run: |
+          set -ex
+          wget https://github.com/cli/cli/releases/download/v2.5.0/gh_2.5.0_linux_amd64.deb
+          sudo dpkg -i gh_2.5.0_linux_amd64.deb
+          echo $token > token
+          gh auth login --with-token < token
+          REPORTS=`find results/ | grep "_report_"`
+          GISTS=`gh gist create ${REPORTS[@]}`
+          echo "  \n\n" >> results/table.md 
+          echo GISTS: $GISTS >> results/table.md
+          # just an identifier for the comment
+          # otherwise it might find a user comment
+          echo "$project -- signed: Jina Bot" >> results/table.md
+          body=$(cat results/table.md)
+          body="${body//'%'/'%25'}"
+          body="${body//$'\n'/'%0A'}"
+          body="${body//$'\r'/'%0D'}"
+          echo ::set-output name=body::$body
+      - name: Find Comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' }}
+        uses: peter-evans/find-comment@v1
+        id: fc
+        env:
+          project: ${{ github.event.inputs.project_repo }}
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          branch:
+          issue-number: ${{ github.event.inputs.pr_number }}
+          body-includes: '$project -- signed: Jina Bot'
+      - name: Create comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          body: ${{ steps.get-comment-eval-body.outputs.body }}
+          reaction-type: "eyes"
+      - name: Update comment (Evaluation)
+        if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id != 0 }}
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-docs-bot
+          issue-number: ${{ github.event.inputs.pr_number }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: ${{ steps.get-comment-eval-body.outputs.body }}
+          reaction-type: "rocket"
+          edit-mode: replace
