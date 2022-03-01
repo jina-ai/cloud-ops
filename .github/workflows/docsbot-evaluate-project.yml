@@ -122,9 +122,8 @@ jobs:
         with:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-docs-bot
-          branch:
           issue-number: ${{ github.event.inputs.pr_number }}
-          body-includes: '$project -- signed: Jina Bot'
+          body-includes: '${{ github.event.inputs.pr_number }} -- signed: Jina Bot'
       - name: Create comment (Evaluation)
         if: ${{ github.event.inputs.pr_number != '0' && steps.fc.outputs.comment-id == 0 }}
         uses: peter-evans/create-or-update-comment@v1
