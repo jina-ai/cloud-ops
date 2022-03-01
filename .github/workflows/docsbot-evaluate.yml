@@ -58,6 +58,7 @@ jobs:
         run: |
           set -ex
           echo "target branch = $target_branch"
+          echo "your branch = $your_branch"
           source ./branchenv/bin/activate
           echo $(ls -la)
           bash scripts/prepare_repos.sh
@@ -72,18 +73,18 @@ jobs:
           cd ..
           git fetch --all
           branch=$(git branch | sed -n -e 's/^\* \(.*\)/\1/p')
-          #git checkout $target_branch
-          #deactivate
-          #rm -rf ./branchenv
-          #python -m virtualenv target_branch_env
-          #source ./target_branch_env/bin/activate
-          #python -m pip install -r src/requirements.txt
-          #python -m pip install -r tests/requirements.txt
-          #cd src
-          #bash ../scripts/evaluate_project.sh target_branch $project
-          #mv *.json ../results
-          #mv *report*txt ../results
-          #cd ..
+          git checkout $target_branch
+          deactivate
+          rm -rf ./branchenv
+          python -m virtualenv target_branch_env
+          source ./target_branch_env/bin/activate
+          python -m pip install -r src/requirements.txt
+          python -m pip install -r tests/requirements.txt
+          cd src
+          bash ../scripts/evaluate_project.sh target_branch $project
+          mv *.json ../results
+          mv *report*txt ../results
+          cd ..
           git checkout $branch
           python -m pip install -r scripts/requirements.txt
           python scripts/evaluation_data.py
