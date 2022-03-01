@@ -67,6 +67,7 @@ jobs:
           export DPR_MODEL_INDEX=facebook/dpr-ctx_encoder-single-nq-base
           export DPR_MODEL_QUERY=facebook/dpr-question_encoder-single-nq-base
           bash ../scripts/evaluate_project.sh your_branch $project
+          ls
           mv *.json ../results
           mv *report*txt ../results
           git clean -xfd
