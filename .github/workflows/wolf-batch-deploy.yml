@@ -9,7 +9,7 @@ on:
         required: false
         
 jobs:
-  deploy-batch-function:
+  wolf-deploy-batch-function:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
