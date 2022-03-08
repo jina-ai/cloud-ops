@@ -1,0 +1,45 @@
+name: (wolf) Batch images deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the docsQA branch/tag name
+        default: main
+        required: false
+        
+jobs:
+  deploy-batch-function:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/wolf
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy batch functions
+        run: |
+          bash batch/deploy.sh flow-post
+          bash batch/deploy.sh flow-terminate
+        env:
+          WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
+          DOCSQA_GITHUB_TOKEN: ${{ secrets.DOCSQA_GITHUB_TOKEN }}
+          WOLF_ATLAS_HOSTNAME: ${{ secrets.WOLF_ATLAS_HOSTNAME }}
+          WOLF_ATLAS_DATABASE: ${{ secrets.WOLF_ATLAS_DATABASE }}
+          WOLF_ATLAS_FLOWS: ${{ secrets.WOLF_ATLAS_FLOWS }}
+          WOLF_ATLAS_HISTORY: ${{ secrets.WOLF_ATLAS_HISTORY }}
+          WOLF_ATLAS_USERNAME: ${{ secrets.WOLF_ATLAS_USERNAME }}
+          WOLF_ATLAS_PASSWORD: ${{ secrets.WOLF_ATLAS_PASSWORD }}
+          WOLF_FLOW_POST_JD: ${{ secrets.WOLF_FLOW_POST_JD }}
+          WOLF_FLOW_POST_QUEUE: ${{ secrets.WOLF_FLOW_POST_QUEUE }}
+        working-directory: ./wolf
