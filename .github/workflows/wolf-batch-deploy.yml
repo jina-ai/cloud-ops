@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: Pass the docsQA branch/tag name
+        description: Pass the wolf branch/tag name
         default: main
         required: false
         
