@@ -42,4 +42,5 @@ jobs:
           WOLF_ATLAS_PASSWORD: ${{ secrets.WOLF_ATLAS_PASSWORD }}
           WOLF_FLOW_POST_JD: ${{ secrets.WOLF_FLOW_POST_JD }}
           WOLF_FLOW_POST_QUEUE: ${{ secrets.WOLF_FLOW_POST_QUEUE }}
+          EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
         working-directory: ./wolf
