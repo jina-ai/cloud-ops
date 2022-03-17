@@ -26,10 +26,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Deploy batch functions
+      - name: Update all projects
         run: |
           curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && mv /tmp/eksctl /usr/local/bin && eksctl version
           eksctl utils write-kubeconfig --cluster=${{ env.DOCSQA_EKS_CLUSTER }}
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
           python -m daas.batch.update_repos --repo all --delete-old-namespace
         env:
           DOCSQA_ADMIN: ${{ secrets.DOCSQA_ADMIN }}
