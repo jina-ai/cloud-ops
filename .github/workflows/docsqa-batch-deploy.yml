@@ -30,6 +30,7 @@ jobs:
         run: |
           bash batch/deploy.sh external-deployment
           bash batch/deploy.sh publish-repo
+          bash batch/deploy.sh update-repos
         env:
           DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
