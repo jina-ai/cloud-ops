@@ -1,0 +1,38 @@
+name: (docsqa) Update all projects
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the docsQA branch/tag name
+        default: main
+        required: false
+        
+jobs:
+  update-all-projects:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/docsQA
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Deploy batch functions
+        run: |
+          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp && mv /tmp/eksctl /usr/local/bin && eksctl version
+          eksctl utils write-kubeconfig --cluster=${{ env.DOCSQA_EKS_CLUSTER }}
+          python -m daas.batch.update_repos --repo all --delete-old-namespace
+        env:
+          DOCSQA_ADMIN: ${{ secrets.DOCSQA_ADMIN }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
+          DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+        working-directory: ./service
