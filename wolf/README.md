@@ -181,3 +181,10 @@ with WolfFlow(
     )
     assert len(da.texts) == 50
 ```
+
+## Gotchas:
+
+1. Your Flow yaml must always include executors that are already [pushed to Hubble](https://docs.jina.ai/fundamentals/executor/hub/push-executor/).
+2. Current infrastructure is limited and doesn't promise to autoscale. This is something we are working on.
+3. We don't have a way to update a Flow yet. You can always create a new one & terminate the old one though.
+4. The API is currently in development version, it might change. But soon the client will be merged with other jina components, so you wouldn't have to worry about the changing the API layer.
