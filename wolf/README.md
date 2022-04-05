@@ -188,3 +188,4 @@ with WolfFlow(
 2. Current infrastructure is limited and doesn't promise to autoscale. This is something we are working on.
 3. We don't have a way to update a Flow yet. You can always create a new one & terminate the old one though.
 4. The API is currently in development version, it might change. But soon the client will be merged with other jina components, so you wouldn't have to worry about the changing the API layer.
+5. Prefer using the CLI. It already handles few things that you'd need to handle if you prefer using cURL commands. Also, we'll keep the interface of the final released version really similar to current one. 
