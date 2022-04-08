@@ -30,6 +30,7 @@ jobs:
         run: |
           bash batch/deploy.sh flow-post
           bash batch/deploy.sh flow-terminate
+          bash batch/deploy.sh flow-normalize
         env:
           WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
           DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
