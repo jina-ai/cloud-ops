@@ -7,6 +7,16 @@ on:
         description: Pass the wolf branch/tag name
         default: main
         required: false
+      name:
+        type: choice
+        description: Pass the name of the image to be pushed to ECR
+        required: false
+        default: all
+        options:
+          - all
+          - flow-post
+          - flow-terminate
+          - flow-normalize
         
 jobs:
   wolf-deploy-batch-function:
@@ -28,9 +38,13 @@ jobs:
           aws-region: us-east-1
       - name: Deploy batch functions
         run: |
-          bash batch/deploy.sh flow-post
-          bash batch/deploy.sh flow-terminate
-          bash batch/deploy.sh flow-normalize
+          if [[ ${{ github.event.inputs.name }} == 'all' ]] ; then
+            bash batch/deploy.sh flow-post
+            bash batch/deploy.sh flow-terminate
+            bash batch/deploy.sh flow-normalize
+          else
+            bash batch/deploy.sh ${{ github.event.inputs.name }}
+          fi
         env:
           WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
           DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
