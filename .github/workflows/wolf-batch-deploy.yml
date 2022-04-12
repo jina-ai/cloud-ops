@@ -47,8 +47,7 @@ jobs:
           fi
         env:
           WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
-          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
-          DOCSQA_GITHUB_TOKEN: ${{ secrets.DOCSQA_GITHUB_TOKEN }}
+          WOLF_LOGIN_TOKEN: ${{ secrets.WOLF_LOGIN_TOKEN }}
           WOLF_ATLAS_HOSTNAME: ${{ secrets.WOLF_ATLAS_HOSTNAME }}
           WOLF_ATLAS_DATABASE: ${{ secrets.WOLF_ATLAS_DATABASE }}
           WOLF_ATLAS_FLOWS: ${{ secrets.WOLF_ATLAS_FLOWS }}
