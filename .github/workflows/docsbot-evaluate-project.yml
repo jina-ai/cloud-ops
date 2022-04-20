@@ -81,6 +81,7 @@ jobs:
           source ./target_branch_env/bin/activate
           python -m pip install -r src/requirements.txt
           python -m pip install -r tests/requirements.txt
+          python -m pip install -r service/daas/rst_scripts/requirements.txt
           cd src
           bash ../scripts/evaluate_project.sh target_branch $project
           mv *.json ../results
