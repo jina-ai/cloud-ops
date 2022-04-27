@@ -28,9 +28,9 @@ jobs:
           aws-region: us-east-1
       - name: Deploy batch functions
         run: |
-          bash batch/deploy.sh external-deployment
-          bash batch/deploy.sh publish-repo
-          bash batch/deploy.sh update-repos
+          bash batch/deploy.sh external-deployment ${{ secrets.JCLOUD_TOKEN }}
+          bash batch/deploy.sh publish-repo ${{ secrets.JCLOUD_TOKEN }}
+          bash batch/deploy.sh update-repos ${{ secrets.JCLOUD_TOKEN }}
         env:
           DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
