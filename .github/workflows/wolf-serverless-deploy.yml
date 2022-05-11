@@ -3,13 +3,34 @@ name: (wolf) Serverless API Deployment
 on:
   workflow_dispatch:
     inputs:
+      release_token:
+        description: 'Your release token'
+        required: true
+      release_reason:
+        description: 'Short reason for this manual release'
+        required: true
       branch:
         description: Pass the wolf branch/tag name
         default: main
         required: false
+      stage:
+        description: Pass the wolf env stage
+        default: dev
+        required: false
         
 jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.release_token != env.release_token
+        env:
+          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
   serverless-deploy-functions:
+    needs: token-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -30,12 +51,18 @@ jobs:
           aws-region: us-east-1
       - name: Install Serverless & Deploy App
         run: |
-          npm install -g serverless@3.7.1 serverless-python-requirements serverless-domain-manager serverless-auto-swagger
-          python -m pip install --upgrade pip
-          pip install -r serverless-requirements.txt
-          bash serverless-deploy.sh
+          echo "run serverless deploy script"
+          bash serverless-deploy.sh 
         env:
+          API_GATEWAY_STAGE: ${{ github.event.inputs.stage }}
           WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
+          WOLF_LOGIN_TOKEN: ${{ secrets.WOLF_LOGIN_TOKEN }}
+          WOLF_ATLAS_USERS: ${{ secrets.WOLF_ATLAS_USERS }}
+          WOLF_ATLAS_LOGSTREAM: ${{ secrets.WOLF_ATLAS_LOGSTREAM }}
+          WOLF_FLOW_TERMINATE_JD: ${{ secrets.WOLF_FLOW_TERMINATE_JD }}
+          WOLF_FLOW_NORMALIZE_JD: ${{ secrets.WOLF_FLOW_NORMALIZE_JD }}
+          WOLF_FLOW_TERMINATE_QUEUE: ${{ secrets.WOLF_FLOW_TERMINATE_QUEUE }}
+          WOLF_FLOW_NORMALIZE_QUEUE: ${{ secrets.WOLF_FLOW_NORMALIZE_QUEUE }}
           DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
           DOCSQA_GITHUB_TOKEN: ${{ secrets.DOCSQA_GITHUB_TOKEN }}
           WOLF_ATLAS_HOSTNAME: ${{ secrets.WOLF_ATLAS_HOSTNAME }}
@@ -46,4 +73,3 @@ jobs:
           WOLF_ATLAS_PASSWORD: ${{ secrets.WOLF_ATLAS_PASSWORD }}
           WOLF_FLOW_POST_JD: ${{ secrets.WOLF_FLOW_POST_JD }}
           WOLF_FLOW_POST_QUEUE: ${{ secrets.WOLF_FLOW_POST_QUEUE }}
-     
