@@ -73,3 +73,7 @@ jobs:
           WOLF_ATLAS_PASSWORD: ${{ secrets.WOLF_ATLAS_PASSWORD }}
           WOLF_FLOW_POST_JD: ${{ secrets.WOLF_FLOW_POST_JD }}
           WOLF_FLOW_POST_QUEUE: ${{ secrets.WOLF_FLOW_POST_QUEUE }}
+          WOLF_WHO_IS_USING_JD: ${{ secrets.WOLF_WHO_IS_USING_JD }}
+          WOLF_WHO_IS_USING_QUEUE: ${{ secrets.WOLF_WHO_IS_USING_QUEUE }}
+          WOLF_GIT_USER: ${{ secrets.WOLF_GIT_USER }}
+          WOLF_GIT_TOKEN: ${{ secrets.WOLF_GIT_TOKEN }}
