@@ -58,5 +58,9 @@ jobs:
           WOLF_FLOW_POST_QUEUE: ${{ secrets.WOLF_FLOW_POST_QUEUE }}
           WOLF_FLOW_TERMINATE_JD: ${{ secrets.WOLF_FLOW_TERMINATE_JD }}
           WOLF_FLOW_TERMINATE_QUEUE: ${{ secrets.WOLF_FLOW_TERMINATE_QUEUE }}
+          WOLF_WHO_IS_USING_JD: ${{ secrets.WOLF_WHO_IS_USING_JD }}
+          WOLF_WHO_IS_USING_QUEUE: ${{ secrets.WOLF_WHO_IS_USING_QUEUE }}
+          WOLF_GIT_USER: ${{ secrets.WOLF_GIT_USER }}
+          WOLF_GIT_TOKEN: ${{ secrets.WOLF_GIT_TOKEN }}
           EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
         working-directory: ./wolf
