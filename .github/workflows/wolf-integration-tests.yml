@@ -1,0 +1,93 @@
+name: Wolf Integration tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the Wolf branch
+        required: false
+        default: main
+
+jobs:
+  prep-testbed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/wolf
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash scripts/get-all-test-paths.sh integration 1)"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  integration-tests:
+    needs: prep-testbed
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7]
+        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/wolf
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Prepare environment
+        run: |
+          aws eks update-kubeconfig --region ${{ env.WOLF_REGION }} --name ${{ env.WOLF_CLUSTER }}
+          python -m pip install --upgrade pip
+          python -m pip install wheel
+          pip install -r requirements-test.txt
+          pip install -r wolf/batch/requirements.txt
+          pip install -r wolf/serverless-requirements.txt
+          sudo apt-get install libsndfile1
+        env:
+          WOLF_REGION: ${{ secrets.WOLF_PROD_REGION }}
+          WOLF_CLUSTER: ${{ secrets.WOLF_PROD_CLUSTER }}
+      - name: Test
+        id: test
+        run: |
+          pytest --suppress-no-test-exit-code --cov=wolf --cov-report=xml \
+            -v -s --log-cli-level=DEBUG -m "not gpu" ${{ matrix.test-path }}
+        timeout-minutes: 30
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}`
+          author_name: ":wolf: Integration Test"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+  # just for blocking the merge until all parallel integration-tests are successful
+  success-all-test:
+    needs: integration-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"
