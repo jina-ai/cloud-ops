@@ -1,0 +1,43 @@
+name: "Wolf Batch Docker Image Build"
+
+on:
+  repository_dispatch:
+    types: [batch-build]
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.client_payload.release_token != env.release_token
+        env:
+          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
+  image-deploy:
+    needs: token-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/wolf
+          ref: ${{ github.event.client_payload.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
+      - name: run image build script
+        run: |
+          ls -l
+      - name: run image build script
+        run: |
+          for i in `ls batch/|egrep -v '^_'|egrep '*.py'|sed 's/.py$//g'|sed 's/_/-/g'`
+          do
+            bash batch/deploy.sh $i
+          done
+        working-directory: wolf/
+      
