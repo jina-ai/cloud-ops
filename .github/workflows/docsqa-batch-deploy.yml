@@ -31,7 +31,7 @@ jobs:
           bash batch/deploy.sh index_projects
           bash batch/deploy.sh deploy_query_flow
         env:
-          JCLOUD_TOKEN: ${{ secretes.JCLOUD_TOKEN }}
+          JCLOUD_TOKEN: ${{ secrets.JCLOUD_TOKEN }}
           DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
