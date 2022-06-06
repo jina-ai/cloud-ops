@@ -32,12 +32,12 @@ jobs:
           aws-region: us-east-2
       - name: run image build script
         run: |
-          ls -l
-      - name: run image build script
-        run: |
           for i in `ls batch/|egrep -v '^_'|egrep '*.py'|sed 's/.py$//g'|sed 's/_/-/g'`
           do
             bash batch/deploy.sh $i
           done
         working-directory: wolf/
+        env:
+          EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+          WOLF_ADMIN: ${{ secrets.WOLF_ADMIN }}
       
