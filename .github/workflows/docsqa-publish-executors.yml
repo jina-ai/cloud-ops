@@ -13,7 +13,7 @@ on:
         default: fix-normalize-and-push
         required: true
 # uncomment this line for testing in PR
-  push:
+# push:
 
 jobs:
   publish-flows-and-executors:
@@ -22,8 +22,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/docsQA
-          # TODO change following back to ${{ github.event.inputs.branch }}
-          ref:  feat-deployment-streamline
+          ref:  ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
           path: docsQA
       - uses: actions/checkout@v3
@@ -65,11 +64,9 @@ jobs:
           cd ${DOCSQA_DIR}/service
           mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
           python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-index-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
-          # TODO change v0.0.26rc4 back to ${{ github.event.inputs.version }}
-          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag v0.0.26rc4
+          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           cd ${DOCSQA_DIR}/service
-          # TODO change v0.0.26rc4 back to ${{ github.event.inputs.version }}
-          python -m daas.local.update_projects --version_tag v0.0.26rc4
+          python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
