@@ -28,7 +28,7 @@ jobs:
           aws-region: us-east-1
       - name: Deploy batch functions
         run: |
-          bash batch/deploy.sh publish_repo
+          bash batch/deploy.sh publish-repo
         env:
           JCLOUD_TOKEN: ${{ secrets.JCLOUD_TOKEN }}
           DOCSQA_SLACK_WEBHOOK: ${{ secrets.DOCSQA_SLACK_WEBHOOK }}
