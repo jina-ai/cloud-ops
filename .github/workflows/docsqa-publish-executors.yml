@@ -71,4 +71,5 @@ jobs:
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           cd ${DOCSQA_DIR}/service
-          python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
+          # TODO change v0.0.26rc4 back to ${{ github.event.inputs.version }}
+          python -m daas.local.update_projects --version_tag v0.0.26rc4
