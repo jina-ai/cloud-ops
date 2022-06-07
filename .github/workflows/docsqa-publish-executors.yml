@@ -1,0 +1,72 @@
+name: (docsqa) Publish Flows and Update Projects
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Pass the version for Executor tagging
+# TODO: change this to main when #652 is merged
+        default: v0.0.26rc4
+        required: true
+      branch:
+        description: Pass the docsQA branch/tag name
+        default: fix-normalize-and-push
+        required: true
+# uncomment this line for testing in PR
+# push:
+
+jobs:
+  publish-flows-and-executors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/docsQA
+          ref:  ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+          path: docsQA
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/wolf
+          ref: 'b44fb7bb982a43116b8b6e24e854cbfe46fa02b0'
+          token: ${{ secrets.JINA_DEV_BOT }}
+          path: wolf
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Normalize executors
+        run: |
+          pip install -r docsQA/service/daas/local/requirements.txt
+          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
+          export WOLF_DIR=${GITHUB_WORKSPACE}/wolf
+          export EXPORT_DIR=${GITHUB_WORKSPACE}/flows
+          echo ${DOCSQA_DIR}
+          echo ${WOLF_DIR}
+          echo ${GITHUB_WORKSPACE}
+          mkdir ${EXPORT_DIR}
+          cd ${DOCSQA_DIR}/src
+          python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
+          python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
+          cd ${WOLF_DIR}
+          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
+          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Upload normalized and external flow ymls
+        run: |
+          export DOCSQA_DIR=$(pwd)/docsQA
+          export EXPORT_DIR=$(pwd)/flows
+          export EXPORT_EXTERNAL_EXECUTOR_DIR=${EXPORT_DIR}/external
+          cd ${DOCSQA_DIR}/service
+          mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
+          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-index-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
+          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+      - name: Update Projects
+        run: |
+          export DOCSQA_DIR=$(pwd)/docsQA
+          cd ${DOCSQA_DIR}/service
+          # python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
