@@ -69,4 +69,4 @@ jobs:
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           cd ${DOCSQA_DIR}/service
-          python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
+          # python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
