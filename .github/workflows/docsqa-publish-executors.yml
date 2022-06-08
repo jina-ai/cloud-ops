@@ -15,6 +15,14 @@ on:
 # uncomment this line for testing in PR
 # push:
 
+env:
+  DOCSQA_DIR: ${GITHUB_WORKSPACE}/docsQA
+  DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+  WOLF_DIR: ${GITHUB_WORKSPACE}/wolf
+  EXPORT_DIR: ${GITHUB_WORKSPACE}/flows
+  EXPORT_EXTERNAL_EXECUTOR_DIR: ${EXPORT_DIR}/external
+  JCLOUD_LOGLEVEL: DEBUG
+
 jobs:
   publish-flows-and-executors:
     runs-on: ubuntu-latest
@@ -34,15 +42,13 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.8
-      - name: Normalize executors
+      - name: Install requirements
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
-          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
-          export WOLF_DIR=${GITHUB_WORKSPACE}/wolf
-          export EXPORT_DIR=${GITHUB_WORKSPACE}/flows
+      - name: Normalize executors
+        run: |
           echo ${DOCSQA_DIR}
           echo ${WOLF_DIR}
-          echo ${GITHUB_WORKSPACE}
           mkdir ${EXPORT_DIR}
           cd ${DOCSQA_DIR}/src
           python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
@@ -56,28 +62,23 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Upload normalized and external flow ymls
+      - name: Create external flow ymls
         run: |
-          export DOCSQA_DIR=$(pwd)/docsQA
-          export EXPORT_DIR=$(pwd)/flows
-          export EXPORT_EXTERNAL_EXECUTOR_DIR=${EXPORT_DIR}/external
+          echo ${DOCSQA_DIR}
+          echo ${WOLF_DIR}
+          echo ${EXPORT_EXTERNAL_EXECUTOR_DIR}
+          mkdir ${EXPORT_DIR}
           cd ${DOCSQA_DIR}/service
           mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
           python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-index-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
-          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
-      - name: Deploy external executors
+      - name: Deploy external flows and upload YAMLs
         run: |
-          export DOCSQA_DIR=$(pwd)/docsQA
-          export EXPORT_DIR=$(pwd)/flows
           mkdir -p ~/.jina
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${DOCSQA_DIR}/service
           python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/external -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
-        env:
-          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
-          JCLOUD_LOGLEVEL: DEBUG
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
