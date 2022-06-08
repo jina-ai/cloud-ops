@@ -48,8 +48,8 @@ jobs:
           python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
           python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
           cd ${WOLF_DIR}
-          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
-          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
+          python -m wolf.batch.flow_normalize --verbose --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
+          python -m wolf.batch.flow_normalize --verbose --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
