@@ -16,11 +16,6 @@ on:
 # push:
 
 env:
-  DOCSQA_DIR: $GITHUB_WORKSPACE/docsQA
-  DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
-  WOLF_DIR: $GITHUB_WORKSPACE/wolf
-  EXPORT_DIR: $GITHUB_WORKSPACE/flows
-  EXPORT_EXTERNAL_EXECUTOR_DIR: $EXPORT_DIR/external
   JCLOUD_LOGLEVEL: DEBUG
 
 jobs:
@@ -47,8 +42,12 @@ jobs:
           pip install -r docsQA/service/daas/local/requirements.txt
       - name: Normalize executors
         run: |
+          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
+          export WOLF_DIR=${GITHUB_WORKSPACE}/wolf
+          export EXPORT_DIR=${GITHUB_WORKSPACE}/flows
           echo ${DOCSQA_DIR}
           echo ${WOLF_DIR}
+          echo ${GITHUB_WORKSPACE}
           mkdir ${EXPORT_DIR}
           cd ${DOCSQA_DIR}/src
           python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
@@ -64,21 +63,24 @@ jobs:
           aws-region: us-east-1
       - name: Create external flow ymls
         run: |
-          echo ${DOCSQA_DIR}
-          echo ${WOLF_DIR}
-          echo ${EXPORT_EXTERNAL_EXECUTOR_DIR}
-          mkdir ${EXPORT_DIR}
+          export DOCSQA_DIR=$(pwd)/docsQA
+          export EXPORT_DIR=$(pwd)/flows
+          export EXPORT_EXTERNAL_EXECUTOR_DIR=${EXPORT_DIR}/external
           cd ${DOCSQA_DIR}/service
           mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
           python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-index-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
       - name: Deploy external flows and upload YAMLs
         run: |
+          export DOCSQA_DIR=$(pwd)/docsQA
+          export EXPORT_DIR=$(pwd)/flows
           mkdir -p ~/.jina
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${DOCSQA_DIR}/service
           python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/external -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+        env:
+          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
