@@ -51,5 +51,6 @@ jobs:
           DOCSQA_PUBLISH_REPO_QUEUE: ${{ secrets.DOCSQA_PUBLISH_REPO_QUEUE }}
           DOCSQA_EXTERNAL_DEPLOYMENT_JD: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_JD }}
           DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE }}
+          DOCSQA_WOLF_TOKEN: ${{ secrets.JCLOUD_TOKEN }}
         working-directory: ./service
      
