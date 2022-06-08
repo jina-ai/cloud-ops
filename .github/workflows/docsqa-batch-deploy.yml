@@ -7,7 +7,7 @@ on:
         description: Pass the docsQA branch/tag name
         default: main
         required: false
-        
+
 jobs:
   deploy-batch-function:
     runs-on: ubuntu-latest
@@ -43,4 +43,5 @@ jobs:
           DOCSQA_EXTERNAL_DEPLOYMENT_JD: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_JD }}
           DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE: ${{ secrets.DOCSQA_EXTERNAL_DEPLOYMENT_QUEUE }}
           DOCSQA_EKS_CLUSTER: ${{ secrets.DOCSQA_EKS_CLUSTER }}
+          DOCSQA_WOLF_TOKEN: ${{ secrets.JCLOUD_TOKEN }}
         working-directory: ./service/daas
