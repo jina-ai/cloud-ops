@@ -6,11 +6,11 @@ on:
       version:
         description: Pass the version for Executor tagging
 # TODO: change this to main when #652 is merged
-        default: v0.0.26rc4
+        default: v0.0.26rc8
         required: true
       branch:
         description: Pass the docsQA branch/tag name
-        default: fix-normalize-and-push
+        default: feat-deployment-streamline
         required: true
 # uncomment this line for testing in PR
 # push:
