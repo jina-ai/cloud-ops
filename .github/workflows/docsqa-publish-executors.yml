@@ -77,6 +77,7 @@ jobs:
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+          JCLOUD_LOGLEVEL: DEBUG
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
