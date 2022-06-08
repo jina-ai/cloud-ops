@@ -65,6 +65,17 @@ jobs:
           mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
           python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-index-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+      - name: Deploy external executors
+        run: |
+          export DOCSQA_DIR=$(pwd)/docsQA
+          export EXPORT_DIR=$(pwd)/flows
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
+          python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/external -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml
+          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+        env:
+          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
