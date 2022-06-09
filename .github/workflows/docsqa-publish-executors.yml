@@ -31,12 +31,12 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/wolf
-          ref: 'b44fb7bb982a43116b8b6e24e854cbfe46fa02b0'
+          ref: '1e6ea5df810c7a2332b1107d3a633518abff9a50'
           token: ${{ secrets.JINA_DEV_BOT }}
           path: wolf
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
       - name: Install requirements
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
