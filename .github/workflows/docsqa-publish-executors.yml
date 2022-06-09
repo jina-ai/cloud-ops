@@ -15,8 +15,8 @@ on:
 # uncomment this line for testing in PR
 # push:
 
-env:
-  JCLOUD_LOGLEVEL: DEBUG
+#env:
+#  JCLOUD_LOGLEVEL: DEBUG
 
 jobs:
   publish-flows-and-executors:
@@ -55,8 +55,6 @@ jobs:
           cd ${WOLF_DIR}
           python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
           python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
-        env:
-          JCLOUD_LOGLEVEL: DEBUG
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -83,7 +81,6 @@ jobs:
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
-          JCLOUD_LOGLEVEL: DEBUG
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
