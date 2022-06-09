@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/wolf
-          ref: '1e6ea5df810c7a2332b1107d3a633518abff9a50'
+          ref: 'b44fb7bb982a43116b8b6e24e854cbfe46fa02b0'
           token: ${{ secrets.JINA_DEV_BOT }}
           path: wolf
       - uses: actions/setup-python@v2
@@ -53,8 +53,10 @@ jobs:
           python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
           python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
           cd ${WOLF_DIR}
-          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
-          python -m wolf.batch.flow_normalize --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
+          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
+          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
+        env:
+          JCLOUD_LOGLEVEL: DEBUG
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -81,6 +83,7 @@ jobs:
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+          JCLOUD_LOGLEVEL: DEBUG
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
