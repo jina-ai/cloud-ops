@@ -40,6 +40,7 @@ jobs:
       - name: Install requirements
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
+          pip install -r docsQA/service/daas/batch/requirements.txt
       - name: Normalize executors
         run: |
           export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
