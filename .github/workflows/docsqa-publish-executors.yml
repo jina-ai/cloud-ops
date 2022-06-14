@@ -66,10 +66,9 @@ jobs:
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           export EXPORT_DIR=$(pwd)/flows
-          export EXPORT_EXTERNAL_EXECUTOR_DIR=${EXPORT_DIR}/external
           cd ${DOCSQA_DIR}/service
           mkdir ${EXPORT_EXTERNAL_EXECUTOR_DIR}
-          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_EXTERNAL_EXECUTOR_DIR}
+          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml
       - name: Deploy external flows and upload YAMLs
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
@@ -78,7 +77,7 @@ jobs:
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${DOCSQA_DIR}/service
-          python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/external -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml --version_tag ${{ github.event.inputs.version }}
+          python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/flow-external.yml -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml --version_tag ${{ github.event.inputs.version }}
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
