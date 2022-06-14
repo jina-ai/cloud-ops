@@ -93,7 +93,7 @@ jobs:
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           cd ${DOCSQA_DIR}/service
-          python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }} --project winstonww/jina
+          # python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
         env:
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
