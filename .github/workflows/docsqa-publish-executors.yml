@@ -72,6 +72,7 @@ jobs:
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           export EXPORT_DIR=$(pwd)/flows
+          export JCLOUD_LOGLEVEL=DEBUG
           mkdir -p ~/.jina
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
