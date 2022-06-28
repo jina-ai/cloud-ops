@@ -68,6 +68,7 @@ jobs:
           export EXPORT_DIR=$(pwd)/flows
           cd ${DOCSQA_DIR}/service
           python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml
+          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
       - name: Deploy external flows and upload YAMLs
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
