@@ -28,8 +28,7 @@ jobs:
           aws-region: us-east-1
       - name: Deploy batch functions
         run: |
-        # create the env file
-          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > logger.env
+          echo -e 'AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n' > logger.env
           cat logger.env
           bash batch/deploy.sh publish-repo
         env:
