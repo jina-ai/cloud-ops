@@ -31,7 +31,7 @@ jobs:
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
-          pip install git+https://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@github.com/jina-ai/docsqalib.git@v0.1
+          pip install -r docsQA/src/executors/DocsQAQuestionFilterer/requirements.txt
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -57,4 +57,5 @@ jobs:
           DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
           DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+          WORDLIFT_API_TOKEN: ${{ secrets.DOCSQA_WORDLIFT_API_TOKEN }}
 
