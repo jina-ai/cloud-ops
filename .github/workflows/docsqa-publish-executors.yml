@@ -28,12 +28,12 @@ jobs:
           ref:  ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
           path: docsQA
-      - uses: actions/checkout@v3
-        with:
-          repository: jina-ai/wolf
-          ref: '1e6ea5df810c7a2332b1107d3a633518abff9a50'
-          token: ${{ secrets.JINA_DEV_BOT }}
-          path: wolf
+#      - uses: actions/checkout@v3
+#        with:
+#          repository: jina-ai/wolf
+#          ref: '1e6ea5df810c7a2332b1107d3a633518abff9a50'
+#          token: ${{ secrets.JINA_DEV_BOT }}
+#          path: wolf
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
@@ -41,62 +41,63 @@ jobs:
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
-      - name: Normalize executors
-        run: |
-          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
-          export WOLF_DIR=${GITHUB_WORKSPACE}/wolf
-          export EXPORT_DIR=${GITHUB_WORKSPACE}/flows
-          echo ${DOCSQA_DIR}
-          echo ${WOLF_DIR}
-          echo ${GITHUB_WORKSPACE}
-          mkdir ${EXPORT_DIR}
-          cd ${DOCSQA_DIR}/src
-          python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
-          python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
-          cd ${WOLF_DIR}
-          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
-          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
+#      - name: Normalize executors
+#        run: |
+#          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
+#          export WOLF_DIR=${GITHUB_WORKSPACE}/wolf
+#          export EXPORT_DIR=${GITHUB_WORKSPACE}/flows
+#          echo ${DOCSQA_DIR}
+#          echo ${WOLF_DIR}
+#          echo ${GITHUB_WORKSPACE}
+#          mkdir ${EXPORT_DIR}
+#          cd ${DOCSQA_DIR}/src
+#          python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
+#          python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
+#          cd ${WOLF_DIR}
+#          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
+#          python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      - name: Create external flow ymls
-        run: |
-          export DOCSQA_DIR=$(pwd)/docsQA
-          export EXPORT_DIR=$(pwd)/flows
-          cd ${DOCSQA_DIR}/service
-          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml
-          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
-      - name: Deploy external flows and upload YAMLs
-        run: |
-          export DOCSQA_DIR=$(pwd)/docsQA
-          export EXPORT_DIR=$(pwd)/flows
-          export JCLOUD_LOGLEVEL=DEBUG
-          mkdir -p ~/.jina
-          touch ~/.jina/config.json
-          echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
-          cd ${DOCSQA_DIR}/service
-          python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/flow-external.yml -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml --version_tag ${{ github.event.inputs.version }}
-          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
-        env:
-          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
-          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
-          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
-          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
-          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
-          DOCSQA_ATLAS_VERSIONS: ${{ secrets.DOCSQA_ATLAS_VERSIONS }}
-          DOCSQA_ATLAS_FEEDBACKS: ${{ secrets.DOCSQA_ATLAS_FEEDBACKS }}
-          DOCSQA_ATLAS_QUERIES: ${{ secrets.DOCSQA_ATLAS_QUERIES }}
-          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
-          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+#      - name: Create external flow ymls
+#        run: |
+#          export DOCSQA_DIR=$(pwd)/docsQA
+#          export EXPORT_DIR=$(pwd)/flows
+#          cd ${DOCSQA_DIR}/service
+#          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml
+#          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+#      - name: Deploy external flows and upload YAMLs
+#        run: |
+#          export DOCSQA_DIR=$(pwd)/docsQA
+#          export EXPORT_DIR=$(pwd)/flows
+#          export JCLOUD_LOGLEVEL=DEBUG
+#          mkdir -p ~/.jina
+#          touch ~/.jina/config.json
+#          echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
+#          cd ${DOCSQA_DIR}/service
+#          python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/flow-external.yml -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml --version_tag ${{ github.event.inputs.version }}
+#          python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
+#        env:
+#          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+#          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
+#          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
+#          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
+#          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
+#          DOCSQA_ATLAS_VERSIONS: ${{ secrets.DOCSQA_ATLAS_VERSIONS }}
+#          DOCSQA_ATLAS_FEEDBACKS: ${{ secrets.DOCSQA_ATLAS_FEEDBACKS }}
+#          DOCSQA_ATLAS_QUERIES: ${{ secrets.DOCSQA_ATLAS_QUERIES }}
+#          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
+#          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
       - name: Update Projects
         run: |
           export DOCSQA_DIR=$(pwd)/docsQA
           cd ${DOCSQA_DIR}/service
-          # python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
+          python -m daas.local.update_projects --version_tag ${{ github.event.inputs.version }}
         env:
+          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
           DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
