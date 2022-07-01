@@ -28,7 +28,7 @@ jobs:
         with:
           repository: jina-ai/docsqalib
           ref: v0.1
-          token: ${{ secrets.JINA_DEV_BOT }}
+          token: ${{ secrets.DOCSQA_LIB_TOKEN }}
           path: docsqalib
       - uses: actions/setup-python@v2
         with:
