@@ -31,6 +31,7 @@ jobs:
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
+          pip install git+https://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@github.com/jina-ai/docsqalib.git@v0.1
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
