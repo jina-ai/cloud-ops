@@ -31,7 +31,29 @@ jobs:
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
       - name: Publish wordlift
         run: |
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${GITHUB_WORKSPACE}/docsQA/service
           python -m daas.local.publish_wordlift --version_tag ${{ github.event.inputs.version }} --force_reindex
+        env:
+          DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
+          DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
+          DOCSQA_ATLAS_PROJECTS: ${{ secrets.DOCSQA_ATLAS_PROJECTS }}
+          DOCSQA_ATLAS_METADATA: ${{ secrets.DOCSQA_ATLAS_METADATA }}
+          DOCSQA_ATLAS_VERSIONS: ${{ secrets.DOCSQA_ATLAS_VERSIONS }}
+          DOCSQA_ATLAS_FEEDBACKS: ${{ secrets.DOCSQA_ATLAS_FEEDBACKS }}
+          DOCSQA_ATLAS_QUERIES: ${{ secrets.DOCSQA_ATLAS_QUERIES }}
+          DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
+          DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+          DOCSQA_JINA_DEV_BOT: ${{ secrets.DEEPANKAR_ACCESS_TOKEN }}
+          DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+
