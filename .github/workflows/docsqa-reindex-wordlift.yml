@@ -24,6 +24,12 @@ jobs:
           ref:  ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
           path: docsQA
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/docsqalib
+          ref: v0.1
+          token: ${{ secrets.JINA_DEV_BOT }}
+          path: docsqalib
       - uses: actions/setup-python@v2
         with:
           python-version: 3.9
@@ -31,7 +37,7 @@ jobs:
         run: |
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
-          pip install -r docsQA/src/executors/DocsQAQuestionFilterer/requirements.txt
+          pip install -e docsqalib
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
