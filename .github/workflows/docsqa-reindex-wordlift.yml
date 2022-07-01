@@ -38,6 +38,7 @@ jobs:
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
           pip install -e docsqalib
+          pip install restructuredtext-lint==1.4.0 nb2plots==0.6
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
