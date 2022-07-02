@@ -51,6 +51,8 @@ jobs:
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${GITHUB_WORKSPACE}/docsQA/service
+          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > daas/logger.env
+          cat daas/logger.env
           python -m daas.local.publish_wordlift --version_tag ${{ github.event.inputs.version }} --force_reindex
         env:
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
