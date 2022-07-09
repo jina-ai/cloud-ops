@@ -51,8 +51,9 @@ jobs:
           echo ${GITHUB_WORKSPACE}
           mkdir ${EXPORT_DIR}
           cd ${DOCSQA_DIR}/src
-          python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml
-          python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml
+          export JINA_VERSION=`cat ${DOCSQA_DIR}/jina_version.txt`
+          python convert_local_flows.py -i flow-index-local.yml -o flow-index-local-with-env.yml --jina_version ${JINA_VERSION}
+          python convert_local_flows.py -i flow-query-local.yml -o flow-query-local-with-env.yml --jina_version ${JINA_VERSION}
           cd ${WOLF_DIR}
           python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-index-local-with-env.yml --output ${EXPORT_DIR}/flow-index-jcloud.yml
           python -m wolf.batch.flow_normalize --verbose true --project-dir ${DOCSQA_DIR}/src --filename flow-query-local-with-env.yml --output ${EXPORT_DIR}/flow-query-jcloud.yml
@@ -67,7 +68,8 @@ jobs:
           export DOCSQA_DIR=$(pwd)/docsQA
           export EXPORT_DIR=$(pwd)/flows
           cd ${DOCSQA_DIR}/service
-          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml
+          export JINA_VERSION=`cat ${DOCSQA_DIR}/jina_version.txt`
+          python -m daas.local.create_external_flows -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-external.yml --jina_version ${JINA_VERSION}
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
       - name: Deploy external flows and upload YAMLs
         run: |

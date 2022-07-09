@@ -47,6 +47,7 @@ jobs:
           python -m pip install virtualenv
           python -m virtualenv branchenv
           source ./branchenv/bin/activate
+          export JINA_VERSION=`cat jina_version.txt`
           bash ./scripts/install_requirements.sh
       - name: evaluate
         env:
