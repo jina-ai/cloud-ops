@@ -30,6 +30,7 @@ jobs:
           aws-region: us-east-1
       - name: Install Serverless & Deploy App
         run: |
+          export JINA_VERSION=`cat ../jina_version.txt`
           npm install -g serverless@2.72.2 serverless-python-requirements serverless-domain-manager
           python -m pip install --upgrade pip
           pip install -r serverless-requirements.txt
