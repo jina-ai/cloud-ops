@@ -39,6 +39,8 @@ jobs:
           python-version: 3.9
       - name: Install requirements
         run: |
+          export DOCSQA_DIR=${GITHUB_WORKSPACE}/docsQA
+          export JINA_VERSION=`cat ${DOCSQA_DIR}/jina_version.txt`
           pip install -r docsQA/service/daas/local/requirements.txt
           pip install -r docsQA/service/daas/batch/requirements.txt
       - name: Normalize executors
