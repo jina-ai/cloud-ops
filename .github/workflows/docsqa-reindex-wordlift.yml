@@ -70,3 +70,4 @@ jobs:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
           WORDLIFT_API_TOKEN: ${{ secrets.DOCSQA_WORDLIFT_API_TOKEN }}
           DOCSQA_ADMIN_TOKEN: ${{ secrets.DOCSQA_ADMIN_TOKEN }}
+          JCLOUD_LOGLEVEL: DEBUG
