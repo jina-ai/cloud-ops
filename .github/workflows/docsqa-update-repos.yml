@@ -19,7 +19,7 @@ jobs:
           token: ${{ secrets.JINA_DEV_BOT }}
       - uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: 3.9
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
