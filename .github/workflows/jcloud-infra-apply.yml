@@ -1,0 +1,81 @@
+name: "Jcloud Infra Deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      environment:
+        type: choice
+        description: Deploy Environment
+        required: true
+        options:
+          - dev
+          - stage
+          - prod
+      project:
+        type: choice
+        description: Project Name
+        required: true
+        default: jcloud
+        options:
+          - jcloud
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+  terraform-deploy:
+    needs: token-check
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: ${{ github.event.inputs.project }}
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+            repository: jina-ai/jcloud-infra
+            ref: master
+            token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Terraform Format
+        id: fmt
+        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform fmt -check -diff
+      - name: Terraform Init
+        id: init
+        run: cd $GITHUB_WORKSPACE/devops && bash init-terraform.sh -b s3 -e $ENVIRONMENT -p $PROJECT
+      - name: Terraform Validate
+        id: validate
+        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform validate -no-color
+      - name: Terraform Plan
+        id: plan
+        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform plan -no-color -input=false  
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -input=false
+
