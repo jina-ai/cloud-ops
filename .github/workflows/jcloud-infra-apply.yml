@@ -77,5 +77,5 @@ jobs:
         if: steps.plan.outcome == 'failure'
         run: exit 1
       - name: Terraform Apply
-        run: terraform apply -auto-approve -input=false
+        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform apply -auto-approve -input=false
 
