@@ -7,6 +7,8 @@ on:
         description: Pass the docsQA branch/tag name
         default: main
         required: false
+    schedule:
+      - cron: "0 2 * * 1" # runs at 02:00 every Monday
         
 jobs:
   update-all-projects:
