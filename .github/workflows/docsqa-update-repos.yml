@@ -40,7 +40,7 @@ jobs:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Update all projects
         run: |
-          python -m daas.local.update_projects --project all --force_reindex
+          python -m daas.local.update_projects --project all
         env:
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}
