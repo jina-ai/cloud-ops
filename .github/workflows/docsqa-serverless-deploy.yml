@@ -5,7 +5,7 @@ on:
     inputs:
       branch:
         description: Pass the docsQA branch/tag name
-        default: main
+        default: master
         required: false
         
 jobs:
