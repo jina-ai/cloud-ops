@@ -48,7 +48,7 @@ jobs:
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Update Projects
-        if: !${{ github.event.inputs.force_reindex }}
+        if: ${{ !github.event.inputs.force_reindex }}
         run: |
           python -m daas.local.update_projects --project ${{ github.event.inputs.repository }}
         env:
