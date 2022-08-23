@@ -84,6 +84,7 @@ jobs:
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${DOCSQA_DIR}/service
           export JINA_VERSION=`cat ${DOCSQA_DIR}/jina_version.txt`
+          echo "{\"OPENAI_API_KEY\": \"${OPENAI_API_KEY}\"}" > openai.env
           python -m daas.local.deploy_external_flows -e ${EXPORT_DIR}/flow-external.yml -i ${EXPORT_DIR}/flow-query-jcloud.yml -o ${EXPORT_DIR}/flow-query-jcloud-with-ext-executors.yml --version_tag ${{ github.event.inputs.version }}  --jina_version ${JINA_VERSION}
           python -m daas.local.upload_flows --flow_dir ${EXPORT_DIR} --version_tag ${{ github.event.inputs.version }}
         env:
@@ -97,6 +98,7 @@ jobs:
           DOCSQA_ATLAS_QUERIES: ${{ secrets.DOCSQA_ATLAS_QUERIES }}
           DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
           DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         timeout-minutes: 45
       - name: Update Projects
         run: |
