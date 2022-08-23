@@ -1,4 +1,4 @@
-name: (docsqa) Batch function deployment
+name: (docsqa) Batch Function Deployment
 
 on:
   workflow_dispatch:
