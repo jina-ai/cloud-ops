@@ -1,4 +1,4 @@
-name: (docsqa) Update all projects
+name: (docsqa) Update Projects
 
 on:
   workflow_dispatch:
@@ -6,6 +6,10 @@ on:
       branch:
         description: Pass the docsQA branch/tag name
         default: master
+        required: false
+      repository:
+        description: The repository to update
+        default: all
         required: false
     schedule:
       - cron: "0 2 * * 1" # runs at 02:00 every Monday
@@ -40,7 +44,7 @@ jobs:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Update all projects
         run: |
-          python -m daas.local.update_projects --project all
+          python -m daas.local.update_projects --project ${{ github.event.inputs.repository }}
         env:
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
           DOCSQA_ATLAS_DATABASE: ${{ secrets.DOCSQA_ATLAS_DATABASE }}

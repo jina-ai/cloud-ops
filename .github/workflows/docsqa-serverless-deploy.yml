@@ -1,4 +1,4 @@
-name: (docsqa) Serverless deployment
+name: (docsqa) Serverless Deployment
 
 on:
   workflow_dispatch:
