@@ -47,6 +47,15 @@ jobs:
           echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
         env:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
+      - name: Deploy batch functions
+        run: |
+          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > service/daas/logger.env
+          cat service/daas/logger.env
+          export JINA_VERSION=`cat jina_version.txt`
+        env:
+          DOCSQA_ADMIN_TOKEN: ${{ secrets.DOCSQA_ADMIN_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       - name: Update Projects
         if: ${{ !github.event.inputs.force_reindex }}
         run: |
