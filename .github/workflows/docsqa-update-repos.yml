@@ -49,8 +49,8 @@ jobs:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
       - name: Deploy batch functions
         run: |
-          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > service/daas/local/logger.env
-          cat service/daas/local/logger.env
+          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > service/daas/logger.env
+          cat service/daas/logger.env
           export JINA_VERSION=`cat jina_version.txt`
         env:
           DOCSQA_ADMIN_TOKEN: ${{ secrets.DOCSQA_ADMIN_TOKEN }}
