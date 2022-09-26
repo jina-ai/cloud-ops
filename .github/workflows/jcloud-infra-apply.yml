@@ -12,6 +12,7 @@ on:
         description: Deploy Environment
         required: true
         options:
+          - CI
           - dev
           - stage
           - prod
