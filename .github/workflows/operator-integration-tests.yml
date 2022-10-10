@@ -46,8 +46,14 @@ jobs:
 
       - name: Build, Push & Deploy Operator
         run: |
-          make undeploy KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} COMMIT_TAG=${{ github.event.inputs.branch }} || true
-          make ci-deploy KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }}
+          make undeploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }} || true
+          make ci-deploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}
         working-directory: ./operator
       
       - id: set-matrix
