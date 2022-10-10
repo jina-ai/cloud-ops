@@ -73,7 +73,12 @@ jobs:
         env:
           AWS_REGION: ${{ secrets.JC_CI_AWS_REGION }}
           K8S_CLUSTER: ${{ secrets.JC_CI_K8S_CLUSTER }}
-      
+
+      - name: Build, Push & Deploy Operator
+        run: make undeploy; make ci-deploy
+        env:
+          COMMIT_TAG: ${{ github.event.inputs.branch }}
+
       - name: Run E2E Integration Test Suites
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
