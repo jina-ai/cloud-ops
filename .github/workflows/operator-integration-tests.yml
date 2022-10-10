@@ -9,8 +9,28 @@ on:
         default: main
 
 jobs:
-  integration-tests:
+  prep-testbed:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash scripts/get-all-test-paths.sh integration 1)"
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  integration-tests:
+    needs: prep-testbed
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
@@ -32,8 +52,11 @@ jobs:
       - name: Install Dependencies
         run: |
           go mod tidy -v
-          go install github.com/onsi/ginkgo/ginkgo@v1.16.5
+          go install github.com/onsi/ginkgo/v2/ginkgo
           go get github.com/onsi/gomega/...
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
           python -m pip install --upgrade pip
           pip install "jina[standard]"
         working-directory: ./operator
@@ -52,9 +75,36 @@ jobs:
           K8S_CLUSTER: ${{ secrets.JC_CI_K8S_CLUSTER }}
       
       - name: Run E2E Integration Test Suites
-        run: make integration-tests
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
           USE_EXISTING_CLUSTER: true
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 1.16.5
         working-directory: ./operator
+        timeout-minutes: 20
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}`
+          author_name: ":cloud: Operator Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+  # just for blocking the merge until all parallel integration-tests are successful
+  success-all-test:
+    needs: integration-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"
