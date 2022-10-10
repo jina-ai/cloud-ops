@@ -38,6 +38,12 @@ jobs:
         with:
           kubectl: 1.21.14
 
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
       - name: Build, Push & Deploy Operator
         run: |
           make undeploy KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} COMMIT_TAG=${{ github.event.inputs.branch }} || true
