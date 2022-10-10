@@ -36,6 +36,7 @@ jobs:
         run: make undeploy; make ci-deploy
         env:
           COMMIT_TAG: ${{ github.event.inputs.branch }}
+        working-directory: ./operator
       
       - id: set-matrix
         run: |
