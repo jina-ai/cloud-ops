@@ -38,6 +38,7 @@ jobs:
         with:
           kubectl: 1.21.14
 
+      # https://github.com/aws-actions/amazon-ecr-login#configure-credentials
       - name: Configure AWS Credentials for ECR
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -53,6 +54,7 @@ jobs:
 
       - name: Build, Push & Deploy Operator
         run: |
+          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
           make undeploy \
             KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
             COMMIT_TAG=${{ github.event.inputs.branch }} \
