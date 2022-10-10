@@ -58,11 +58,11 @@ jobs:
           make undeploy \
             KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
             COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }} || true
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
           make ci-deploy \
             KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
             COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
         working-directory: ./operator
       
       - id: set-matrix
