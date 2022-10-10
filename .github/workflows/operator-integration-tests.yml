@@ -101,11 +101,11 @@ jobs:
       - name: Install Dependencies
         run: |
           go mod tidy -v
-          go install github.com/onsi/ginkgo/v2/ginkgo
-          go get github.com/onsi/gomega/...
           go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
           go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
           go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
           python -m pip install --upgrade pip
           pip install "jina[standard]"
         working-directory: ./operator
