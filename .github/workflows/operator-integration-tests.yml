@@ -9,7 +9,7 @@ on:
         default: main
 
 jobs:
-  prep-testbed:
+  build-and-deploy-controller:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -64,7 +64,18 @@ jobs:
             COMMIT_TAG=${{ github.event.inputs.branch }} \
             PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
         working-directory: ./operator
-      
+
+  prep-testbed:
+    needs: build-and-deploy-controller
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    
       - id: set-matrix
         run: |
           sudo apt-get install jq
@@ -126,7 +137,6 @@ jobs:
       - name: Run E2E Integration Test Suites
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
-          USE_EXISTING_CLUSTER: true
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 1.16.5
         working-directory: ./operator
