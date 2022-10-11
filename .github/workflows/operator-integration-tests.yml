@@ -8,6 +8,10 @@ on:
         required: false
         default: main
 
+concurrency:
+  group: operator-e2e-tests
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy-controller:
     runs-on: ubuntu-latest
