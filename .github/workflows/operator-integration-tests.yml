@@ -238,6 +238,7 @@ jobs:
       - name: Run E2E Integration Test Suites for API
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
+          API_HOST: https://api-dev-lpzje.wolf.jina.ai
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 1.16.5
         working-directory: ./api
