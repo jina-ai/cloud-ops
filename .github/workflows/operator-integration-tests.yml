@@ -192,7 +192,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
+        test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
