@@ -117,7 +117,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  integration-tests-operator:
+  operator-tests:
     needs: prep-testbed-operator
     runs-on: ubuntu-latest
     strategy:
@@ -186,7 +186,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
 
-  integration-tests-api:
+  api-tests:
     needs: prep-testbed-api
     runs-on: ubuntu-latest
     strategy:
@@ -260,8 +260,8 @@ jobs:
   # just for blocking the merge until all parallel integration-tests are successful
   success-all-test:
     needs: 
-      - integration-tests-operator
-      - integration-tests-api
+      - operator-tests
+      - api-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
