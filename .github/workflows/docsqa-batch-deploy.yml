@@ -1,11 +1,11 @@
-name: (docsqa) Batch function deployment
+name: (docsqa) Batch Function Deployment
 
 on:
   workflow_dispatch:
     inputs:
       branch:
         description: Pass the docsQA branch/tag name
-        default: main
+        default: master
         required: false
 
 jobs:

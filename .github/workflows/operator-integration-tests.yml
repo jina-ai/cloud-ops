@@ -1,0 +1,274 @@
+name: (jc-operator) Integration Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: false
+        default: main
+
+concurrency:
+  group: operator-e2e-tests
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.JC_CI_AWS_REGION }}
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.K8S_CLUSTER }}
+        env:
+          AWS_REGION: ${{ secrets.JC_CI_AWS_REGION }}
+          K8S_CLUSTER: ${{ secrets.JC_CI_K8S_CLUSTER }}
+
+      - name: Install Kubetools
+        id: install-kubetools
+        uses: yokawasa/action-setup-kube-tools@v0.7.1
+        with:
+          kubectl: 1.21.14
+
+      # https://github.com/aws-actions/amazon-ecr-login#configure-credentials
+      - name: Configure AWS Credentials for ECR
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR Public
+        id: login-ecr-public
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registry-type: public
+
+      - name: Build, Push & Deploy Operator
+        run: |
+          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
+          make undeploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
+          make ci-deploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
+        working-directory: ./operator
+
+      - name: Build, Push & Deploy API
+        run: |
+          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
+          make -f api/Makefile undeploy \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
+          make -f api/Makefile ci-deploy \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
+
+  prep-testbed-operator:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+        working-directory: ./operator
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  prep-testbed-api:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+        working-directory: ./api
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  operator-tests:
+    needs: prep-testbed-operator
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.JC_CI_AWS_REGION }}
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.K8S_CLUSTER }}
+        env:
+          AWS_REGION: ${{ secrets.JC_CI_AWS_REGION }}
+          K8S_CLUSTER: ${{ secrets.JC_CI_K8S_CLUSTER }}
+
+      - name: Run E2E Integration Test Suites for Operator
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 1.16.5
+        working-directory: ./operator
+        timeout-minutes: 20
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}`
+          author_name: ":cloud: Operator Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+  api-tests:
+    needs: prep-testbed-api
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./api
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.JC_CI_AWS_REGION }}
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.K8S_CLUSTER }}
+        env:
+          AWS_REGION: ${{ secrets.JC_CI_AWS_REGION }}
+          K8S_CLUSTER: ${{ secrets.JC_CI_K8S_CLUSTER }}
+
+      - name: Run E2E Integration Test Suites for API
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          API_HOST: https://api-dev-lpzje.wolf.jina.ai
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 1.16.5
+        working-directory: ./api
+        timeout-minutes: 20
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}`
+          author_name: ":cloud: API Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+
+  # just for blocking the merge until all parallel integration-tests are successful
+  success-all-test:
+    needs: 
+      - operator-tests
+      - api-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"

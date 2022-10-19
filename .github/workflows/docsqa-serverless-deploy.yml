@@ -1,11 +1,11 @@
-name: (docsqa) Serverless deployment
+name: (docsqa) Serverless Deployment
 
 on:
   workflow_dispatch:
     inputs:
       branch:
         description: Pass the docsQA branch/tag name
-        default: main
+        default: master
         required: false
         
 jobs:
