@@ -44,21 +44,21 @@ jobs:
           aws-region: us-east-1
       - name: Terraform Format
         id: fmt
-        run: cd $GITHUB_WORKSPACE/devops/iam/${{ github.event.client_payload.project }} && terraform fmt -check -diff
+        run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && terraform fmt -check -diff
       - name: Terraform Init
         id: init
-        run: cd $GITHUB_WORKSPACE/devops/iam/${{ github.event.client_payload.project }} && cp $GITHUB_WORKSPACE/devops/iam/backends/s3.tf ./ && terraform init -backend-config="key=${{ github.event.client_payload.project }}/iam/default" -migrate-state
+        run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && cp $GITHUB_WORKSPACE/devops/iam/backends/s3.tf ./ && terraform init -backend-config="key=${{ github.event.client_payload.project }}/iam/default" -migrate-state
       - name: Terraform Validate
         id: validate
-        run: cd $GITHUB_WORKSPACE/devops/iam/${{ github.event.client_payload.project }} && terraform validate -no-color
+        run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && terraform validate -no-color
       - name: Terraform Plan
         id: plan
-        run: cd $GITHUB_WORKSPACE/devops/iam/${{ github.event.client_payload.project }} && terraform plan -no-color -input=false   
+        run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && terraform plan -no-color -input=false   
       - name: Terraform Plan Status
         if: steps.plan.outcome == 'failure'
         run: exit 1
       - name: Terraform Apply
-        run: cd $GITHUB_WORKSPACE/devops/iam/${{ github.event.client_payload.project }} && terraform apply -auto-approve -input=false
+        run: cd $GITHUB_WORKSPACE/devops/project/iam/${{ github.event.client_payload.project }} && terraform apply -auto-approve -input=false
 
 
       
