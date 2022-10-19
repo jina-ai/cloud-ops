@@ -1,0 +1,64 @@
+name: "Wolf Batch Docker Image Build"
+
+on:
+  repository_dispatch:
+    types: [iam-user-deploy]
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.client_payload.release_token != env.release_token
+        env:
+          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
+  terraform-deploy:
+    needs: token-check
+    runs-on: ubuntu-latest
+    env:
+      PROJECT: ${{ github.event.inputs.project }}
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+            repository: jina-ai/jcloud-infra
+            ref: master
+            token: ${{ secrets.JINA_DEV_BOT }}
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Terraform Format
+        id: fmt
+        run: cd $GITHUB_WORKSPACE/devops/iam/$PROJECT && terraform fmt -check -diff
+      - name: Terraform Init
+        id: init
+        run: cd $GITHUB_WORKSPACE/devops/iam/$PROJECT && cp $GITHUB_WORKSPACE/devops/iam/backends/s3.tf ./ && terraform init -backend-config="key=$PROJECT/iam/default" -migrate-state
+      - name: Terraform Validate
+        id: validate
+        run: cd $GITHUB_WORKSPACE/devops/iam/$PROJECT && terraform validate -no-color
+      - name: Terraform Plan
+        id: plan
+        run: cd $GITHUB_WORKSPACE/devops/iam/$PROJECT && terraform plan -no-color -input=false   
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+      - name: Terraform Apply
+        run: cd $GITHUB_WORKSPACE/devops/iam/$PROJECT && terraform apply -auto-approve -input=false
+
+
+      
