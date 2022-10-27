@@ -79,6 +79,26 @@ jobs:
             COMMIT_TAG=${{ github.event.inputs.branch }} \
             PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
 
+      - name: Run setup script for API
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "api/test/scripts" ]; then
+            cd api/test/scripts
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      
+      - name: Run setup script for Operator
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "operator/controllers/test/scripts" ]; then
+            cd operator/controllers/test/scripts
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+
   prep-testbed-operator:
     needs: build-and-deploy
     runs-on: ubuntu-latest
