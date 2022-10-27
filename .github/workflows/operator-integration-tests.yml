@@ -56,28 +56,10 @@ jobs:
         with:
           registry-type: public
 
-      - name: Build, Push & Deploy Operator
-        run: |
-          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
-          make undeploy \
-            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
-            COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
-          make ci-deploy \
-            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
-            COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
-        working-directory: ./operator
-
-      - name: Build, Push & Deploy API
-        run: |
-          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
-          make -f api/Makefile undeploy \
-            COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
-          make -f api/Makefile ci-deploy \
-            COMMIT_TAG=${{ github.event.inputs.branch }} \
-            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
 
       - name: Run setup script for API
         run: |
@@ -100,6 +82,29 @@ jobs:
           fi
         env:
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+
+      - name: Build, Push & Deploy Operator
+        run: |
+          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
+          make undeploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
+          make ci-deploy \
+            KUSTOMIZE=${{ steps.install-kubetools.outputs.kustomize-path }} \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
+        working-directory: ./operator
+
+      - name: Build, Push & Deploy API
+        run: |
+          echo -e "Pushing to registry: ${{ steps.login-ecr-public.outputs.registry }}"
+          make -f api/Makefile undeploy \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1 || true
+          make -f api/Makefile ci-deploy \
+            COMMIT_TAG=${{ github.event.inputs.branch }} \
+            PUBLIC_REGISTRY=${{ steps.login-ecr-public.outputs.registry }}/s5k7r1x1
 
   prep-testbed-operator:
     needs: build-and-deploy
