@@ -22,6 +22,20 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+      
+      - name: Notify who triggered the build
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${process.env.AS_AUTHOR} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\``,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
