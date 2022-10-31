@@ -282,7 +282,8 @@ jobs:
           API_HOST: https://api-dev-lpzje.wolf.jina.ai
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 1.16.5
-          FIRST_USER_TOKEN: ${{ secrets.JC_CI_USER_TOKEN }}
+          FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
+          SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
         working-directory: ./api
         timeout-minutes: 20
 
