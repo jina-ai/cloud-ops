@@ -89,8 +89,8 @@ jobs:
       - name: Run setup script for Operator
         run: |
           # cd is a hack to work with other branches (remove later)
-          if [ -d "operator/controllers/test/scripts" ]; then
-            cd operator/controllers/test/scripts
+          if [ -d "operator/config/scripts/setup" ]; then
+            cd operator/config/scripts/setup
             go mod tidy
             go run setup.go
           fi
