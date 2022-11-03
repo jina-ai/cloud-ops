@@ -1,4 +1,4 @@
-name: (jc-operator) Integration Tests
+name: (jc-operator) Integration Tests v2
 
 on:
   workflow_dispatch:
