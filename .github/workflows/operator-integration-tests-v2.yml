@@ -1,4 +1,4 @@
-name: (jc-operator) Integration Tests v2
+name: (jc-operator) Integration Tests
 
 on:
   workflow_dispatch:
@@ -39,9 +39,7 @@ jobs:
           aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
@@ -55,15 +53,15 @@ jobs:
             go run setup.go
           fi
         env:
-          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
       - name: Build Image
         id: build_image
         run: |
           cd $GITHUB_WORKSPACE/operator
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ../deployment/scripts/docker-build.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-operator:latest
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
           else
-            bash ../deployment/scripts/docker-build.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-operator:${{ github.event.inputs.branch }}
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
           fi
   build-api-manager:
     needs: token-check
@@ -77,9 +75,7 @@ jobs:
           aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
@@ -93,15 +89,15 @@ jobs:
             go run setup.go
           fi
         env:
-          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
       - name: Build Image
         id: build_image
         run: |
           cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ./deployment/scripts/docker-build.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-api-manager:latest api/
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
           else
-            bash ./deployment/scripts/docker-build.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-api-manager:${{ github.event.inputs.branch }} api/
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
           fi
   deployment:
     needs: [build-api-manager, build-operator]
@@ -110,14 +106,12 @@ jobs:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
     - uses: actions/checkout@v3
       with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
+        ref: ${{ github.event.inputs.branch }}
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
@@ -137,7 +131,7 @@ jobs:
           -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
         fi
-        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
   prep-testbed-operator:
     needs: deployment
     runs-on: ubuntu-latest
@@ -145,9 +139,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - id: set-matrix
         run: |
           sudo apt-get install jq
@@ -162,9 +154,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - id: set-matrix
         run: |
           sudo apt-get install jq
@@ -183,9 +173,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
@@ -207,8 +195,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
@@ -237,9 +225,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
