@@ -138,6 +138,7 @@ jobs:
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
         fi
         kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
+        sleep 60
   prep-testbed-operator:
     needs: deployment
     runs-on: ubuntu-latest
