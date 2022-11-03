@@ -61,9 +61,9 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE/operator
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-operator:latest
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
           else
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-operator:${{ github.event.inputs.branch }}
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
           fi
   build-api-manager:
     needs: token-check
@@ -99,9 +99,9 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-api-manager:latest api/
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
           else
-            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jina-api-manager:${{ github.event.inputs.branch }} api/
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
           fi
   deployment:
     needs: [build-api-manager, build-operator]
