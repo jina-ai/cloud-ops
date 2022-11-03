@@ -27,6 +27,7 @@ jobs:
         if: github.event.inputs.deploy_token != env.deploy_token
         env:
           deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+  
   build-operator:
     needs: token-check
     runs-on: ubuntu-latest
@@ -65,6 +66,7 @@ jobs:
           else
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
           fi
+  
   build-api-manager:
     needs: token-check
     runs-on: ubuntu-latest
@@ -103,6 +105,7 @@ jobs:
           else
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
           fi
+  
   deployment:
     needs: [build-api-manager, build-operator]
     runs-on: ubuntu-latest
@@ -139,6 +142,7 @@ jobs:
         fi
         kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
         sleep 60
+  
   prep-testbed-operator:
     needs: deployment
     runs-on: ubuntu-latest
@@ -156,6 +160,7 @@ jobs:
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+  
   prep-testbed-api:
     needs: deployment
     runs-on: ubuntu-latest
@@ -173,6 +178,7 @@ jobs:
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+  
   operator-tests:
     needs: prep-testbed-operator
     runs-on: ubuntu-latest
@@ -228,6 +234,10 @@ jobs:
           text: |
             :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}`
           author_name: ":cloud: Operator Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+  
   api-tests:
     needs: prep-testbed-api
     runs-on: ubuntu-latest
