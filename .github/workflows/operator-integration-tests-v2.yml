@@ -123,7 +123,10 @@ jobs:
           -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
         fi
+        
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}"
         kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
+        
         for i in {1..180}
         do
           STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" http://api-ci-episr.wolf.jina.ai`
