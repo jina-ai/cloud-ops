@@ -124,7 +124,16 @@ jobs:
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
         fi
         kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
-        sleep 60
+        STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" http://api-ci-episr.wolf.jina.ai`
+        for i in {1..180}
+        do
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai is return ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai is return ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
   
   prep-testbed-operator:
     needs: deployment
