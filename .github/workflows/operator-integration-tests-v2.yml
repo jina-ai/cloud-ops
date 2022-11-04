@@ -3,10 +3,6 @@ name: (jc-operator) Integration Tests v2
 on:
   workflow_dispatch:
     inputs:
-      deploy_token:
-        description: Deploy Token
-        default: ""
-        required: true
       branch:
         description: Pass the jina-operator branch
         required: true
@@ -17,19 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  token-check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/github-script@v3
-        with:
-          script: |
-            core.setFailed('token are not equivalent!')
-        if: github.event.inputs.deploy_token != env.deploy_token
-        env:
-          deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
-  
   build-operator:
-    needs: token-check
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -68,7 +52,6 @@ jobs:
           fi
   
   build-api-manager:
-    needs: token-check
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
