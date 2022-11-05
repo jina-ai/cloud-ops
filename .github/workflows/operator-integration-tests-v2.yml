@@ -141,17 +141,22 @@ jobs:
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
         fi
         
-        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}"
-        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
-        
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+      
+    - name: Wait until API is healthy
+      run: |
         for i in {1..180}
         do
-          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" http://api-ci-episr.wolf.jina.ai`
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
           if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
-            echo "API api-ci-episr.wolf.jina.ai is return ${STATUS_CODE}, continue."
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
             exit 0
           fi
-          echo "API api-ci-episr.wolf.jina.ai is return ${STATUS_CODE}, retry ${1}."
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
           sleep 1
         done
   
