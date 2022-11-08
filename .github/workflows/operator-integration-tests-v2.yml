@@ -133,7 +133,7 @@ jobs:
         cd $GITHUB_WORKSPACE
         if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
           bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
-          -f .github/ci/CI-values.yaml \
+          -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
         else
           bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
