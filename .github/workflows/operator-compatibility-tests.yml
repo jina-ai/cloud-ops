@@ -1,0 +1,148 @@
+name: (jc-operator) (WIP) Compatibility Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+
+concurrency:
+  group: operator-compatibility-tests
+  cancel-in-progress: false
+
+jobs:
+  build-operator-from-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for Operator
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
+            cd $GITHUB_WORKSPACE/operator/config/scripts/setup
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE/operator
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
+          else
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
+          fi
+
+  deployment-operator-main:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+        -f .github/ci/CI-values.yaml \
+        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+        
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+
+  compatibility-tests:
+    needs: prep-testbed-operator
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: [controllers/test/compatibility/baseline_flows_setup_test.go]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      - name: Run E2E Integration Test Suites for Operator
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 1.16.5
+        working-directory: ./operator
+        timeout-minutes: 20
+
+  success-all-test:
+    needs: 
+      - operator-tests
+      - api-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"
