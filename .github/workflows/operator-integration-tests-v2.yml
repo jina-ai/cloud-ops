@@ -159,6 +159,7 @@ jobs:
           echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
           sleep 1
         done
+        exit 1
   
   prep-testbed-operator:
     needs: deployment
