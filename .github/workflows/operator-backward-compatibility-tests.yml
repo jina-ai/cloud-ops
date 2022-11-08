@@ -85,7 +85,7 @@ jobs:
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
   compatibility-tests:
-    needs: prep-testbed-operator
+    needs: deployment-operator-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -134,8 +134,7 @@ jobs:
 
   success-all-test:
     needs: 
-      - operator-tests
-      - api-tests
+      - compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
