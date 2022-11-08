@@ -219,6 +219,9 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      - name: Install Jina
+        run: |
+          pip3 install jina
       - name: Install Dependencies
         run: |
           go mod tidy -v
