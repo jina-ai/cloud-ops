@@ -41,7 +41,8 @@ jobs:
           if [[ ${{ github.event.client_payload.branch }} == 'main' ]]; then
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
           else
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.client_payload.branch }}
+            echo "not build from main branch, quit!"
+            exit 1
           fi
   
   build-api-manager:
