@@ -194,7 +194,7 @@ jobs:
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
   compatibility-tests:
-    needs: patch-operator-image
+    needs: patch-operator-and-api-image
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
