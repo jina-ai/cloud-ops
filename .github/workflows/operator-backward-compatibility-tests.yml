@@ -179,11 +179,7 @@ jobs:
         working-directory: ./operator
         timeout-minutes: 20
 
-  patch-operator-and-api-image:
-    needs:
-      - compatibility-tests-setup
-      - build-operator-from-branch
-      - build-api-manager-from-branch
+  deployment-from-branch:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
@@ -197,11 +193,21 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-    - name: patch
+    - name: helm clean
       run: |
         aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
-        kubectl set image deployment/jcloud-operator jcloud-operator=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
-        kubectl set image deployment/jcloud-operator-api-manager jcloud-api-manager=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+        -f .github/ci/CI-values.yaml \
+        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
@@ -220,7 +226,7 @@ jobs:
         exit 1
 
   compatibility-tests:
-    needs: patch-operator-and-api-image
+    needs: deployment-from-branch
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
