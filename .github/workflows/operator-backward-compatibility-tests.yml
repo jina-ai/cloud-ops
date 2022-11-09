@@ -51,7 +51,41 @@ jobs:
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
           fi
 
-  deployment-operator-from-main:
+  build-api-manager-from-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for API
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
+            cd $GITHUB_WORKSPACE/api/test/scripts
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
+
+  deployment-from-main:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
@@ -85,7 +119,7 @@ jobs:
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
   compatibility-tests-setup:
-    needs: deployment-operator-from-main
+    needs: deployment-from-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -132,8 +166,11 @@ jobs:
         working-directory: ./operator
         timeout-minutes: 20
 
-  deployment-operator-from-branch:
-    needs: compatibility-tests-setup
+  patch-operator-image:
+    needs:
+      - compatibility-tests-setup
+      - build-operator-from-branch
+      - build-api-manager-from-branch
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
@@ -147,28 +184,18 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-    - name: helm clean
+    - name: patch
       run: |
         aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
-        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-        do
-          helm uninstall ${i} -n jcloud
-        done
-    - name: helm deploy
-      run: |
-        cd $GITHUB_WORKSPACE
-        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
-        -f .github/ci/CI-values.yaml \
-        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
-        
-        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+        kubectl set image deployment/jcloud-operator jcloud-operator=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
+        kubectl set image deployment/jcloud-operator-api-manager jcloud-operator-api-manager=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
   success-all-test:
     needs: 
-      - deployment-operator-from-branch
+      - patch-operator-image
     if: always()
     runs-on: ubuntu-latest
     steps:
