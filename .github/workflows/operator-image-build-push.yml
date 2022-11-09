@@ -38,7 +38,7 @@ jobs:
         id: build_image
         run: |
           cd $GITHUB_WORKSPACE/operator
-          if [[ ${{ github.event.client_payload.branch }} == 'main' ]]; then
+          if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
           else
             echo "not build from main branch, quit!"
