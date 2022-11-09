@@ -180,7 +180,10 @@ jobs:
         timeout-minutes: 20
 
   deployment-from-branch:
-    needs: compatibility-tests-setup
+    needs:
+      - compatibility-tests-setup
+      - build-operator-from-branch
+      - build-api-manager-from-branch
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
