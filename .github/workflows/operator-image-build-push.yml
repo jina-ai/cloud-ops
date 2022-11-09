@@ -43,7 +43,7 @@ jobs:
           if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
           elif [[ ${{ github.event.client_payload.branch }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            TAG=${${{ github.event.client_payload.branch }}#refs/tags/}
+            TAG=`echo ${{ github.event.client_payload.branch }} | cut -d / -f 3`
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
           else
             echo "not build from main branch, quit!"
@@ -78,7 +78,7 @@ jobs:
           if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
           elif [[ ${{ github.event.client_payload.branch }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            TAG=${${{ github.event.client_payload.branch }}#refs/tags/}
+            TAG=`echo ${{ github.event.client_payload.branch }} | cut -d / -f 3`
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
           else
             echo "not build from main branch, quit!"
