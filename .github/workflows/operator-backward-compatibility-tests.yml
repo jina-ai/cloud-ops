@@ -117,6 +117,19 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until API is healthy
+      run: |
+        for i in {1..180}
+        do
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
 
   compatibility-tests-setup:
     needs: deployment-from-main
@@ -192,6 +205,19 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until API is healthy
+      run: |
+        for i in {1..180}
+        do
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
 
   compatibility-tests:
     needs: patch-operator-and-api-image
