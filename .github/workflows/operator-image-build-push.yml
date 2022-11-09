@@ -36,6 +36,7 @@ jobs:
           go-version: 1.18
       - name: Build Image
         id: build_image
+        shell: bash
         run: |
           cd $GITHUB_WORKSPACE/operator
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
@@ -70,6 +71,7 @@ jobs:
           go-version: 1.18
       - name: Build Image
         id: build_image
+        shell: bash
         run: |
           cd $GITHUB_WORKSPACE
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
