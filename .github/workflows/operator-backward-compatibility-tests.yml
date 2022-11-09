@@ -166,7 +166,7 @@ jobs:
         working-directory: ./operator
         timeout-minutes: 20
 
-  patch-operator-image:
+  patch-operator-and-api-image:
     needs:
       - compatibility-tests-setup
       - build-operator-from-branch
@@ -188,7 +188,7 @@ jobs:
       run: |
         aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
         kubectl set image deployment/jcloud-operator jcloud-operator=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
-        kubectl set image deployment/jcloud-operator-api-manager jcloud-operator-api-manager=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
+        kubectl set image deployment/jcloud-operator-api-manager jcloud-api-manager=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${{ github.event.inputs.branch }} -n jcloud
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
