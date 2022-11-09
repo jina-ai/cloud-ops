@@ -34,16 +34,6 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
-      - name: Run setup script for Operator
-        run: |
-          # cd is a hack to work with other branches (remove later)
-          if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
-            cd $GITHUB_WORKSPACE/operator/config/scripts/setup
-            go mod tidy
-            go run setup.go
-          fi
-        env:
-          MONGO_URI: ${{ secrets.JC_PROD_MONGO_URI }}
       - name: Build Image
         id: build_image
         run: |
@@ -73,23 +63,14 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
-      - name: Run setup script for API
-        run: |
-          # cd is a hack to work with other branches (remove later)
-          if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
-            cd $GITHUB_WORKSPACE/api/test/scripts
-            go mod tidy
-            go run setup.go
-          fi
-        env:
-          MONGO_URI: ${{ secrets.JC_PROD_MONGO_URI }}
       - name: Build Image
         id: build_image
         run: |
           cd $GITHUB_WORKSPACE
-          if [[ ${{ github.event.client_payload.branch }} == 'main' ]]; then
+          if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
           else
-            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.client_payload.branch }} api/
+            echo "not build from main branch, quit!"
+            exit 1
           fi
       
