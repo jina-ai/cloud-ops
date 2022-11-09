@@ -41,7 +41,7 @@ jobs:
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
           if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
-          elif [[ ${{ github.event.client_payload.branch }} =~ ${regex} ]]; then
+          elif [[ "${{ github.event.client_payload.branch }}" =~ ${regex} ]]; then
             TAG=${${{ github.event.client_payload.branch }}#refs/tags/}
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
           else
@@ -75,7 +75,7 @@ jobs:
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
           if [[ ${{ github.event.client_payload.branch }} == 'refs/heads/main' ]]; then
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
-          elif [[ ${{ github.event.client_payload.branch }} =~ ${regex} ]]; then
+          elif [[ "${{ github.event.client_payload.branch }}" =~ ${regex} ]]; then
             TAG=${${{ github.event.client_payload.branch }}#refs/tags/}
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
           else
