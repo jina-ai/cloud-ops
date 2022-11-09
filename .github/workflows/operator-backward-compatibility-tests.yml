@@ -143,7 +143,7 @@ jobs:
       - name: Install Dependencies
         run: |
           go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
           go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
           go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
           go install github.com/onsi/ginkgo/v2/ginkgo
@@ -193,9 +193,57 @@ jobs:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
+  compatibility-tests:
+    needs: patch-operator-image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: [controllers/test/compatibility/backward_compatibility_test.go]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      - name: Run Compatibility Test Suites for Operator
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 1.16.5
+        working-directory: ./operator
+        timeout-minutes: 20
+
   success-all-test:
     needs: 
-      - patch-operator-image
+      - compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
