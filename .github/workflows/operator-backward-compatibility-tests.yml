@@ -51,7 +51,7 @@ jobs:
             bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
           fi
 
-  deployment-operator-main:
+  deployment-operator-from-main:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
@@ -84,8 +84,8 @@ jobs:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
 
-  compatibility-tests:
-    needs: deployment-operator-main
+  compatibility-tests-setup:
+    needs: deployment-operator-from-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -124,7 +124,7 @@ jobs:
           aws-region: us-east-1
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
-      - name: Run E2E Integration Test Suites for Operator
+      - name: Run Compatibility Test Suites for Operator
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
@@ -132,9 +132,43 @@ jobs:
         working-directory: ./operator
         timeout-minutes: 20
 
+  deployment-operator-from-branch:
+    needs: compatibility-tests-setup
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+        -f .github/ci/CI-values.yaml \
+        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+        
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+
   success-all-test:
     needs: 
-      - compatibility-tests
+      - deployment-operator-from-branch
     if: always()
     runs-on: ubuntu-latest
     steps:
