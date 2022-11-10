@@ -134,9 +134,9 @@ jobs:
         git tag ${{ github.event.inputs.tag }}
         git push origin ${{ github.event.inputs.tag }} --force
     - name: Set up Golang 1.19
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.19
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
     - name: "Pack the binary"
       run: |
         cd operator/
