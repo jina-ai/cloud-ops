@@ -26,7 +26,7 @@ jobs:
         env:
           release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
   build-operator:
-    needs: release
+    needs: token-check
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.build_image.outputs.sha }}
@@ -57,7 +57,7 @@ jobs:
           sha=`echo ${image_fullname}|cut -d @ -f 2`
           echo "${sha}" >> $GITHUB_OUTPUT
   build-api-manager:
-    needs: release
+    needs: token-check
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.build_image.outputs.sha }}
