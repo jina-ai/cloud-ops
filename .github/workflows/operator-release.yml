@@ -115,7 +115,7 @@ jobs:
       run: |
         sudo snap install yq
         tag=${{ github.event.inputs.tag }}
-        yq -i ".appVersion="${tag:1}"" deployment/charts/jcloud-operator/Chart.yaml
+        yq -i ".appVersion=\"${tag:1}\"" deployment/charts/jcloud-operator/Chart.yaml
         cat deployment/charts/jcloud-operator/Chart.yaml
         yq -i ".apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"" deployment/charts/jcloud-operator/values.yaml
         yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" deployment/charts/jcloud-operator/values.yaml
