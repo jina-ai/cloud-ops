@@ -109,6 +109,7 @@ jobs:
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
+        kubectl apply -f deployment/charts/jcloud-operator/crds/
         bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
         -f .github/ci/CI-values.yaml \
         --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
@@ -208,6 +209,7 @@ jobs:
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
+        kubectl apply -f deployment/charts/jcloud-operator/crds/
         bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
         -f .github/ci/CI-values.yaml \
         --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
