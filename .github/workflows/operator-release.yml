@@ -94,7 +94,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         repository: jina-ai/jina-operator
-        ref: refs/tags/${{ github.event.inputs.tag }}
         token: ${{ secrets.JINA_DEV_BOT }}
     - name: "Build Changelog"
       id: build_changelog
@@ -103,6 +102,7 @@ jobs:
       with:
         configuration: ".github/ci/config/jcloud-release-config.json"
         token: ${{ secrets.JINA_DEV_BOT }}
+        toTag: ${{ github.event.inputs.tag }}
         outputFile: new_release.md
     - name: "Append Changelog"
       if: github.event.inputs.changelog_flag
