@@ -55,7 +55,7 @@ jobs:
           bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
-          echo "${sha}" >> $GITHUB_OUTPUT
+          echo "sha=${sha}" >> $GITHUB_OUTPUT
   build-api-manager:
     needs: token-check
     runs-on: ubuntu-latest
@@ -86,7 +86,7 @@ jobs:
           bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
-          echo "${sha}" >> $GITHUB_OUTPUT
+          echo "sha=${sha}" >> $GITHUB_OUTPUT
   release:
     needs: ["build-api-manager", "build-operator"]
     runs-on: ubuntu-latest
