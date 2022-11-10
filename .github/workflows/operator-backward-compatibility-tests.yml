@@ -177,7 +177,7 @@ jobs:
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
-          ACK_GINKGO_DEPRECATIONS: 1.16.5
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
         working-directory: ./operator
         timeout-minutes: 20
 
@@ -277,7 +277,7 @@ jobs:
         run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
-          ACK_GINKGO_DEPRECATIONS: 1.16.5
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
         working-directory: ./operator
         timeout-minutes: 20
 
