@@ -1,0 +1,153 @@
+name: "(jc-operator) Operator Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Jcloud Operator repo tag
+        required: true
+      release_token:
+        description: 'Your release token'
+        required: true
+      changelog_flag:
+        type: boolean
+        description: Whether Update CHANGELOG.md Automatically
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.release_token != env.release_token
+        env:
+          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
+  build-operator:
+    needs: release
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.build_image.outputs.sha }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: refs/tags/${{ github.event.inputs.tag }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Build Image
+        id: build_image
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE/operator
+          TAG=${{ github.event.inputs.tag }}
+          bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
+          image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${TAG}`
+          sha=`echo ${image_fullname}|cut -d @ -f 2`
+          echo "${sha}" >> $GITHUB_OUTPUT
+  build-api-manager:
+    needs: release
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.build_image.outputs.sha }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: refs/tags/${{ github.event.inputs.tag }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Build Image
+        id: build_image
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          TAG=${{ github.event.inputs.tag }}
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
+          image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager:${TAG}`
+          sha=`echo ${image_fullname}|cut -d @ -f 2`
+          echo "${sha}" >> $GITHUB_OUTPUT
+  release:
+    needs: ["build-api-manager", "build-operator"]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        repository: jina-ai/jina-operator
+        ref: refs/tags/${{ github.event.inputs.tag }}
+        token: ${{ secrets.JINA_DEV_BOT }}
+    - name: "Build Changelog"
+      id: build_changelog
+      if: github.event.inputs.changelog_flag
+      uses: mikepenz/release-changelog-builder-action@v3
+      with:
+        configuration: ".github/ci/config/jcloud-release-config.json"
+        token: ${{ secrets.JINA_DEV_BOT }}
+        outputFile: new_release.md
+    - name: "Append Changelog"
+      if: github.event.inputs.changelog_flag
+      run: |
+        cat new_release.md
+        sed -i -e '/==================$/r new_release.md' CHANGELOG.md
+        cat CHANGELOG.md
+        rm new_release.md
+    - name: "Update Helm Charts App version"
+      run: |
+        sudo snap install yq
+        tag=${{ github.event.inputs.tag }}
+        yq -i '.appVersion="${tag:1}"' deployment/charts/jcloud-operator/Chart.yaml
+        cat deployment/charts/jcloud-operator/Chart.yaml
+        yq -i '.apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"' deployment/charts/jcloud-operator/values.yaml
+        yq -i '.operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"' deployment/charts/jcloud-operator/values.yaml
+        yq -i '.apimanager.image.tag=\"${tag}\"' deployment/charts/jcloud-operator/values.yaml
+        yq -i '.operator.image.tag=\"${tag}\"' deployment/charts/jcloud-operator/values.yaml
+        cat deployment/charts/jcloud-operator/values.yaml
+    - name: "Retag and push"
+      run: |
+        git --version
+        git config user.name "Jina Dev Bot"
+        git config user.email "<>"
+        git status
+        git tag -d ${{ github.event.inputs.tag }}
+        git add .
+        git commit -m "release: Update CHANGELOG and Charts"
+        git tag ${{ github.event.inputs.tag }}
+        git push origin ${{ github.event.inputs.tag }} --force
+    - name: "Pack the binary"
+      run: |
+        cd operator/
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ../operator main.go
+        cd .. 
+        cd api/
+        cp -rp ../operator ./
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o ../api-manager main.go
+        tar -czvf jcloud-operator-amd64.tar.gz operator api-manager
+    - name: "Release"
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: new_release.md
+        tag_name: refs/tags/${{ github.event.inputs.tag }}
+        token: ${{ secrets.JINA_DEV_BOT }}
+        files: jcloud-operator-amd64.tar.gz
+      env:
+        GITHUB_REPOSITORY: jina-ai/jina-operator
