@@ -115,7 +115,7 @@ jobs:
       run: |
         sudo snap install yq
         tag=${{ github.event.inputs.tag }}
-        yq -i '.appVersion="${tag:1}"' deployment/charts/jcloud-operator/Chart.yaml
+        yq -i ".appVersion="${tag:1}"" deployment/charts/jcloud-operator/Chart.yaml
         cat deployment/charts/jcloud-operator/Chart.yaml
         yq -i ".apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"" deployment/charts/jcloud-operator/values.yaml
         yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" deployment/charts/jcloud-operator/values.yaml
@@ -133,6 +133,10 @@ jobs:
         git commit -m "release: Update CHANGELOG and Charts"
         git tag ${{ github.event.inputs.tag }}
         git push origin ${{ github.event.inputs.tag }} --force
+    - name: Set up Golang 1.19
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
     - name: "Pack the binary"
       run: |
         cd operator/
