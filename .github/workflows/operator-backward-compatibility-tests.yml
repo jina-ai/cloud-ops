@@ -1,4 +1,4 @@
-name: (jc-operator) (WIP) Compatibility Tests
+name: (jc-operator) Compatibility Tests
 
 on:
   workflow_dispatch:
