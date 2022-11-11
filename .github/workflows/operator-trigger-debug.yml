@@ -1,0 +1,36 @@
+name: (jc-operator) DEBUG WILL REMOVE LATER
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+
+concurrency:
+  group: operator-e2e-tests
+  cancel-in-progress: false
+
+jobs:
+  call-workflow-passing-data:
+    runs-on: ubuntu-latest
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yaml@main
+    with:
+      branch: ${{ github.event.inputs.branch }}
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
+  
+  success-all-test:
+    needs: 
+      - call-workflow-passing-data
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"
