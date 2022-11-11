@@ -7,13 +7,30 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
+  workflow_call:
+    inputs:
+      branch-name:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
 
 concurrency:
   group: operator-compatibility-tests
   cancel-in-progress: false
 
 jobs:
+  prep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Env setup for the rest of the jobs
+        run: |-
+          echo "HAHAHHAHAHA"
+          echo ${{ github.event.inputs.branch }}
+
   build-operator-from-branch:
+    needs: prep
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -52,6 +69,7 @@ jobs:
           fi
 
   build-api-manager-from-branch:
+    needs: prep
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -86,6 +104,7 @@ jobs:
           bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
 
   deployment-from-main:
+    needs: prep
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
