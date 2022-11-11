@@ -17,8 +17,6 @@ jobs:
     secrets: inherit
     with:
       branch: ${{ inputs.branch }}
-    secrets:
-      token: ${{ secrets.GITHUB_TOKEN }}
   
   success-all-test:
     needs: 
