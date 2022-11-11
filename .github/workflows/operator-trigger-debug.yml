@@ -6,7 +6,6 @@ on:
       branch:
         description: Pass the jina-operator branch
         required: true
-        default: main
 
 concurrency:
   group: operator-e2e-tests
@@ -17,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     with:
-      branch: ${{ github.event.inputs.branch }}
+      branch: feat-backward-com
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
   

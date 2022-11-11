@@ -6,7 +6,6 @@ on:
       branch:
         description: Pass the jina-operator branch
         required: true
-        default: main
   workflow_call:
     inputs:
       branch-name:
