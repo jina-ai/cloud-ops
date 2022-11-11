@@ -41,6 +41,7 @@ jobs:
           echo "${{ steps.abc.outputs.added_modified }}"
 
   compatibility-test-necessity:
+    runs-on: ubuntu-latest
     steps:
       - name: Check if needed to run Compatibility Test
         run: |
