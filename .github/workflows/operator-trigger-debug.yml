@@ -13,10 +13,9 @@ concurrency:
 
 jobs:
   call-workflow-passing-data:
-    runs-on: ubuntu-latest
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     with:
-      branch: feat-backward-com
+      branch: ${{ inputs.branch }}
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
   
