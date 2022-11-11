@@ -237,11 +237,11 @@ jobs:
         for i in {1..60}
         do
           INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
-          if [ -n "${INDICATOR}" ]; then
+          if [[ -n "${INDICATOR}" ]]; then
             echo "Operator is now running as exspected, continue."
             exit 0
           fi
-          echo "Operator is not in running state, will retry ..."
+          echo "Operator is not in running state, retry ${1}."
           sleep 1
         done
         exit 1
