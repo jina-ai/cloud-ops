@@ -121,10 +121,10 @@ jobs:
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
     - name: Wait until Operatpr is healthy
       run: |
-        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
         for i in {1..60}
         do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
           if [[ -n "${INDICATOR}" ]]; then
             echo "Operator is now running as exspected, continue."
             exit 0
@@ -237,7 +237,7 @@ jobs:
       run: |
         for i in {1..60}
         do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
           if [[ -n "${INDICATOR}" ]]; then
             echo "Operator is now running as exspected, continue."
             exit 0
