@@ -119,6 +119,19 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until Operatpr is healthy
+      run: |
+        for i in {1..60}
+        do
+            INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
+            if [ -n "${INDICATOR}" ]; then
+            echo "Operator is now running as exspected, continue."
+            exit 0
+            fi
+            echo "Operator is not in running state, will retry ..."
+            sleep 1
+        done
+        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
@@ -219,6 +232,19 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until Operatpr is healthy
+      run: |
+        for i in {1..60}
+        do
+            INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
+            if [ -n "${INDICATOR}" ]; then
+            echo "Operator is now running as exspected, continue."
+            exit 0
+            fi
+            echo "Operator is not in running state, will retry ..."
+            sleep 1
+        done
+        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
