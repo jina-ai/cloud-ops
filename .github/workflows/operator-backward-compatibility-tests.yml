@@ -248,6 +248,7 @@ jobs:
         exit 1
     - name: Wait until Operator is healthy
       run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
         for i in {1..60}
         do
           INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
