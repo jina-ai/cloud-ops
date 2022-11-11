@@ -6,60 +6,26 @@ on:
       branch:
         description: Pass the jina-operator branch
         required: true
-
-concurrency:
-  group: operator-e2e-tests
-  cancel-in-progress: false
+      only_api_changed:
+        description: Set to true to if only API code was changed
+        type: boolean
+        default: false
+        required: false
 
 jobs:
-  test:
+  compatibility-test
     runs-on: ubuntu-latest
+    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == false) }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Run Compatibility Test
+        uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+        secrets: inherit
         with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
-      - uses: jitterbit/get-changed-files@v1
-        id: abc
-        with:
-          format: space-delimited
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Printing
-        run: |
-          echo "All:"
-          echo "${{ steps.abc.outputs.all }}"
-          echo "Added:"
-          echo "${{ steps.abc.outputs.added }}"
-          echo "Removed:"
-          echo "${{ steps.abc.outputs.removed }}"
-          echo "Renamed:"
-          echo "${{ steps.abc.outputs.renamed }}"
-          echo "Modified:"
-          echo "${{ steps.abc.outputs.modified }}"
-          echo "Added+Modified:"
-          echo "${{ steps.abc.outputs.added_modified }}"
-
-  compatibility-test-necessity:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check if needed to run Compatibility Test
-        run: |
-          RUN_COMP_TEST=1
-          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            RUN_COMP_TEST=0
-          fi
-          echo "RUN_COMP_TEST=$RUN_COMP_TEST" >> $GITHUB_ENV
-
-  # compatibility-test:
-  #   uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
-  #   secrets: inherit
-  #   with:
-  #     branch: ${{ github.event.inputs.branch }}
+          branch: ${{ github.event.inputs.branch }}
 
   success-all-test:
     needs: 
-      - compatibility-test-necessity
+      - compatibility-test
     if: always()
     runs-on: ubuntu-latest
     steps:
