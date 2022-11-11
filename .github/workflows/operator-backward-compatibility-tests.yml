@@ -12,10 +12,6 @@ on:
         required: true
         type: string
 
-permissions:
-  id-token: write
-  contents: read
-
 concurrency:
   group: operator-compatibility-tests
   cancel-in-progress: false
@@ -71,9 +67,6 @@ jobs:
   build-api-manager-from-branch:
     needs: prep
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@master
@@ -109,9 +102,6 @@ jobs:
   deployment-from-main:
     needs: prep
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@master
@@ -175,9 +165,6 @@ jobs:
   compatibility-tests-setup:
     needs: deployment-from-main
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -229,9 +216,6 @@ jobs:
       - build-operator-from-branch
       - build-api-manager-from-branch
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     steps:
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@master
@@ -295,9 +279,6 @@ jobs:
   compatibility-tests:
     needs: deployment-from-branch
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
     strategy:
       fail-fast: false
       matrix:
