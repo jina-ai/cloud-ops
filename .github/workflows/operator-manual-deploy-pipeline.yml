@@ -1,0 +1,91 @@
+name: "(jc-operator) Jcloud operator manual deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag
+        default: ""
+        required: false
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      environment:
+        description: Deploy Environment
+        required: false
+      eks_region:
+        description: EKS Region
+        default: "us-east-1"
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.client_payload.release_token != env.release_token
+        env:
+          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
+  deployment:
+    needs: token-check
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == "CI" || ${{ github.event.inputs.environment }} == "dev" || ${{ github.event.inputs.environment }} == "tmp" || ${{ github.event.inputs.environment }} == "prod"
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: Get remote state
+      uses: dflook/terraform-remote-state@v1
+      id: remote-state
+      with:
+        backend_type: s3
+        backend_config: |
+          bucket=jina-terraform-state
+          key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
+          region=us-east-2
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        if [[ ${{ github.event.inputs.environment }} == 'prod' ]]; then
+          bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+          -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
+          --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+        else
+          if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+          else
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.image_tag }}
+          fi
+        fi
+    - name: set env
+      run: |
+        if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
+        else
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}"
+        fi

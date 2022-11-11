@@ -1,4 +1,4 @@
-name: "Operator Docker Image Build & Push"
+name: "(jc-operator) Operator Docker Image Build & Push"
 
 on:
   repository_dispatch:
