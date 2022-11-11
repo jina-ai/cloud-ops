@@ -8,7 +8,7 @@ on:
         required: true
   workflow_call:
     inputs:
-      branch-name:
+      branch:
         required: true
         type: string
     secrets:
