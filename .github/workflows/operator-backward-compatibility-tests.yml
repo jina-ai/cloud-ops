@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -107,7 +107,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@master
       with:
         aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
         aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -198,7 +198,7 @@ jobs:
           go mod tidy -v
         working-directory: ./operator
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -221,7 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@master
       with:
         aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
         aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -312,7 +312,7 @@ jobs:
           go mod tidy -v
         working-directory: ./operator
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
