@@ -15,6 +15,7 @@ jobs:
   call-workflow-passing-data:
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     permissions:
+      id-token: write
       contents: read
     with:
       branch: ${{ inputs.branch }}
