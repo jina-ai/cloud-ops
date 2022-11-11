@@ -15,7 +15,7 @@ on:
 jobs:
   compatibility-test
     runs-on: ubuntu-latest
-    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == false) }}
+    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
     steps:
       - name: Run Compatibility Test
         uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
