@@ -119,20 +119,6 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-    - name: Wait until Operatpr is healthy
-      run: |
-        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
-        for i in {1..60}
-        do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
-          if [[ -n "$INDICATOR" ]]; then
-            echo "Operator is now running as exspected, continue."
-            exit 0
-          fi
-          echo "Operator is not in running state, retry ${1}."
-          sleep 1
-        done
-        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
@@ -143,6 +129,20 @@ jobs:
             exit 0
           fi
           echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
+        for i in {1..60}
+        do
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
+          if [[ -n "${INDICATOR}" ]]; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry ${1}."
           sleep 1
         done
         exit 1
@@ -233,19 +233,6 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-    - name: Wait until Operatpr is healthy
-      run: |
-        for i in {1..60}
-        do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
-          if [[ -n "$INDICATOR" ]]; then
-            echo "Operator is now running as exspected, continue."
-            exit 0
-          fi
-          echo "Operator is not in running state, retry ${1}."
-          sleep 1
-        done
-        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
@@ -256,6 +243,19 @@ jobs:
             exit 0
           fi
           echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        for i in {1..60}
+        do
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
+          if [[ -n "${INDICATOR}" ]]; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry ${1}."
           sleep 1
         done
         exit 1
