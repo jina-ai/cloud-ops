@@ -177,7 +177,7 @@ jobs:
   compatibility-tests-setup:
     needs: deployment-from-main
     runs-on: ubuntu-latest
-      permissions:
+    permissions:
       id-token: write
       contents: read
     strategy:
