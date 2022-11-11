@@ -11,9 +11,7 @@ on:
       branch:
         required: true
         type: string
-    secrets:
-      token:
-        required: true
+
 permissions:
   id-token: write
   contents: read
