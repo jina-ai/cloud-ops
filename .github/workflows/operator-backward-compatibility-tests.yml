@@ -17,16 +17,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prep:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Env setup for the rest of the jobs
-        run: |-
-          echo "HAHAHHAHAHA"
-          echo ${{ github.event.inputs.branch }}
-
   build-operator-from-branch:
-    needs: prep
+    # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -65,7 +58,8 @@ jobs:
           fi
 
   build-api-manager-from-branch:
-    needs: prep
+    # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -100,7 +94,6 @@ jobs:
           bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
 
   deployment-from-main:
-    needs: prep
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
