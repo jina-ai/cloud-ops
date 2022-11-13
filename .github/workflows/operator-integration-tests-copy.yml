@@ -7,11 +7,11 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
-    only_api_changed:
-      description: Set to true to if only API code was changed
-      type: boolean
-      default: false
-      required: false
+      only_api_changed:
+        description: Set to true to if only API code was changed
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: operator-e2e-tests
