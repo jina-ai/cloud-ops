@@ -15,8 +15,10 @@ on:
 jobs:
   compatibility-test:
     if: ${{ inputs.only_api_changed != 'true'}}
-    run: |
-      echo "AAJAJAJAJAJJA"
+    steps: 
+      - name: "TEST
+        run: |
+          echo "AAJAJAJAJAJJA"
 
   # compatibility-test:
   #   if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
