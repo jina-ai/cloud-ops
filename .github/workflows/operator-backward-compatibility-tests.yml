@@ -285,6 +285,9 @@ jobs:
 
   backward-compatibility-tests:
     needs: deployment-from-branch
+    if: |
+      always() &&
+      (needs.deployment-from-branch.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
