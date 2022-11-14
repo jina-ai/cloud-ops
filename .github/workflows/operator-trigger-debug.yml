@@ -19,6 +19,7 @@ jobs:
     steps: 
       - name: "TEST"
         run: |
+          echo '${{inputs.only_api_changed}}'
           echo "AAJAJAJAJAJJA"
 
   # compatibility-test:
