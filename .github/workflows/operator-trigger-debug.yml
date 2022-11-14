@@ -16,7 +16,7 @@ jobs:
   compatibility-test:
     if: ${{ inputs.only_api_changed != 'true'}}
     steps: 
-      - name: "TEST
+      - name: "TEST"
         run: |
           echo "AAJAJAJAJAJJA"
 
