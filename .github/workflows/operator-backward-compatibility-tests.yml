@@ -17,7 +17,7 @@ on:
         type: string
       manual_run:
         description: Please check if this job is manually run.
-        default: true
+        default: false
         required: false
         type: boolean
 
@@ -28,7 +28,7 @@ concurrency:
 jobs:
   build-operator-from-branch:
     # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
-    if: ${{ inputs.manual_run != 'true' }}
+    if: ${{ inputs.manual_run }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -68,7 +68,7 @@ jobs:
 
   build-api-manager-from-branch:
     # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
-    if: ${{ inputs.manual_run != 'true' }}
+    if: ${{ inputs.manual_run }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
