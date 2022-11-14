@@ -283,7 +283,7 @@ jobs:
         done
         exit 1
 
-  compatibility-tests:
+  backward-compatibility-tests:
     needs: deployment-from-branch
     runs-on: ubuntu-latest
     strategy:
@@ -333,7 +333,7 @@ jobs:
 
   success-all-test:
     needs: 
-      - compatibility-tests
+      - backward-compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
