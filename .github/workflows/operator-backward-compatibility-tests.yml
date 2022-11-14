@@ -21,10 +21,6 @@ on:
         required: false
         type: boolean
 
-concurrency:
-  group: operator-compatibility-tests
-  cancel-in-progress: false
-
 jobs:
   build-operator-from-branch:
     # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
@@ -165,7 +161,6 @@ jobs:
         exit 1
 
   compatibility-tests-setup:
-    needs: deployment-from-main
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -213,10 +208,6 @@ jobs:
         timeout-minutes: 20
 
   deployment-from-branch:
-    needs:
-      - compatibility-tests-setup
-      - build-operator-from-branch
-      - build-api-manager-from-branch
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
@@ -279,7 +270,6 @@ jobs:
         exit 1
 
   compatibility-tests:
-    needs: deployment-from-branch
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -327,8 +317,6 @@ jobs:
         timeout-minutes: 20
 
   success-all-test:
-    needs: 
-      - compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
