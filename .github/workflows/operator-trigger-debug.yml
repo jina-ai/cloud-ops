@@ -14,11 +14,16 @@ on:
 
 jobs:
   compatibility-test:
-    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
-    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
-    secrets: inherit
-    with:
-      branch: ${{ github.event.inputs.branch }}
+    if: ${{ inputs.only_api_changed != 'true'}}
+    run: |
+      echo "AAJAJAJAJAJJA"
+
+  # compatibility-test:
+  #   if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
+  #   uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+  #   secrets: inherit
+  #   with:
+  #     branch: ${{ github.event.inputs.branch }}
 
   success-all-test:
     needs: 
