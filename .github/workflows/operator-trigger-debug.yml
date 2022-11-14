@@ -14,7 +14,7 @@ on:
 
 jobs:
   compatibility-test:
-    if: ${{ inputs.only_api_changed != 'true'}}
+    if: ${{ inputs.only_api_changed }}
     runs-on: ubuntu-latest
     steps: 
       - name: "TEST"
