@@ -34,6 +34,7 @@ jobs:
       - name: Test
         run: | 
           echo '${{github.event.inputs.manual_run}}'
+          echo '${{inputs.manual_run}}'
           echo '${{github.event_name}}'
 
   success-all-test:
