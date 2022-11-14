@@ -7,6 +7,7 @@ on:
         description: Pass the jina-operator branch
         required: true
       manual_run:
+        description: Please check if this job is manually run.
         default: false
         required: false
         type: boolean
@@ -16,7 +17,6 @@ on:
         required: true
         type: string
       manual_run:
-        description: Please check if this job is manually run.
         default: false
         required: false
         type: boolean
