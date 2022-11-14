@@ -217,6 +217,10 @@ jobs:
       - compatibility-tests-setup
       - build-operator-from-branch
       - build-api-manager-from-branch
+    if: |
+      always() &&
+      (needs.build-operator-from-branch.result == 'success' || needs.build-operator-from-branch.result == 'skipped') &&
+      (needs.build-api-manager-from-branch.result == 'success' || needs.build-api-manager-from-branch.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
