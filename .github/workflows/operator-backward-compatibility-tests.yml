@@ -31,15 +31,304 @@ jobs:
     if: ${{ github.event.inputs.manual_run != 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Test
-        run: | 
-          echo '${{github.event.inputs.manual_run}}'
-          echo '${{inputs.manual_run}}'
-          echo '${{github.event_name}}'
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for Operator
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
+            cd $GITHUB_WORKSPACE/operator/config/scripts/setup
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE/operator
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
+          else
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
+          fi
+
+  build-api-manager-from-branch:
+    # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
+    if: ${{ github.event.inputs.manual_run != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for API
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
+            cd $GITHUB_WORKSPACE/api/test/scripts
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
+
+  deployment-from-main:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@master
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        kubectl apply -f deployment/charts/jcloud-operator/crds/
+        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+        -f .github/ci/CI-values.yaml \
+        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+        
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until API is healthy
+      run: |
+        for i in {1..180}
+        do
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
+        for i in {1..60}
+        do
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
+          if [[ -n "${INDICATOR}" ]]; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry ${1}."
+          sleep 1
+        done
+        exit 1
+
+  compatibility-tests-setup:
+    needs: deployment-from-main
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: [controllers/test/compatibility/baseline_flows_setup_test.go]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      - name: Run Compatibility Test Suites for Operator
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
+        working-directory: ./operator
+        timeout-minutes: 20
+
+  deployment-from-branch:
+    needs:
+      - compatibility-tests-setup
+      - build-operator-from-branch
+      - build-api-manager-from-branch
+    runs-on: ubuntu-latest
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@master
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        kubectl apply -f deployment/charts/jcloud-operator/crds/
+        bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+        -f .github/ci/CI-values.yaml \
+        --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+    - name: Wait until API is healthy
+      run: |
+        for i in {1..180}
+        do
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
+        for i in {1..60}
+        do
+          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"`
+          if [[ -n "${INDICATOR}" ]]; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry ${1}."
+          sleep 1
+        done
+        exit 1
+
+  compatibility-tests:
+    needs: deployment-from-branch
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: [controllers/test/compatibility/backward_compatibility_test.go]
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@master
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      - name: Run Compatibility Test Suites for Operator
+        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
+        working-directory: ./operator
+        timeout-minutes: 20
 
   success-all-test:
     needs: 
-      - build-operator-from-branch
+      - compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
