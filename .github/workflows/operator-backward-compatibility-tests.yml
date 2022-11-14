@@ -6,11 +6,20 @@ on:
       branch:
         description: Pass the jina-operator branch
         required: true
+      manual_run:
+        default: false
+        required: false
+        type: boolean
   workflow_call:
     inputs:
       branch:
         required: true
         type: string
+      manual_run:
+        description: Please check if this job is manually run.
+        default: true
+        required: false
+        type: boolean
 
 concurrency:
   group: operator-compatibility-tests
@@ -19,7 +28,7 @@ concurrency:
 jobs:
   build-operator-from-branch:
     # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
-    if: ${{ github.event_name != 'workflow_call' }}
+    if: ${{ github.event.inputs.manual_run != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -59,7 +68,7 @@ jobs:
 
   build-api-manager-from-branch:
     # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
-    if: ${{ github.event_name != 'workflow_call' }}
+    if: ${{ github.event.inputs.manual_run != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
