@@ -14,7 +14,6 @@ concurrency:
 
 jobs:
   api-tests:
-    needs: prep-testbed-api
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
