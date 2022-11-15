@@ -57,3 +57,6 @@ jobs:
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
         working-directory: ./api
         timeout-minutes: 20
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
