@@ -48,7 +48,7 @@ jobs:
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
       - name: Run E2E Integration Test Suites for API
-        run: ginkgo -p --focus-file /test/e2e/basic_http_test.go -v --progress ./...
+        run: ginkgo -p --trace --focus-file /test/e2e/basic_http_test.go -v --progress ./...
         env:
           API_HOST: https://api-ci-episr.wolf.jina.ai
           ACK_GINKGO_RC: true
