@@ -1,0 +1,60 @@
+name: (jc-operator) Integration Tests API K8S Client DEBUG
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+
+concurrency:
+  group: operator-e2e-tests
+  cancel-in-progress: false
+
+jobs:
+  api-tests:
+    needs: prep-testbed-api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          go mod tidy -v
+          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
+          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
+          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
+          go install github.com/onsi/ginkgo/v2/ginkgo
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./api
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      - name: Run E2E Integration Test Suites for API
+        run: ginkgo -p --focus-file /test/e2e/basic_http_test.go -v --progress ./...
+        env:
+          API_HOST: https://api-ci-episr.wolf.jina.ai
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
+          FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
+          SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
+        working-directory: ./api
+        timeout-minutes: 20
