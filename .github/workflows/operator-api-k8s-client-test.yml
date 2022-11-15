@@ -55,6 +55,8 @@ jobs:
           ACK_GINKGO_DEPRECATIONS: 2.5.0
           FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         working-directory: ./api
         timeout-minutes: 20
       - name: Setup tmate session
