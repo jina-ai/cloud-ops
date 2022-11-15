@@ -7,6 +7,11 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
+      only_api_changed:
+        description: Set to true to if only API code was changed
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: operator-e2e-tests
@@ -29,7 +34,7 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
-          
+
   build-operator:
     runs-on: ubuntu-latest
     steps:
@@ -319,11 +324,19 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
-  # just for blocking the merge until all parallel integration-tests are successful
-  success-all-test:
+
+  compatibility-test:
     needs: 
       - operator-tests
       - api-tests
+    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+
+  success-all-test:
+    needs: compatibility-test
     if: always()
     runs-on: ubuntu-latest
     steps:
