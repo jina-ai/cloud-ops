@@ -8,7 +8,7 @@ on:
         required: true
         default: main
       only_api_changed:
-        description: Set to true to if only API code was changed
+        description: Check the box only if API related code was changed
         type: boolean
         default: false
         required: false
