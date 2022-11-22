@@ -27,7 +27,7 @@ jobs:
         with:
           script: |
             core.setFailed('token are not equivalent!')
-        if: github.event.client_payload.release_token != env.release_token
+        if: github.event.inputs.deploy_token != env.deploy_token
         env:
           release_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
   build-operator:
