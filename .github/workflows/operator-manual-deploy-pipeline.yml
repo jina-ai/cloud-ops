@@ -1,4 +1,4 @@
-name: "Jcloud operator manual deployment"
+name: "(jc-operator) Jcloud operator manual deployment"
 
 on:
   workflow_dispatch:
@@ -29,7 +29,7 @@ jobs:
             core.setFailed('token are not equivalent!')
         if: github.event.client_payload.release_token != env.release_token
         env:
-          release_token: ${{ secrets.WOLF_RELEASE_TOKEN }}
+          release_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
   build-operator:
     needs: token-check
     runs-on: ubuntu-latest
