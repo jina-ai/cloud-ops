@@ -44,7 +44,7 @@ jobs:
         id: flag_flows
         run: |
           aws eks update-kubeconfig --region us-east-1 --name jcloud-prod-eks-kcjpa
-          for namespace in `echo ${{ github.event.inputs.flow_id }}|awk -F ';' '{print $1}'`
+          for namespace in `echo "${{ github.event.inputs.flow_id }}"|awk -F ';' '{print $1}'`
           do
             echo "add no-delete flag to all flows in namespace jnamespace-${namespace}"
             flows=`kubectl get flows -n jnamespace-${namespace}|grep -v NAME|awk '{print $1}'`
