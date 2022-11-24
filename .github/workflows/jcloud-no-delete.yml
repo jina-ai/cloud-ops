@@ -47,15 +47,15 @@ jobs:
           for namespace in `echo "${{ github.event.inputs.flow_id }}"| tr ";" "\n"`
           do
             echo "add no-delete flag to all flows in namespace jnamespace-${namespace}"
-            flows=`kubectl get flows -n jnamespace-${namespace}|grep -v NAME|awk '{print $1}'`
+            flows=`kubectl get flows -n jnamespace-${namespace}`
             if [[ ${flows} == '' ]]; then
               echo "empty jnamespace-${namespace}, continue."
               continue
             else
-              for flow in flows
+              for flow in `kubectl get flows -n jnamespace-${namespace}|grep -v NAME|awk '{print $1}'`
               do
                 echo "mark flow ${flow} no-delete as ${{ github.event.inputs.non_delete_flag }}."
-                kubectl patch flow ${flow} -n jnamespace-${namespace} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
+                kubectl patch flows ${flow} -n jnamespace-${namespace} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
               done
             fi
           done
