@@ -1,0 +1,60 @@
+name: "(jc-flow) add no-delete flag to jcloud flow "
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      flow_id:
+        description: flow id (seperated by semicolon), e.g. fb91746434;d6419b6dc7
+        default: ""
+        required: true
+      non_delete_flag:
+        type: boolean
+        description: Add/Remove no-delete flag
+        default: true
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_USER_TOKEN }}
+  build-operator:
+    needs: token-check
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Flag flows
+        id: flag_flows
+        run: |
+          for namespace in `echo ${{ github.event.inputs.flow_id }}|awk -F ';' '{print $1}'`
+          do
+            echo "add no-delete flag to all flows in namespace jnamespace-${namespace}"
+            flows=`kubectl get flows -n jnamespace-${namespace}|grep -v NAME|awk '{print $1}'`
+            if [[ ${flows} == '' ]]; then
+              echo "empty jnamespace-${namespace}, continue."
+              continue
+            else
+              for flow in flows
+              do
+                echo "mark flow ${flow} no-delete as ${{ github.event.inputs.non_delete_flag }}."
+                kubectl patch flow ${flow} -n jnamespace-${namespace} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
+              done
+            fi
+          done
