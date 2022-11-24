@@ -28,7 +28,7 @@ jobs:
         if: github.event.inputs.deploy_token != env.deploy_token
         env:
           deploy_token: ${{ secrets.JCLOUD_USER_TOKEN }}
-  build-operator:
+  flag-flows:
     needs: token-check
     runs-on: ubuntu-latest
     env:
