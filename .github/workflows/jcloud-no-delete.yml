@@ -56,16 +56,16 @@ jobs:
               fi
               kubectl patch flows ${BASH_REMATCH[1]} -n jnamespace-${BASH_REMATCH[2]} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
           else
-              echo "add no-delete flag to all flows in namespace jnamespace-${namespace}"
+              echo "add no-delete flag to all flows in namespace jnamespace-${flow}"
               ns=`kubectl get ns jnamespace-${flow}`
               if [[ $? -ne 0 ]]; then
                   echo "no namespace jnamespace-${flow}"
                   exit 1
               fi
-              for flow in `kubectl get flows -n jnamespace-${namespace}|grep -v NAME|awk '{print $1}'`
+              for f in `kubectl get flows -n jnamespace-${flow}|grep -v NAME|awk '{print $1}'`
               do
-              echo "mark flow ${flow} no-delete as ${{ github.event.inputs.non_delete_flag }}."
-              kubectl patch flows ${flow} -n jnamespace-${namespace} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
+              echo "mark flow ${f} no-delete as ${{ github.event.inputs.non_delete_flag }}."
+              kubectl patch flows ${f} -n jnamespace-${flow} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
               done
           fi
           done
