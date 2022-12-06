@@ -211,8 +211,11 @@ jobs:
         fi
     - name: set env
       run: |
-        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}"
-      env:
-        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+        if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ secrets.GRAFANA_AUTH_TOKEN }}"
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.MONGO_URI }}"
+        else
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ secrets.GRAFANA_AUTH_TOKEN }}"
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}"
+        fi
+
