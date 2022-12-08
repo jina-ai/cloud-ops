@@ -15,12 +15,7 @@ jobs:
       - name: Get now latest tag
         id: latest
         uses: "WyriHaximus/github-action-get-previous-tag@v1"
-      - id: set-matrix
-        run: |
-          sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash scripts/get-all-test-paths.sh)"
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
       tag: ${{ steps.latest.outputs.tag }}
 
   now-integration-tests:
@@ -87,6 +82,6 @@ jobs:
           pip install --no-cache-dir -r requirements-test.txt
       - name: Run tests
         run: |
-          pytest -v -m remote ${{ matrix.test-path }}
+          pytest -v -m remote tests/integration/test_end_to_end.py
         env:
           JCLOUD_API: https://api-ci-episr.wolf.jina.ai
