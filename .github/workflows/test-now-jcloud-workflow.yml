@@ -62,12 +62,10 @@ jobs:
           echo "{\"auth_token\": \"${WOLF_TOKEN}\"}" > ~/.jina/config.json
           cat ~/.jina/config.json
         env:
-          WOLF_TOKEN: $_WOLF_NPRD_GENERAL_WOLF_TOKEN
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+          WOLF_TOKEN: $_WOLF_NPRD_GENERAL_WOLF_TOKENs
       - name: Run tests
         run: |
-          pytest -v -m remote --group ${{ matrix.group }} --splitting-algorithm least_duration tests/integration/test_end_to_end.py
+          pytest -v -m remote --splits 9 --group ${{ matrix.group }} --splitting-algorithm least_duration tests/integration/test_end_to_end.py
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
