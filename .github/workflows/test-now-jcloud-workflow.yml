@@ -21,10 +21,6 @@ jobs:
   now-integration-tests:
     needs: now-prep-testbed
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        test-path: ${{fromJson(needs.now-prep-testbed.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
