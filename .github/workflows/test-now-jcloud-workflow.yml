@@ -46,25 +46,47 @@ jobs:
       - name: Set secrets to env vars
         run: |
           export DOCKER_PASSWORD=$_WOLF_NPRD_GENERAL_DOCKER_PASSWORD
-          echo $DOCKER_PASSWORD
-      # - name: Checkout now repo
-      #   uses: actions/checkout@v3
-      #   with:
-      #     repository: jina-ai/now
-      #     ref: ${{ needs.now-prep-testbed.outputs.tag }}
-      # - name: Setup Python 3.7
-      #   uses: actions/setup-python@v2
-      #   with:
-      #     python-version: 3.7
-      # - name: Prepare environment
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     python -m pip install wheel
-      #     export JCLOUD_LOGLEVEL=DEBUG
-      #     pip install --no-cache-dir -r requirements.txt
-      #     pip install --no-cache-dir -r requirements-test.txt
-      # - name: Run tests
-      #   run: |
-      #     pytest -v -m remote ${{ matrix.test-path }}
-      #   env:
-      #     JCLOUD_API: https://api-ci-episr.wolf.jina.ai
+          export HUBBLE_AUTH_TOKEN=$_WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN
+          export DOCKER_USERNAME=$_WOLF_NPRD_GENERAL_DOCKER_USERNAME
+          export JINA_DEV_BOT=$_WOLF_NPRD_GENERAL_JINA_DEV_BOT
+          export JINA_OPTOUT_TELEMETRY=$_WOLF_NPRD_GENERAL_JINA_OPTOUT_TELEMETRY
+          export NETLIFY_AUTH_TOKEN1=$_WOLF_NPRD_GENERAL_NETLIFY_AUTH_TOKEN1
+          export NETLIFY_SITE_ID=$_WOLF_NPRD_GENERAL_NETLIFY_SITE_ID
+          export ANNLITE_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_ANNLITE_EXECUTOR_SECRET
+          export AUTH_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_AUTH_EXECUTOR_SECRET
+          export AUTOCOMPLETE_SECRET=$_WOLF_NPRD_GENERAL_NOW_AUTOCOMPLETE_SECRET
+          export NOW_ELASTIC_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_ELASTIC_EXECUTOR_SECRET
+          export NOW_OCR_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_OCR_EXECUTOR_SECRET
+          export NOW_POSTPROCESSOR_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_POSTPROCESSOR_EXECUTOR_SECRET
+          export NOW_PREPROCESSOR_JCLOUD_TOKEN=$_WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_JCLOUD_TOKEN
+          export NOW_PREPROCESSOR_REPO=$_WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO
+          export NOW_PREPROCESSOR_REPO_TOKEN=$_WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO_TOKEN
+          export NOW_QDRANT_EXECUTOR_SECRET=$_WOLF_NPRD_GENERAL_NOW_QDRANT_EXECUTOR_SECRET
+          export NOW_STAGING_FLORIAN=$_WOLF_NPRD_GENERAL_NOW_STAGING_FLORIAN
+          export PERSONAL_ACCESS_TOKEN=$_WOLF_NPRD_GENERAL_PERSONAL_ACCESS_TOKEN
+          export S3_IMAGE_TEST_DATA_PATH=$_WOLF_NPRD_GENERAL_S3_IMAGE_TEST_DATA_PATH
+          export TWINE_PASSWORD=$_WOLF_NPRD_GENERAL_TWINE_PASSWORD
+          export TWINE_USERNAME=$_WOLF_NPRD_GENERAL_TWINE_USERNAME
+          export WOLF_EXAMPLES_TOKEN=$_WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN
+          export WOLF_TOKEN=$_WOLF_NPRD_GENERAL_WOLF_TOKEN
+      - name: Checkout now repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/now
+          ref: ${{ needs.now-prep-testbed.outputs.tag }}
+      - name: Setup Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Prepare environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheel
+          export JCLOUD_LOGLEVEL=DEBUG
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir -r requirements-test.txt
+      - name: Run tests
+        run: |
+          pytest -v -m remote ${{ matrix.test-path }}
+        env:
+          JCLOUD_API: https://api-ci-episr.wolf.jina.ai
