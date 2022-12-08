@@ -2,11 +2,6 @@ name: (test-workflow) now-jcloud integration Tests
 
 on:
   workflow_dispatch:
-    inputs:
-      release:
-        description: Pass the jina-now release
-        required: true
-        default: latest
 
 jobs:
   now-prep-testbed:
@@ -50,7 +45,8 @@ jobs:
           parse-json: true
       - name: Set secrets to env vars
         run: |
-          env
+          export DOCKER_PASSWORD=$_WOLF_NPRD_GENERAL_DOCKER_PASSWORD
+          echo $DOCKER_PASSWORD
       # - name: Checkout now repo
       #   uses: actions/checkout@v3
       #   with:
