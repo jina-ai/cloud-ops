@@ -21,6 +21,11 @@ jobs:
   now-integration-tests:
     needs: now-prep-testbed
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.7]
+        group: [1, 2, 3, 4, 5, 6, 7, 8, 9] # set to the number of end-to-end tests + 1
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -34,9 +39,6 @@ jobs:
           secrets: |
             /wolf/nprd/general
           parse-json: true
-      - name: Set secrets to env vars
-        run: |
-
       - name: Checkout now repo
         uses: actions/checkout@v3
         with:
@@ -48,15 +50,24 @@ jobs:
           python-version: 3.7
       - name: Prepare environment
         run: |
+          sudo apt update && sudo apt install ffmpeg
           python -m pip install --upgrade pip
           python -m pip install wheel
           export JCLOUD_LOGLEVEL=DEBUG
-          pip install --no-cache-dir -r requirements.txt
-          pip install --no-cache-dir -r requirements-test.txt
-          pip install --no-cache-dir pytest-xdist
+          pip install --no-cache-dir ".[full,test]"
+      - name: Add JCloud auth token
+        run: |
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${WOLF_TOKEN}\"}" > ~/.jina/config.json
+          cat ~/.jina/config.json
+        env:
+          WOLF_TOKEN: $_WOLF_NPRD_GENERAL_WOLF_TOKEN
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Run tests
         run: |
-          pytest -v -n 5 -m remote tests/integration/test_end_to_end.py
+          pytest -v -m remote --group ${{ matrix.group }} --splitting-algorithm least_duration tests/integration/test_end_to_end.py
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
