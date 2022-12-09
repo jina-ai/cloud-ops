@@ -57,7 +57,7 @@ jobs:
           echo "{\"auth_token\": \"${WOLF_TOKEN}\"}" > ~/.jina/config.json
           cat ~/.jina/config.json
         env:
-          WOLF_TOKEN: $_WOLF_NPRD_GENERAL_WOLF_TOKEN
+          WOLF_TOKEN: ${_WOLF_NPRD_GENERAL_WOLF_TOKEN}
       - name: Run tests
         run: |
           pytest -v -m remote tests/integration/test_end_to_end.py
