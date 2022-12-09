@@ -54,10 +54,8 @@ jobs:
         run: |
           mkdir -p ~/.jina
           touch ~/.jina/config.json
-          echo "{\"auth_token\": \"${WOLF_TOKEN}\"}" > ~/.jina/config.json
+          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cat ~/.jina/config.json
-        env:
-          WOLF_TOKEN: ${_WOLF_NPRD_GENERAL_WOLF_TOKEN}
       - name: tmate session
         uses: mxschmitt/action-tmate@v3
       # - name: Run tests
