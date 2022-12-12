@@ -51,6 +51,12 @@ jobs:
           pip install --no-cache-dir ".[full,test]"
         env:
           JCLOUD_LOGLEVEL: DEBUG
+      - name: Add JCloud auth token
+        run: |
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
+          cat ~/.jina/config.json
       - name: Run tests
         run: |
           pytest -v -m remote tests/integration/test_end_to_end.py
@@ -81,4 +87,3 @@ jobs:
           WOLF_EXAMPLES_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          JINA_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
