@@ -366,6 +366,37 @@ jobs:
       - name: Check Failure
         if: env.WORKFLOW_CONCLUSION == 'failure'
         run: exit 1
+      
+      - name: Notify success
+        if: ${{ success() }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :white_check_mark:`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          
+      - name: Notify failure
+        if: ${{ success() }}
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :x: `,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+      
       - name: Success
         if: ${{ success() }}
         run: echo "All Done"
