@@ -53,5 +53,6 @@ jobs:
             exit 1
           else
             kubectl scale deployment ${{ github.event.inputs.executor_name }} -n jnamespace-${{ github.event.inputs.flow_id }} --replicas ${{ github.event.inputs.replicas }}
+          fi
           sleep 6
           kubectl get deployment ${{ github.event.inputs.executor_name }} -n jnamespace-${{ github.event.inputs.flow_id }}
