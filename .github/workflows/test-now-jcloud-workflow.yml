@@ -1,0 +1,91 @@
+name: (test-workflow) now-jcloud integration Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  now-prep-testbed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout now repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/now
+          fetch-depth: 0
+      - name: Get now latest tag
+        id: latest
+        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+    outputs:
+      tag: ${{ steps.latest.outputs.tag }}
+
+  now-integration-tests:
+    needs: now-prep-testbed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
+      - name: Checkout now repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/now
+          ref: ${{ needs.now-prep-testbed.outputs.tag }}
+      - name: Setup Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Prepare environment
+        run: |
+          sudo apt update && sudo apt install ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install wheel
+          pip install --no-cache-dir ".[full,test]"
+        env:
+          JCLOUD_LOGLEVEL: DEBUG
+      - name: Add JCloud auth token
+        run: |
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
+          cat ~/.jina/config.json
+      - name: Run tests
+        run: |
+          pytest -v -m remote tests/integration/test_end_to_end.py
+        env:
+          S3_IMAGE_TEST_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_IMAGE_TEST_DATA_PATH }}
+          JCLOUD_API: https://api-ci-episr.wolf.jina.ai
+          DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
+          HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}
+          DOCKER_USERNAME: ${{ env._WOLF_NPRD_GENERAL_DOCKER_USERNAME }}
+          JINA_DEV_BOT: ${{ env._WOLF_NPRD_GENERAL_JINA_DEV_BOT }}
+          JINA_OPTOUT_TELEMETRY: ${{ env._WOLF_NPRD_GENERAL_JINA_OPTOUT_TELEMETRY }}
+          NETLIFY_AUTH_TOKEN1: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_AUTH_TOKEN1 }}
+          NETLIFY_SITE_ID: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_SITE_ID }}
+          NOW_ANNLITE_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ANNLITE_EXECUTOR_SECRET }}
+          NOW_AUTH_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTH_EXECUTOR_SECRET }}
+          NOW_AUTOCOMPLETE_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTOCOMPLETE_SECRET }}
+          NOW_ELASTIC_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ELASTIC_EXECUTOR_SECRET }}
+          NOW_OCR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_OCR_EXECUTOR_SECRET }}
+          NOW_POSTPROCESSOR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_POSTPROCESSOR_EXECUTOR_SECRET }}
+          NOW_PREPROCESSOR_JCLOUD_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_JCLOUD_TOKEN }}
+          NOW_PREPROCESSOR_REPO: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO }}
+          NOW_PREPROCESSOR_REPO_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO_TOKEN }}
+          NOW_QDRANT_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_QDRANT_EXECUTOR_SECRET }}
+          NOW_STAGING_FLORIAN: ${{ env._WOLF_NPRD_GENERAL_NOW_STAGING_FLORIAN }}
+          PERSONAL_ACCESS_TOKEN: ${{ env._WOLF_NPRD_GENERAL_PERSONAL_ACCESS_TOKEN }}
+          TWINE_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_TWINE_PASSWORD }}
+          TWINE_USERNAME: ${{ env._WOLF_NPRD_GENERAL_TWINE_USERNAME }}
+          WOLF_EXAMPLES_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN }}
+          WOLF_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          JINA_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}

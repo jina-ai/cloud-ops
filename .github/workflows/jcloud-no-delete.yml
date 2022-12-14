@@ -1,4 +1,4 @@
-name: "(jc-flow) add no-delete flag to jcloud flow "
+name: "(jc-flow) add no-delete flag to jcloud flow, re-run will not affect current flags."
 
 on:
   workflow_dispatch:
@@ -8,12 +8,12 @@ on:
         default: ""
         required: true
       flow_id:
-        description: flow id (seperated by semicolon), e.g. fb91746434;d6419b6dc7
+        description: flow id (seperated by semicolon), e.g. fb91746434;d6419b6dc7 or example-flow-d50e307e96;example-flow-2-d6419b6dc7
         default: ""
         required: true
       non_delete_flag:
         type: boolean
-        description: Add/Remove no-delete flag
+        description: if checked, flow is not cleaned up. If not checked, no-delete flag is removed.
         default: true
         required: true
 

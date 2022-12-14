@@ -1,0 +1,58 @@
+name: "(jc-flow) scale flow replicas."
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      flow_id:
+        description: flow id (only accept flow uid), e.g. fb91746434
+        default: ""
+        required: true
+      executor_name:
+        default: ""
+        required: true
+        description: executor name.
+      replicas:
+        default: ""
+        required: true
+        description: expected replicas number.
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_USER_TOKEN }}
+  scale-executor:
+    needs: token-check
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Flag flows
+        id: flag_flows
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name jcloud-prod-eks-kcjpa
+          kubectl get deployment ${{ github.event.inputs.executor_name }} -n jnamespace-${{ github.event.inputs.flow_id }}
+          if [[ $? -ne 0 ]]; then
+            echo "failed to get deployment ${{ github.event.inputs.executor_name }} from namespace jnamespace-${{ github.event.inputs.flow_id }}, quit."
+            exit 1
+          else
+            kubectl scale deployment ${{ github.event.inputs.executor_name }} -n jnamespace-${{ github.event.inputs.flow_id }} --replicas ${{ github.event.inputs.replicas }}
+          fi
+          sleep 6
+          kubectl get deployment ${{ github.event.inputs.executor_name }} -n jnamespace-${{ github.event.inputs.flow_id }}
