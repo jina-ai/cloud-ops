@@ -363,12 +363,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: technote-space/workflow-conclusion-action@v2
-      - name: Check Failure
-        if: env.WORKFLOW_CONCLUSION == 'failure'
-        run: exit 1
       
       - name: Notify success
-        if: ${{ success() }}
+        if: env.WORKFLOW_CONCLUSION != 'failure'
         uses: 8398a7/action-slack@v3
         with:
           status: custom
@@ -383,7 +380,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           
       - name: Notify failure
-        if: ${{ failure() }}
+        if: env.WORKFLOW_CONCLUSION == 'failure'
         uses: 8398a7/action-slack@v3
         with:
           status: custom
@@ -397,6 +394,10 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
       
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: exit 1
+        
       - name: Success
         if: ${{ success() }}
         run: echo "All Done"
