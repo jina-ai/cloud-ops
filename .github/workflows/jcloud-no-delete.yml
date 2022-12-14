@@ -1,0 +1,71 @@
+name: "(jc-flow) add no-delete flag to jcloud flow, re-run will not affect current flags."
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      flow_id:
+        description: flow id (seperated by semicolon), e.g. fb91746434;d6419b6dc7 or example-flow-d50e307e96;example-flow-2-d6419b6dc7
+        default: ""
+        required: true
+      non_delete_flag:
+        type: boolean
+        description: if checked, flow is not cleaned up. If not checked, no-delete flag is removed.
+        default: true
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_USER_TOKEN }}
+  flag-flows:
+    needs: token-check
+    runs-on: ubuntu-latest
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Flag flows
+        id: flag_flows
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name jcloud-prod-eks-kcjpa
+          JFLOW_PATTERN="(^[[:graph:]]+)-([[:graph:]]+)$"
+          for flow in `echo "${{ github.event.inputs.flow_id }}"| tr ";" "\n"`
+          do
+          if [[ ${flow} =~ ${JFLOW_PATTERN} ]]; then
+              echo "add no-delete flag to flow ${BASH_REMATCH[1]} in namespace ${BASH_REMATCH[2]}"
+              ns=`kubectl get flow ${BASH_REMATCH[1]} -n jnamespace-${BASH_REMATCH[2]}`
+              if [[ $? -ne 0 ]]; then
+                  echo "no resouces in namespace jnamespace-${BASH_REMATCH[2]}"
+                  exit 1
+              fi
+              kubectl patch flows ${BASH_REMATCH[1]} -n jnamespace-${BASH_REMATCH[2]} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
+          else
+              echo "add no-delete flag to all flows in namespace jnamespace-${flow}"
+              ns=`kubectl get ns jnamespace-${flow}`
+              if [[ $? -ne 0 ]]; then
+                  echo "no namespace jnamespace-${flow}"
+                  exit 1
+              fi
+              for f in `kubectl get flows -n jnamespace-${flow}|grep -v NAME|awk '{print $1}'`
+              do
+              echo "mark flow ${f} no-delete as ${{ github.event.inputs.non_delete_flag }}."
+              kubectl patch flows ${f} -n jnamespace-${flow} --patch '{"metadata":{"annotations":{"jina.ai/no-delete":"${{ github.event.inputs.non_delete_flag }}"}}}' --type=merge
+              done
+          fi
+          done

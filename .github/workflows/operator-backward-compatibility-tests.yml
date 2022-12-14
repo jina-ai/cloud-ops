@@ -6,7 +6,20 @@ on:
       branch:
         description: Pass the jina-operator branch
         required: true
-        default: main
+      manual_run:
+        description: Please check if this job is manually run.
+        default: false
+        required: false
+        type: boolean
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+        type: string
+      manual_run:
+        default: false
+        required: false
+        type: boolean
 
 concurrency:
   group: operator-compatibility-tests
@@ -14,10 +27,12 @@ concurrency:
 
 jobs:
   build-operator-from-branch:
+    # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
+    if: ${{ inputs.manual_run }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -52,10 +67,12 @@ jobs:
           fi
 
   build-api-manager-from-branch:
+    # Build only when it's triggered directly; the image has been built if this is triggered from integration tests.
+    if: ${{ inputs.manual_run }}
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -89,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@master
       with:
         aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
         aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -119,20 +136,6 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-    - name: Wait until Operatpr is healthy
-      run: |
-        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running
-        for i in {1..60}
-        do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
-          if [[ -n "${INDICATOR}" ]]; then
-            echo "Operator is now running as exspected, continue."
-            exit 0
-          fi
-          echo "Operator is not in running state, retry ${1}."
-          sleep 1
-        done
-        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
@@ -143,6 +146,19 @@ jobs:
             exit 0
           fi
           echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
+        for i in {1..60}
+        do
+          if kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry."
           sleep 1
         done
         exit 1
@@ -180,7 +196,7 @@ jobs:
           go mod tidy -v
         working-directory: ./operator
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -200,10 +216,15 @@ jobs:
       - compatibility-tests-setup
       - build-operator-from-branch
       - build-api-manager-from-branch
+    if: |
+      always() &&
+      (needs.compatibility-tests-setup.result == 'success') &&
+      (needs.build-operator-from-branch.result == 'success' || needs.build-operator-from-branch.result == 'skipped') &&
+      (needs.build-api-manager-from-branch.result == 'success' || needs.build-api-manager-from-branch.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@master
       with:
         aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
         aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -233,19 +254,6 @@ jobs:
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-    - name: Wait until Operatpr is healthy
-      run: |
-        for i in {1..60}
-        do
-          INDICATOR=`kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator --field-selector=status.phase=Running | grep "Running"`
-          if [[ -n "${INDICATOR}" ]]; then
-            echo "Operator is now running as exspected, continue."
-            exit 0
-          fi
-          echo "Operator is not in running state, retry ${1}."
-          sleep 1
-        done
-        exit 1
     - name: Wait until API is healthy
       run: |
         for i in {1..180}
@@ -259,9 +267,25 @@ jobs:
           sleep 1
         done
         exit 1
+    - name: Wait until Operator is healthy
+      run: |
+        kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator
+        for i in {1..60}
+        do
+          if kubectl get pods -n jcloud -l=app.kubernetes.io/name=jcloud-operator | grep "Running"; then
+            echo "Operator is now running as expected, continue."
+            exit 0
+          fi
+          echo "Operator is not in running state, retry."
+          sleep 1
+        done
+        exit 1
 
-  compatibility-tests:
+  backward-compatibility-tests:
     needs: deployment-from-branch
+    if: |
+      always() &&
+      (needs.deployment-from-branch.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -293,7 +317,7 @@ jobs:
           go mod tidy -v
         working-directory: ./operator
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@master
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
@@ -310,7 +334,7 @@ jobs:
 
   success-all-test:
     needs: 
-      - compatibility-tests
+      - backward-compatibility-tests
     if: always()
     runs-on: ubuntu-latest
     steps:

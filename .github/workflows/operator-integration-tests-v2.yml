@@ -7,6 +7,11 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
+      only_api_changed:
+        description: Check the box only if API related code was changed
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: operator-e2e-tests
@@ -16,6 +21,10 @@ jobs:
   notify-user:
     runs-on: ubuntu-latest
     steps:
+      - name: echo who triggered
+        run: |
+          echo -e "Who? ${{ github.actor }} \nWhat? ${{ github.event.inputs.branch }}"
+      
       - name: Notify who triggered the build
         uses: 8398a7/action-slack@v3
         with:
@@ -29,7 +38,7 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
-          
+
   build-operator:
     runs-on: ubuntu-latest
     steps:
@@ -142,10 +151,11 @@ jobs:
         fi
         
         kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}"
       env:
         MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+        GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
       
     - name: Wait until API is healthy
       run: |
@@ -272,14 +282,17 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+      
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
+      
       - name: Set up Python 3.7
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      
       - name: Install Dependencies
         run: |
           go mod tidy -v
@@ -290,14 +303,31 @@ jobs:
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./api
+      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      
+      - name: Make sure API is healthy
+        run: |
+          for i in {1..180}
+          do
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+              echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+              exit 0
+            fi
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+            sleep 2
+          done
+          exit 1
+      
       - name: Run E2E Integration Test Suites for API
         run: ginkgo -p --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
@@ -308,6 +338,7 @@ jobs:
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
         working-directory: ./api
         timeout-minutes: 20
+      
       - if: failure()
         uses: 8398a7/action-slack@v3
         with:
@@ -319,18 +350,58 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
-  # just for blocking the merge until all parallel integration-tests are successful
-  success-all-test:
+
+  compatibility-test:
     needs: 
       - operator-tests
       - api-tests
+    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+
+  success-all-test:
+    needs: compatibility-test
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: technote-space/workflow-conclusion-action@v2
+      
+      - name: Notify success
+        if: env.WORKFLOW_CONCLUSION != 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :white_check_mark:`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          
+      - name: Notify failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :x: `,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+      
       - name: Check Failure
         if: env.WORKFLOW_CONCLUSION == 'failure'
         run: exit 1
+        
       - name: Success
         if: ${{ success() }}
         run: echo "All Done"
