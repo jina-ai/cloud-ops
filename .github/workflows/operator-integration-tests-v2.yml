@@ -21,6 +21,10 @@ jobs:
   notify-user:
     runs-on: ubuntu-latest
     steps:
+      - name: echo who triggered
+        run: |
+          echo -e "Who? ${{ github.actor }} \nWhat? ${{ github.event.inputs.branch }}"
+      
       - name: Notify who triggered the build
         uses: 8398a7/action-slack@v3
         with:
