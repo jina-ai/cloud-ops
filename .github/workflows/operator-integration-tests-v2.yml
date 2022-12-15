@@ -48,34 +48,34 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      # - uses: actions/checkout@v3
-      #   with:
-      #     repository: jina-ai/jina-operator
-      #     ref: ${{ github.event.inputs.branch }}
-      #     token: ${{ secrets.JINA_DEV_BOT }}
-      # - name: Set up Golang 1.18
-      #   uses: actions/setup-go@v3
-      #   with:
-      #     go-version: 1.18
-      # - name: Run setup script for Operator
-      #   run: |
-      #     # cd is a hack to work with other branches (remove later)
-      #     if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
-      #       cd $GITHUB_WORKSPACE/operator/config/scripts/setup
-      #       go mod tidy
-      #       go run setup.go
-      #     fi
-      #   env:
-      #     MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-      # - name: Build Image
-      #   id: build_image
-      #   run: |
-      #     cd $GITHUB_WORKSPACE/operator
-      #     if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-      #       bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
-      #     else
-      #       bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
-      #     fi
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for Operator
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
+            cd $GITHUB_WORKSPACE/operator/config/scripts/setup
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE/operator
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
+          else
+            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
+          fi
   
   build-api-manager:
     runs-on: ubuntu-latest
@@ -86,34 +86,34 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      # - uses: actions/checkout@v3
-      #   with:
-      #     repository: jina-ai/jina-operator
-      #     ref: ${{ github.event.inputs.branch }}
-      #     token: ${{ secrets.JINA_DEV_BOT }}
-      # - name: Set up Golang 1.18
-      #   uses: actions/setup-go@v3
-      #   with:
-      #     go-version: 1.18
-      # - name: Run setup script for API
-      #   run: |
-      #     # cd is a hack to work with other branches (remove later)
-      #     if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
-      #       cd $GITHUB_WORKSPACE/api/test/scripts
-      #       go mod tidy
-      #       go run setup.go
-      #     fi
-      #   env:
-      #     MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-      # - name: Build Image
-      #   id: build_image
-      #   run: |
-      #     cd $GITHUB_WORKSPACE
-      #     if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-      #       bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
-      #     else
-      #       bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
-      #     fi
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for API
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
+            cd $GITHUB_WORKSPACE/api/test/scripts
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
+          else
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
+          fi
   
   deployment:
     needs: [build-api-manager, build-operator]
@@ -125,51 +125,51 @@ jobs:
         aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
         aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-    # - uses: actions/checkout@v3
-    #   with:
-    #       repository: jina-ai/jina-operator
-    #       ref: ${{ github.event.inputs.branch }}
-    #       token: ${{ secrets.JINA_DEV_BOT }}
-    # - name: helm clean
-    #   run: |
-    #     aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
-    #     for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-    #     do
-    #       helm uninstall ${i} -n jcloud
-    #     done
-    # - name: helm deploy
-    #   run: |
-    #     cd $GITHUB_WORKSPACE
-    #     if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-    #       bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
-    #       -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
-    #       --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
-    #     else
-    #       bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
-    #       -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
-    #       --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
-    #     fi
+    - uses: actions/checkout@v3
+      with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
+        do
+          helm uninstall ${i} -n jcloud
+        done
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+          bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+          -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
+          --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+        else
+          bash ./deployment/scripts/deploy.sh -r eu-west-3 -n jcloud-CI-eks-episr \
+          -f .github/ci/CI-values.yaml --api-host "api-ci-episr.wolf.jina.ai" \
+          --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+        fi
         
-    #     kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-    #     kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}"
-    #   env:
-    #     MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-    #     LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-    #     GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+        kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+        kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}"
+      env:
+        MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+        GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
       
-    # - name: Wait until API is healthy
-    #   run: |
-    #     for i in {1..180}
-    #     do
-    #       STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
-    #       if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
-    #         echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
-    #         exit 0
-    #       fi
-    #       echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
-    #       sleep 1
-    #     done
-    #     exit 1
+    - name: Wait until API is healthy
+      run: |
+        for i in {1..180}
+        do
+          STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://api-ci-episr.wolf.jina.ai`
+          if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+            echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, continue."
+            exit 0
+          fi
+          echo "API api-ci-episr.wolf.jina.ai returns ${STATUS_CODE}, retry ${1}."
+          sleep 1
+        done
+        exit 1
   
   prep-testbed-operator:
     needs: deployment
@@ -211,8 +211,8 @@ jobs:
     needs: prep-testbed-operator
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 3
-      fail-fast: true
+      max-parallel: 4
+      fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
     steps:
@@ -222,31 +222,56 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
+      
       - name: Set up Python 3.7
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      
       - name: Install Jina
         run: |
           pip3 install jina
+      
       - name: Install Dependencies
         run: |
           go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./operator
+      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      
       - name: Run E2E Integration Test Suites for Operator
         run: |
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
@@ -256,6 +281,7 @@ jobs:
           ACK_GINKGO_DEPRECATIONS: 2.6.1
         working-directory: ./operator
         timeout-minutes: 30
+      
       - if: failure()
         uses: 8398a7/action-slack@v3
         with:
@@ -272,8 +298,8 @@ jobs:
     needs: prep-testbed-api
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 3
-      fail-fast: true
+      max-parallel: 4
+      fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
     steps:
@@ -282,6 +308,24 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+      
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
@@ -354,7 +398,7 @@ jobs:
       - operator
       - api
     if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
-    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@operator-test-dependencies
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
