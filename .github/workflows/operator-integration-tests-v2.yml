@@ -212,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 3
-      fail-fast: false
+      fail-fast: true
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
     steps:
@@ -273,7 +273,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 3
-      fail-fast: false
+      fail-fast: true
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
     steps:
