@@ -7,15 +7,15 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
-      only_api_changed:
-        description: Check the box only if API related code was changed
-        type: boolean
-        default: false
-        required: false
       num_tests_in_group:
         description: Number of tests in a group (default 3)
         type: string
         default: '3'
+        required: false
+      only_api_changed:
+        description: Check the box only if API related code was changed
+        type: boolean
+        default: false
         required: false
 
 concurrency:
@@ -253,7 +253,7 @@ jobs:
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          focus_files=$(echo ${{ matrix.test-path }} | | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
@@ -329,9 +329,8 @@ jobs:
       
       - name: Run E2E Integration Test Suites for API
         run: |
-          focus_files=$(echo ${{ matrix.test-path }} | | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
-          ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
         env:
           API_HOST: https://api-ci-episr.wolf.jina.ai
           ACK_GINKGO_RC: true
