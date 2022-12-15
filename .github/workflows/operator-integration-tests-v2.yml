@@ -8,9 +8,9 @@ on:
         required: true
         default: main
       num_tests_in_group:
-        description: Number of tests in a group (default 3)
+        description: Number of tests in a group (default 4)
         type: string
-        default: '3'
+        default: '4'
         required: false
       only_api_changed:
         description: Check the box only if API related code was changed
