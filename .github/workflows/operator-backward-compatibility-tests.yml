@@ -187,11 +187,7 @@ jobs:
           python-version: 3.7
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./operator
@@ -308,11 +304,7 @@ jobs:
           python-version: 3.7
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./operator

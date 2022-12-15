@@ -234,11 +234,7 @@ jobs:
           pip3 install jina
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./operator
@@ -295,11 +291,7 @@ jobs:
       
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./api
@@ -356,7 +348,7 @@ jobs:
       - operator-tests
       - api-tests
     if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
-    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@operator-test-dependencies
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
