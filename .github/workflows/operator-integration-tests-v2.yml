@@ -212,7 +212,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
   
-  operator-tests:
+  operator:
     needs: prep-testbed-operator
     runs-on: ubuntu-latest
     strategy:
@@ -272,7 +272,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
   
-  api-tests:
+  api:
     needs: prep-testbed-api
     runs-on: ubuntu-latest
     strategy:
@@ -354,8 +354,8 @@ jobs:
 
   compatibility-test:
     needs: 
-      - operator-tests
-      - api-tests
+      - operator
+      - api
     if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@operator-test-dependencies
     secrets: inherit
