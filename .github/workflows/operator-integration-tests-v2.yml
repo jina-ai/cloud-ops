@@ -207,10 +207,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
   
-  operator-tests:
+  operator:
     needs: prep-testbed-operator
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 4
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
@@ -221,42 +222,66 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
           go-version: 1.18
+      
       - name: Set up Python 3.7
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
+      
       - name: Install Jina
         run: |
           pip3 install jina
+      
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./operator
+      
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region eu-west-3 --name jcloud-CI-eks-episr
+      
       - name: Run E2E Integration Test Suites for Operator
-        run: ginkgo --focus-file ${{ matrix.test-path }} -v --progress ./...
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
+          ginkgo ${focus_files} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
-          ACK_GINKGO_DEPRECATIONS: 2.5.0
+          ACK_GINKGO_DEPRECATIONS: 2.6.1
         working-directory: ./operator
-        timeout-minutes: 20
+        timeout-minutes: 30
+      
       - if: failure()
         uses: 8398a7/action-slack@v3
         with:
@@ -269,10 +294,11 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
           MATRIX_CONTEXT: ${{ toJson(matrix) }}
   
-  api-tests:
+  api:
     needs: prep-testbed-api
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 4
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
@@ -282,6 +308,24 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+      
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
@@ -295,11 +339,7 @@ jobs:
       
       - name: Install Dependencies
         run: |
-          go mod tidy -v
-          go get github.com/onsi/ginkgo/v2/ginkgo/generators@v2.1.6 
-          go get github.com/onsi/ginkgo/v2/ginkgo/internal@v2.1.6
-          go get github.com/onsi/ginkgo/v2/ginkgo/labels@v2.1.6
-          go install github.com/onsi/ginkgo/v2/ginkgo
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.6.1
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./api
@@ -329,7 +369,9 @@ jobs:
           exit 1
       
       - name: Run E2E Integration Test Suites for API
-        run: ginkgo -p --focus-file ${{ matrix.test-path }} -v --progress ./...
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          ginkgo ${focus_files} -v --progress ./...
         env:
           API_HOST: https://api-ci-episr.wolf.jina.ai
           ACK_GINKGO_RC: true
@@ -337,7 +379,7 @@ jobs:
           FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
         working-directory: ./api
-        timeout-minutes: 20
+        timeout-minutes: 30
       
       - if: failure()
         uses: 8398a7/action-slack@v3
@@ -353,8 +395,8 @@ jobs:
 
   compatibility-test:
     needs: 
-      - operator-tests
-      - api-tests
+      - operator
+      - api
     if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     secrets: inherit
