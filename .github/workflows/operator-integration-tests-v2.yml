@@ -222,7 +222,7 @@ jobs:
       tag: ${{ steps.latest.outputs.tag }}
 
   now-integration-tests:
-    needs: now-prep-testbed
+    needs: [now-prep-testbed, deployment]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
