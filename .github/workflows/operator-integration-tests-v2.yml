@@ -7,11 +7,6 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
-      only_api_changed:
-        description: Check the box only if API related code was changed
-        type: boolean
-        default: false
-        required: false
       env:
         type: choice
         description: Choose the environment (i.e. which cluster to run the integration tests on)
@@ -19,6 +14,11 @@ on:
         options:
           - CI
           - dev
+      only_api_changed:
+        description: Check the box only if API related code was changed
+        type: boolean
+        default: false
+        required: false
 
 
 concurrency:
