@@ -459,7 +459,7 @@ jobs:
           custom_payload: |
             {
               attachments: [{
-                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :white_check_mark:`,
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: Where? :point_right: ${{ github.event.inputs.env }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :white_check_mark:`,
               }]
             }
         env:
@@ -474,7 +474,7 @@ jobs:
           custom_payload: |
             {
               attachments: [{
-                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :x: `,
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: Where? :point_right: ${{ github.event.inputs.env }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :x: `,
               }]
             }
         env:
