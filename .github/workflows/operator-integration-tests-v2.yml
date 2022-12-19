@@ -437,7 +437,7 @@ jobs:
       - api
       - set-env
     if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
-    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@feat-add-dev-operator-integration-tests
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
