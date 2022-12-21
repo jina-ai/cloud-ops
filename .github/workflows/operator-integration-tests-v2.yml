@@ -289,6 +289,8 @@ jobs:
           touch ~/.jina/config.json
           echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cat ~/.jina/config.json
+      - name: tmate
+        uses: mxschmitt/action-tmate@v3
       - name: Run tests
         run: |
           pytest -v -m remote tests/integration/test_end_to_end.py
