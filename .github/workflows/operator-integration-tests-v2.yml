@@ -243,7 +243,8 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  now-prep-testbed:
+  prep-testbed-now:
+    needs: deployment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout now repo
@@ -257,8 +258,8 @@ jobs:
     outputs:
       tag: ${{ steps.latest.outputs.tag }}
 
-  now-integration-tests:
-    needs: [now-prep-testbed, deployment]
+  now:
+    needs: prep-testbed-now
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
