@@ -15,7 +15,7 @@ on:
           - CI
           - dev
       only_api_changed:
-        description: Check the box only if API related code was changed
+        description: Only API related code changed?
         type: boolean
         default: false
         required: false
