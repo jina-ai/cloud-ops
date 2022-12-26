@@ -172,10 +172,12 @@ jobs:
           for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
           do
             helm uninstall ${i} -n jcloud
+            kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
           done
       - name: helm deploy
         run: |
           cd $GITHUB_WORKSPACE
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
             bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
             -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
