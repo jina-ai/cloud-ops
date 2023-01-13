@@ -246,7 +246,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   now-integration-tests:
-    needs: deployment
+    needs: [deployment, set-env]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
