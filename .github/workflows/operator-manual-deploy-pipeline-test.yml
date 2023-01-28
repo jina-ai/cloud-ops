@@ -1,4 +1,4 @@
-name: "(jc-operator) Jcloud operator manual deployment"
+name: "(jc-operator TEST) Jcloud operator manual deployment"
 
 on:
   workflow_dispatch:
