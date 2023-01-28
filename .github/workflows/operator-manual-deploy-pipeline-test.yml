@@ -82,7 +82,7 @@ jobs:
               TAG="${{ github.event.inputs.image_tag }}"
             fi
           fi
-          bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
           echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT
