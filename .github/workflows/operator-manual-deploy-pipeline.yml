@@ -72,7 +72,7 @@ jobs:
       - name: Build Image
         id: build_image
         run: |
-          cd $GITHUB_WORKSPACE/operator
+          cd $GITHUB_WORKSPACE
           if [[ $GIT_BRANCH == 'main' ]]; then
             TAG="latest"
           else
@@ -82,7 +82,7 @@ jobs:
               TAG="${{ github.event.inputs.image_tag }}"
             fi
           fi
-          bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
           echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT

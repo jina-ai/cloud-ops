@@ -106,11 +106,11 @@ jobs:
       - name: Build Image
         id: build_image
         run: |
-          cd $GITHUB_WORKSPACE/operator
+          cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest operator/
           else
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }} operator/
           fi
 
   build-api-manager:

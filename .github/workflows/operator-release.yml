@@ -50,9 +50,9 @@ jobs:
         id: build_image
         shell: bash
         run: |
-          cd $GITHUB_WORKSPACE/operator
+          cd $GITHUB_WORKSPACE
           TAG=${{ github.event.inputs.tag }}
-          bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG}
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
           echo "sha=${sha}" >> $GITHUB_OUTPUT
