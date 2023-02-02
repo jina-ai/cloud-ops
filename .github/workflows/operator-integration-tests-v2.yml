@@ -316,6 +316,7 @@ jobs:
           pytest -v ${focus_files}
         env:
           S3_CUSTOM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_IMAGE_TEST_DATA_PATH }}
+          S3_CUSTOM_MM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_CUSTOM_MM_DATA_PATH }}
           JCLOUD_API: https://${{ needs.set-env.outputs.host }}
           DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
           HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}
