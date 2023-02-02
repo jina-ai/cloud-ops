@@ -197,7 +197,7 @@ jobs:
 
       - name: Wait until API is healthy
         run: |
-          for i in {1..180}
+          for i in {1..300}
           do
             STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
             if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
@@ -493,7 +493,7 @@ jobs:
 
       - name: Make sure API is healthy
         run: |
-          for i in {1..180}
+          for i in {1..300}
           do
             STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
             if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
