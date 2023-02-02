@@ -264,6 +264,7 @@ jobs:
     needs: [prep-testbed-now, set-env]
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-now.outputs.matrix)}}
     steps:
