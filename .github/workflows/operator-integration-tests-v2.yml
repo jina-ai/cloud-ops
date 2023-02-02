@@ -311,7 +311,7 @@ jobs:
           cat ~/.jina/config.json
       - name: Run tests
         run: |
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file tests/integration/remote{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "tests/integration/remote{}" | xargs)
           pytest -v ${focus_files}
         env:
           S3_CUSTOM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_IMAGE_TEST_DATA_PATH }}
