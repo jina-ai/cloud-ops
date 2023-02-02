@@ -1,4 +1,4 @@
-name: "Wolf Batch Docker Image Build"
+name: "Wolf IAM User deployment"
 
 on:
   repository_dispatch:
@@ -47,7 +47,15 @@ jobs:
         run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && terraform fmt -check -diff
       - name: Terraform Init
         id: init
-        run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && cp $GITHUB_WORKSPACE/devops/iam/backends/s3.tf ./ && terraform init -backend-config="key=${{ github.event.client_payload.project }}/iam/default" -migrate-state
+        run: | 
+          REGION=`cat $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }}/terraform.tfvars |grep region|awk -F '=' '{print $2}'|tr -d '"'|tr -d "'"`
+          REGION=$(eval echo $REGION)
+          if [ ! -z $REGION ]; then
+            cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && cp $GITHUB_WORKSPACE/devops/iam/backends/s3.tf ./ && terraform init -backend-config="key=${{ github.event.client_payload.project }}/nprd/iam/$REGION" -migrate-state
+          else
+            echo "can't get region from tfvar file, quit!"
+            exit 127
+          fi
       - name: Terraform Validate
         id: validate
         run: cd $GITHUB_WORKSPACE/devops/iam/project/${{ github.event.client_payload.project }} && terraform validate -no-color
