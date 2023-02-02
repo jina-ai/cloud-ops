@@ -255,7 +255,7 @@ jobs:
           repository: jina-ai/now
       - id: set-matrix
         run: |
-          echo "::set-output name=matrix::$(find test -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
+          echo "::set-output name=matrix::$(find -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
         working-directory: ./tests/integration/remote
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
