@@ -19,6 +19,11 @@ on:
         type: boolean
         default: false
         required: false
+      skip_now_tests:
+        description: Skip now integration tests?
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: operator-e2e-tests-${{ github.event.inputs.env }}
@@ -247,6 +252,7 @@ jobs:
 
   prep-testbed-now:
     needs: deployment
+    if: ${{ (github.event.inputs.skip_now_tests == 'false') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout now Repo
