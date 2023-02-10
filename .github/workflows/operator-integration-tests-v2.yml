@@ -19,6 +19,11 @@ on:
         type: boolean
         default: false
         required: false
+      skip_now_tests:
+        description: Skip now integration tests?
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: operator-e2e-tests-${{ github.event.inputs.env }}
@@ -245,9 +250,29 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  now-integration-tests:
-    needs: [deployment, set-env]
+  prep-testbed-now:
+    needs: deployment
+    if: ${{ (github.event.inputs.skip_now_tests == 'false') }}
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout now Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/now
+      - id: set-matrix
+        run: |
+          echo "::set-output name=matrix::$(find -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
+        working-directory: ./tests/integration/remote
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  now-integration-tests:
+    needs: [prep-testbed-now, set-env]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-now.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -293,9 +318,11 @@ jobs:
           cat ~/.jina/config.json
       - name: Run tests
         run: |
-          pytest -v tests/integration/test_end_to_end.py
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "tests/integration/remote/{}" | xargs)
+          pytest -v ${focus_files}
         env:
-          S3_CUSTOM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_IMAGE_TEST_DATA_PATH }}
+          S3_CUSTOM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_CUSTOM_DATA_PATH }}
+          S3_CUSTOM_MM_DATA_PATH: ${{ env._WOLF_NPRD_GENERAL_S3_CUSTOM_MM_DATA_PATH }}
           JCLOUD_API: https://${{ needs.set-env.outputs.host }}
           DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
           HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}

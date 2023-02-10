@@ -209,6 +209,31 @@ jobs:
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.image_tag }}
           fi
         fi
+    - name: check if certificate exists
+      id: check_cert
+      run: |
+        echo "cert=`kubectl get cert -n jcloud wolf-tls -o name`" >> $GITHUB_OUTPUT
+    - name: deploy certificate
+      if: steps.check_cert.outputs.cert == ''
+      run: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: wolf-tls
+          namespace: jcloud
+        spec:
+          dnsNames:
+          - '*.wolf.jina.ai'
+          issuerRef:
+            group: cert-manager.io
+            kind: ClusterIssuer
+            name: letsencrypt
+          secretName: wolf-tls
+          usages:
+          - digital signature
+          - key encipherment
+        EOF
     - name: set env
       run: |
         if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
