@@ -194,11 +194,12 @@ jobs:
           fi
 
           kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
 
       - name: Wait until API is healthy
         run: |
@@ -521,6 +522,7 @@ jobs:
           API_HOST: https://${{ needs.set-env.outputs.host }}
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.5.0
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
         working-directory: ./api
