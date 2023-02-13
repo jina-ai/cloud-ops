@@ -202,6 +202,7 @@ jobs:
 
       - name: Wait until API is healthy
         run: |
+          sleep 15
           for i in {1..300}
           do
             STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
