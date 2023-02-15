@@ -92,6 +92,7 @@ jobs:
           DOCSQA_ATLAS_USERNAME: ${{ secrets.DOCSQA_ATLAS_USERNAME }}
           DOCSQA_ATLAS_PASSWORD: ${{ secrets.DOCSQA_ATLAS_PASSWORD }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          JINA_AUTH_TOKEN: ${{ secrets.DOCSQA_JAC_AUTH_TOKEN }}
         timeout-minutes: 45
       - name: Update Projects
         run: |
