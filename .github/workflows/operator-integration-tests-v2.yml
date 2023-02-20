@@ -203,6 +203,7 @@ jobs:
 
       - name: Wait until API is healthy
         run: |
+          sleep 15
           for i in {1..300}
           do
             STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
@@ -496,7 +497,12 @@ jobs:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
@@ -525,6 +531,9 @@ jobs:
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
+          WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
+          THIRD_USER_TOKEN: ${{ env._WOLF_NPRD_GENERAL_THIRD_USER_TOKEN }}
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
         working-directory: ./api
         timeout-minutes: 30
 
