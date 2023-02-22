@@ -111,11 +111,11 @@ jobs:
       - name: Build Image
         id: build_image
         run: |
-          cd $GITHUB_WORKSPACE/operator
+          cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest operator/
           else
-            bash ../deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }}
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }} operator/
           fi
 
   build-api-manager:
@@ -174,11 +174,10 @@ jobs:
       - name: helm clean
         run: |
           aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-          for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-          do
-            helm uninstall ${i} -n jcloud
-            kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
-          done
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
+          fi
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
         run: |
           cd $GITHUB_WORKSPACE
@@ -194,11 +193,12 @@ jobs:
           fi
 
           kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
 
       - name: Wait until API is healthy
         run: |
@@ -527,6 +527,7 @@ jobs:
           API_HOST: https://${{ needs.set-env.outputs.host }}
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.5.0
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
           SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
           WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
