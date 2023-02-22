@@ -161,10 +161,10 @@ jobs:
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-        do
-          helm uninstall ${i} -n jcloud
-        done
+        if helm list -n jcloud | grep -q jcloud-operator; then
+          helm uninstall -n jcloud jcloud-operator
+        fi
+        kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
@@ -303,10 +303,10 @@ jobs:
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-        do
-          helm uninstall ${i} -n jcloud
-        done
+        if helm list -n jcloud | grep -q jcloud-operator; then
+          helm uninstall -n jcloud jcloud-operator
+        fi
+        kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
