@@ -110,7 +110,9 @@ jobs:
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
-        helm uninstall -n jcloud jcloud-credit-guard
+        if helm list -n jcloud | grep -q jcloud-credit-guard; then
+          helm uninstall -n jcloud jcloud-credit-guard
+        fi
       if: github.event.inputs.environment != 'prod'
     - name: "Update Helm Charts Image sha"
       run: |
