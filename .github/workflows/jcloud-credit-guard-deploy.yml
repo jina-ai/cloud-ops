@@ -110,11 +110,7 @@ jobs:
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
-        RELEASES=$(helm list -n jcloud | grep -v NAME)
-        while read -r release; do
-          RELEASE_NAME=$(echo $release | awk '{print $1}')
-          helm uninstall -n jcloud $RELEASE_NAME
-          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+        helm uninstall -n jcloud jcloud-credit-guard
       if: github.event.inputs.environment != 'prod'
     - name: "Update Helm Charts Image sha"
       run: |
@@ -125,7 +121,6 @@ jobs:
       run: |
         cd $GITHUB_WORKSPACE
         aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
-        kubectl apply -f deployment/charts/jcloud-operator/crds/
         if [[ $GIT_BRANCH == 'main' ]]; then
           bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
           -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
