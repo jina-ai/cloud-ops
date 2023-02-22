@@ -1,0 +1,175 @@
+name: "(jc-credit-guard) Jcloud Credit Guard manual deployment"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the credit guard branch
+        required: true
+        default: main
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      environment:
+        description: Deploy Environment
+        required: true
+      eks_region:
+        description: EKS Region
+        default: "us-east-1"
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+  build-credit-guard:
+    needs: token-check
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.build_image.outputs.sha }}
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Set environment variables
+        run: |
+          # Short name for current branch. For PRs, use target branch (base ref)
+          GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ $GIT_BRANCH == 'main' ]]; then
+            TAG="latest"
+          else
+            if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+              TAG="${{ env.GIT_BRANCH }}"
+            else
+              TAG="${{ github.event.inputs.image_tag }}"
+            fi
+          fi
+          bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-credit-guard:${TAG} creditguard/
+          image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-credit-guard:${TAG}`
+          sha=`echo ${image_fullname}|cut -d @ -f 2`
+          echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT
+  deployment:
+    needs: [build-credit-guard]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == "CI" || ${{ github.event.inputs.environment }} == "dev" || ${{ github.event.inputs.environment }} == "tmp" || ${{ github.event.inputs.environment }} == "prod"
+    env:
+      ENVIRONMENT: ${{ github.event.inputs.environment }}
+    steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - uses: actions/checkout@v3
+      with:
+        repository: jina-ai/jina-operator
+        ref: ${{ github.event.inputs.branch }}
+        token: ${{ secrets.JINA_DEV_BOT }}
+    - name: Get remote state
+      uses: dflook/terraform-remote-state@v1
+      id: remote-state
+      with:
+        backend_type: s3
+        backend_config: |
+          bucket=jina-terraform-state
+          key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
+          region=us-east-2
+    - name: Set environment variables
+      run: |
+        # Short name for current branch. For PRs, use target branch (base ref)
+        GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+        echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+    - name: helm clean
+      run: |
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+        RELEASES=$(helm list -n jcloud | grep -v NAME)
+        while read -r release; do
+          RELEASE_NAME=$(echo $release | awk '{print $1}')
+          helm uninstall -n jcloud $RELEASE_NAME
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+      if: github.event.inputs.environment != 'prod'
+    - name: "Update Helm Charts Image sha"
+      run: |
+        sudo snap install yq
+        yq -i ".creditguard.image.sha=\"${{needs.build-credit-guard.outputs.sha}}\"" .github/ci/cg-$cg-{{ github.event.inputs.environment }}-values.yaml
+        cat .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml
+    - name: helm deploy
+      run: |
+        cd $GITHUB_WORKSPACE
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+        kubectl apply -f deployment/charts/jcloud-operator/crds/
+        if [[ $GIT_BRANCH == 'main' ]]; then
+          bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+          -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+          --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+        else
+          if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+            bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ env.GIT_BRANCH }}
+          else
+            bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.image_tag }}
+          fi
+        fi
+    - name: check if certificate exists
+      id: check_cert
+      run: |
+        echo "cert=`kubectl get cert -n jcloud wolf-tls -o name`" >> $GITHUB_OUTPUT
+    - name: deploy certificate
+      if: steps.check_cert.outputs.cert == ''
+      run: |
+        cat <<EOF | kubectl apply -f -
+        apiVersion: cert-manager.io/v1
+        kind: Certificate
+        metadata:
+          name: wolf-tls
+          namespace: jcloud
+        spec:
+          dnsNames:
+          - '*.wolf.jina.ai'
+          issuerRef:
+            group: cert-manager.io
+            kind: ClusterIssuer
+            name: letsencrypt
+          secretName: wolf-tls
+          usages:
+          - digital signature
+          - key encipherment
+        EOF
+    - name: set env
+      run: |
+        if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
+          kubectl set env deploy/jcloud-credit-guard -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }} JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
+        else
+          kubectl set env deploy/jcloud-credit-guard -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }} JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
+        fi
