@@ -117,24 +117,24 @@ jobs:
     - name: "Update Helm Charts Image sha"
       run: |
         sudo snap install yq
-        yq -i ".creditguard.image.sha=\"${{needs.build-credit-guard.outputs.sha}}\"" .github/ci/cg-$cg-{{ github.event.inputs.environment }}-values.yaml
-        cat .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml
+        yq -i ".creditguard.image.sha=\"${{needs.build-credit-guard.outputs.sha}}\"" .github/ci/cg-${{ github.event.inputs.environment }}-values.yaml
+        cat .github/ci/cg-${{ github.event.inputs.environment }}-values.yaml
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
         aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
         if [[ $GIT_BRANCH == 'main' ]]; then
           bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
-          -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+          -f .github/ci/cg-${{ github.event.inputs.environment }}-values.yaml \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
         else
           if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
             bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
-            -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+            -f .github/ci/cg-${{ github.event.inputs.environment }}-values.yaml \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ env.GIT_BRANCH }}
           else
             bash ./deployment/scripts/deploy-credit-guard.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
-            -f .github/ci/$cg-{{ github.event.inputs.environment }}-values.yaml \
+            -f .github/ci/cg-${{ github.event.inputs.environment }}-values.yaml \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.image_tag }}
           fi
         fi
