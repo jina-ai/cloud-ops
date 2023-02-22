@@ -177,11 +177,10 @@ jobs:
     - name: helm clean
       run: |
         aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
-        for i in `helm list -n jcloud|grep -v NAME|awk '{printf $1}'`
-        do
-          helm uninstall ${i} -n jcloud
-          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
-        done
+        if helm list -n jcloud | grep -q jcloud-operator; then
+          helm uninstall -n jcloud jcloud-operator
+        fi
+        kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       if: github.event.inputs.environment != 'prod'
     - name: "Update Helm Charts Image sha"
       run: |
