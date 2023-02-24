@@ -306,7 +306,6 @@ jobs:
         if helm list -n jcloud | grep -q jcloud-operator; then
           helm uninstall -n jcloud jcloud-operator
         fi
-        kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
