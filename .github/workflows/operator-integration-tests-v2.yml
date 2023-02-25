@@ -611,8 +611,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/restart/{}" | xargs)
-          ginkgo ${focus_files} -v --progress ./...
+          ginkgo --focus-file controllers/test/restart/restart_test.go -v --progress ./...
         env:
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.6.1
