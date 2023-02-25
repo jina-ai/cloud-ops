@@ -618,7 +618,6 @@ jobs:
         working-directory: ./operator
         timeout-minutes: 30
 
-
   compatibility-test:
     needs:
       - restart-tests
