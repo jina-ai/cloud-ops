@@ -554,6 +554,7 @@ jobs:
     needs:
       - operator
       - api
+      - set-env
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
