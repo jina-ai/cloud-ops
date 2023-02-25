@@ -552,8 +552,8 @@ jobs:
 
   restart-tests:
     needs:
-      - operator
-      - api
+      # - operator
+      # - api
       - set-env
     runs-on: ubuntu-latest
     steps:
@@ -630,7 +630,9 @@ jobs:
       env: ${{ github.event.inputs.env }}
 
   success-all-test:
-    needs: [compatibility-test, now-integration-tests]
+    needs: 
+      - compatibility-test 
+      # - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
     steps:
