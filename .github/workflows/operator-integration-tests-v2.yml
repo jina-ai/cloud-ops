@@ -287,14 +287,14 @@ jobs:
           secrets: |
             /wolf/nprd/general
           parse-json: true
-      - name: Checkout now repo
-        uses: actions/checkout@v3
-        with:
-          repository: jina-ai/now
-          fetch-depth: 0
-      - name: Get now latest tag
-        id: latest
-        uses: "WyriHaximus/github-action-get-previous-tag@v1"
+      # - name: Checkout now repo
+      #   uses: actions/checkout@v3
+      #   with:
+      #     repository: jina-ai/now
+      #     fetch-depth: 0
+      # - name: Get now latest tag
+      #   id: latest
+      #   uses: "WyriHaximus/github-action-get-previous-tag@v1"
       - name: Setup Python 3.7
         uses: actions/setup-python@v2
         with:
@@ -303,7 +303,7 @@ jobs:
         uses: actions/checkout/@v3
         with:
           repository: jina-ai/now
-          ref: ${{ steps.latest.outputs.tag }}
+          # ref: ${{ steps.latest.outputs.tag }}
       - name: Prepare environment
         run: |
           sudo apt update && sudo apt install ffmpeg
@@ -496,14 +496,14 @@ jobs:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-      
+
       - name: Read secrets from AWS Secrets Manager into environment variables
         uses: abhilash1in/aws-secrets-manager-action@v2.1.0
         with:
           secrets: |
             /wolf/nprd/general
           parse-json: true
-      
+
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
@@ -629,8 +629,8 @@ jobs:
       env: ${{ github.event.inputs.env }}
 
   success-all-test:
-    needs: 
-      - compatibility-test 
+    needs:
+      - compatibility-test
       - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
