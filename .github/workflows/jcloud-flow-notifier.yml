@@ -28,6 +28,6 @@ jobs:
         run: python notify.py
         working-directory: ./scripts/notify-flows
         env:
-          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
-          MONGO_URI: ${{ secrets.JCLOUD_MONGO_URI }}
+          MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
