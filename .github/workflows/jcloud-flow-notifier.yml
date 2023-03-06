@@ -2,6 +2,11 @@ name: (jcloud) Notify Current Flows on Slack
 
 on:
   workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
 
 jobs:
   notify:
