@@ -215,42 +215,6 @@ jobs:
           done
           exit 1
 
-  prep-testbed-operator:
-    needs: deployment
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-        with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
-      - id: set-matrix
-        run: |
-          sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
-        working-directory: ./operator
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-  prep-testbed-api:
-    needs: deployment
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-        with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
-      - id: set-matrix
-        run: |
-          sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
-        working-directory: ./api
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
   prep-testbed-now:
     needs: deployment
     if: ${{ (github.event.inputs.skip_now_tests == 'false') }}
@@ -291,11 +255,10 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.7
-      - name: Checkout now repo with latest tag
+      - name: Checkout now repo
         uses: actions/checkout/@v3
         with:
           repository: jina-ai/now
-          ref: jac_release_latest
       - name: Prepare environment
         run: |
           sudo apt update && sudo apt install ffmpeg
