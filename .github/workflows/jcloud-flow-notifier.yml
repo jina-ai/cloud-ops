@@ -7,6 +7,11 @@ on:
         description: Pass the jina-operator branch
         required: true
         default: main
+      channel:
+        description: Pass the slack channel ID to send notifications to
+        required: false
+  schedule:
+    - cron: "30 53 * * 1-5"
 
 jobs:
   notify:
@@ -17,7 +22,7 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
@@ -36,3 +41,4 @@ jobs:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
+          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel }}
