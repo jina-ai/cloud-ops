@@ -11,7 +11,7 @@ on:
         description: Pass the slack channel ID to send notifications to
         required: false
   schedule:
-    - cron: "30 5 * * 1-5"
+    - cron: "30 17 * * 1-5"
 
 jobs:
   notify:
