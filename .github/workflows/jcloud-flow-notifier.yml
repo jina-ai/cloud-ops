@@ -9,7 +9,8 @@ on:
         default: main
       channel:
         description: Pass the slack channel ID to send notifications to
-        required: false
+        required: true
+        default: C04SZ7AAWQZ
   schedule:
     - cron: "30 17 * * 1-5"
 
