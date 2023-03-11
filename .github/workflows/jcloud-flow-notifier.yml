@@ -35,10 +35,11 @@ jobs:
           pip install -r requirements.txt
         working-directory: ./scripts/notify-flows
       - name: Notify on Slack
-        run: python notify.py
+        run: |
+          echo $SLACK_CHANNEL_ID
         working-directory: ./scripts/notify-flows
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel }}
+          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel }} || C04SZ7AAWQZ
