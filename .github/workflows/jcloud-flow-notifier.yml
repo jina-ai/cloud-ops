@@ -12,8 +12,7 @@ on:
         required: true
         default: C04SZ7AAWQZ
   schedule:
-    # - cron: "30 17 * * 1-5"
-    - cron: "*/10 * * * *"
+    - cron: "30 17 * * 1-5"
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -21,7 +20,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
-          ref: fix-notifier
+          ref: ${{ github.events.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -35,11 +34,10 @@ jobs:
           pip install -r requirements.txt
         working-directory: ./scripts/notify-flows
       - name: Notify on Slack
-        run: |
-          echo $SLACK_CHANNEL_ID
+        run: python notify.py
         working-directory: ./scripts/notify-flows
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel == '' && 'C04SZ7AAWQZ'  || github.event.inputs.channel }}
+          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel == '' && 'C04SZ7AAWQZ' || github.event.inputs.channel }}
