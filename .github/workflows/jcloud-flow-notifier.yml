@@ -12,8 +12,8 @@ on:
         required: true
         default: C04SZ7AAWQZ
   schedule:
-    - cron: "30 17 * * 1-5"
-
+    # - cron: "30 17 * * 1-5"
+    - cron: "*/10 * * * *"
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -36,8 +36,9 @@ jobs:
         working-directory: ./scripts/notify-flows
 
       - name: Notify on Slack
-        run: python notify.py
-        working-directory: ./scripts/notify-flows
+        # run: python notify.py
+        run: echo $SLACK_CHANNEL_ID
+        # working-directory: ./scripts/notify-flows
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
