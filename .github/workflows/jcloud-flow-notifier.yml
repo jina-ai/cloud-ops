@@ -49,3 +49,5 @@ jobs:
           SLACK_CHANNEL_ID: ${{ github.event.inputs.channel }}
       - name: Setup tmate session
         uses: mxschmitt/action-tmate@v3
+        env:
+          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel }}
