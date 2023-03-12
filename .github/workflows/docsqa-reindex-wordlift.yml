@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/docsqalib
-          ref: v0.1
+          ref: v0.2
           token: ${{ secrets.DOCSQA_LIB_TOKEN }}
           path: docsqalib
       - uses: actions/setup-python@v2
@@ -50,11 +50,7 @@ jobs:
       - name: Publish wordlift
         run: |
           mkdir -p ~/.jina
-          touch ~/.jina/config.json
-          echo "{\"auth_token\": \"${DOCSQA_WOLF_TOKEN}\"}" > ~/.jina/config.json
           cd ${GITHUB_WORKSPACE}/docsQA/service
-          echo -e "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\nAWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\nDOCSQA_ADMIN_TOKEN=${DOCSQA_ADMIN_TOKEN}\n" > daas/logger.env
-          cat daas/logger.env
           python -m daas.local.publish_wordlift --version_tag ${{ github.event.inputs.version }} --force_reindex
         env:
           DOCSQA_ATLAS_HOSTNAME: ${{ secrets.DOCSQA_ATLAS_HOSTNAME }}
@@ -70,3 +66,4 @@ jobs:
           DOCSQA_WOLF_TOKEN: ${{ secrets.DOCSQA_WOLF_TOKEN }}
           WORDLIFT_API_TOKEN: ${{ secrets.DOCSQA_WORDLIFT_API_TOKEN }}
           DOCSQA_ADMIN_TOKEN: ${{ secrets.DOCSQA_ADMIN_TOKEN }}
+          JINA_AUTH_TOKEN: ${{ secrets.DOCSQA_JAC_AUTH_TOKEN }}
