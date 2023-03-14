@@ -140,8 +140,19 @@ jobs:
         fi
     - name: set env
       run: |
-        if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
-          kubectl set env deploy/jcloud-credit-guard -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
-        else
-          kubectl set env deploy/jcloud-credit-guard -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
+        if [[ ${{ github.event.inputs.environment }} == "dev" ]]; then
+          kubectl set env deploy/jcloud-credit-guard -n jcloud \
+          JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}" \
+          MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" \
+          JCLOUD_API="https://api-dev-lpzje.wolf.jina.ai/"
+        elif [[ ${{ github.event.inputs.environment }} == "CI" ]]; then
+          kubectl set env deploy/jcloud-credit-guard -n jcloud \
+          JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}" \
+          MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" \
+          JCLOUD_API="https://api-ci-episr.wolf.jina.ai/"
+        elif [[ ${{ github.event.inputs.environment }} == "prod" ]]; then
+          kubectl set env deploy/jcloud-credit-guard -n jcloud \
+          JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}" \
+          MONGO_URI="${{ secrets.PROD_MONGO_URI }}" \
+          JCLOUD_API="https://api-v2.wolf.jina.ai/"
         fi
