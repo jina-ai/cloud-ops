@@ -22,12 +22,16 @@ on:
     inputs:
       branch:
         required: true
+        type: string
       deploy_token:
         required: true
+        type: string
       environment:
         required: true
+        type: string
       eks_region:
         required: true
+        type: string
 
 jobs:
   token-check:
