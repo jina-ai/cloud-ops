@@ -1,4 +1,4 @@
-name: "(jc-credit-guard) Jcloud Credit Guard integration tests"
+name: "(jc-credit-guard) Jcloud CG integration tests"
 
 on:
   workflow_dispatch:
@@ -50,7 +50,7 @@ jobs:
       eks_region: ${{ github.event.inputs.eks_region }}
   deploy-operator-and-api:
     needs: token-check
-    if: ${{ (github.event.inputs.should_redeploy_operator != 'false')
+    if: ${{ github.event.inputs.should_redeploy_operator != 'false' }}
     uses: jina-ai/cloud-ops/.github/workflows/operator-manual-deploy-pipeline.yml@master
     secrets: inherit
     with:

@@ -1,4 +1,4 @@
-name: "(jc-credit-guard) Jcloud Credit Guard manual deployment"
+name: "(jc-credit-guard) Jcloud CG manual deployment"
 
 on:
   workflow_dispatch:
