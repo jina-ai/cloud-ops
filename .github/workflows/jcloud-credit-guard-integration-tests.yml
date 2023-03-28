@@ -29,6 +29,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    outputs:
+      region: ${{ steps.output-region.outputs.region }}
+      cluster: ${{ steps.output-cluster.outputs.cluster }}
+      host: ${{ steps.output-host.outputs.host }}
+    steps:
+      - id: output-region
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "region=eu-west-3" >> $GITHUB_OUTPUT
+          else
+            echo "region=us-east-2" >> $GITHUB_OUTPUT
+          fi
+      - id: output-cluster
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "cluster=jcloud-CI-eks-episr" >> $GITHUB_OUTPUT
+          else
+            echo "cluster=jcloud-dev-eks-lpzje" >> $GITHUB_OUTPUT
+          fi
+      - id: output-host
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "host=api-ci-episr.wolf.jina.ai" >> $GITHUB_OUTPUT
+          else
+            echo "host=api-dev-lpzje.wolf.jina.ai" >> $GITHUB_OUTPUT
+          fi
+
   token-check:
     runs-on: ubuntu-latest
     steps:
@@ -39,6 +68,7 @@ jobs:
         if: github.event.inputs.deploy_token != env.deploy_token
         env:
           deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+
   deploy-credit-guard:
     needs: token-check
     uses: jina-ai/cloud-ops/.github/workflows/jcloud-credit-guard-deploy.yml@master
@@ -48,6 +78,7 @@ jobs:
       deploy_token: ${{ github.event.inputs.deploy_token }}
       environment: ${{ github.event.inputs.environment }}
       eks_region: ${{ github.event.inputs.eks_region }}
+
   deploy-operator-and-api:
     needs: token-check
     if: ${{ github.event.inputs.should_redeploy_operator != 'false' }}
@@ -58,3 +89,126 @@ jobs:
       deploy_token: ${{ github.event.inputs.deploy_token }}
       environment: ${{ github.event.inputs.environment }}
       eks_region: ${{ github.event.inputs.eks_region }}
+
+  prep-testbed:
+    needs: [deploy-credit-guard, deploy-operator-and-api]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+        working-directory: ./creditguard
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  run-tests:
+    needs: [prep-testbed, set-env]
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Install Dependencies
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./creditguard
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+
+      - name: Make sure API is healthy
+        run: |
+          for i in {1..300}
+          do
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
+            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
+              exit 0
+            fi
+            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
+            sleep 2
+          done
+          exit 1
+
+      - name: Run E2E Integration Test Suites for Credit Guard
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          ginkgo ${focus_files} -v --progress ./...
+        env:
+          API_HOST: https://${{ needs.set-env.outputs.host }}
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+          FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
+          SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
+          WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
+          THIRD_USER_TOKEN: ${{ env._WOLF_NPRD_GENERAL_THIRD_USER_TOKEN }}
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        working-directory: ./creditguard
+        timeout-minutes: 30
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}` (cluster: `${{ github.event.inputs.env }}`)
+          author_name: ":cloud: Credit Guard Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
