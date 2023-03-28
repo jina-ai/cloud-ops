@@ -1,0 +1,41 @@
+name: "(jc-credit-guard) Jcloud Credit Guard integration tests"
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the branch
+        required: true
+        default: main
+      deploy_token:
+        description: Deploy Token
+        default: ""
+        required: true
+      environment:
+        description: Environment to run tests in
+        required: true
+      eks_region:
+        description: EKS Region
+        default: "us-east-1"
+        required: true
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v3
+        with:
+          script: |
+            core.setFailed('token are not equivalent!')
+        if: github.event.inputs.deploy_token != env.deploy_token
+        env:
+          deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+  deploy-credit-guard:
+    needs: token-check
+    uses: jina-ai/cloud-ops/.github/workflows/jcloud-credit-guard-integration-tests.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+      deploy_token: ${{ github.event.inputs.deploy_token }}
+      environment: ${{ github.event.inputs.environment }}
+      eks_region: ${{ github.event.inputs.eks_region }}

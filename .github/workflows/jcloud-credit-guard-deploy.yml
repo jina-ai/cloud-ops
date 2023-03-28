@@ -18,6 +18,16 @@ on:
         description: EKS Region
         default: "us-east-1"
         required: true
+  workflow_call:
+    inputs:
+      branch:
+        required: true
+      deploy_token:
+        required: true
+      environment:
+        required: true
+      eks_region:
+        required: true
 
 jobs:
   token-check:
