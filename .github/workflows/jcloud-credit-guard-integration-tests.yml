@@ -18,6 +18,15 @@ on:
         description: EKS Region
         default: "us-east-1"
         required: true
+      should_redeploy_operator:
+        description: Also re-deploy Operator & API?
+        type: boolean
+        default: false
+        required: true
+
+concurrency:
+  group: cg-e2e-tests-${{ github.event.inputs.env }}
+  cancel-in-progress: false
 
 jobs:
   token-check:
@@ -33,6 +42,16 @@ jobs:
   deploy-credit-guard:
     needs: token-check
     uses: jina-ai/cloud-ops/.github/workflows/jcloud-credit-guard-deploy.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+      deploy_token: ${{ github.event.inputs.deploy_token }}
+      environment: ${{ github.event.inputs.environment }}
+      eks_region: ${{ github.event.inputs.eks_region }}
+  deploy-operator-and-api:
+    needs: token-check
+    if: ${{ (github.event.inputs.should_redeploy_operator != 'false')
+    uses: jina-ai/cloud-ops/.github/workflows/operator-manual-deploy-pipeline.yml@master
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
