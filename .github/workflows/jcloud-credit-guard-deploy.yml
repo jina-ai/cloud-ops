@@ -18,6 +18,11 @@ on:
         description: EKS Region
         default: "us-east-1"
         required: true
+      should_redeploy_operator:
+        description: Also Deploy Operator & API?
+        type: boolean
+        default: false
+        required: true
   workflow_call:
     inputs:
       branch:
@@ -32,6 +37,9 @@ on:
       eks_region:
         required: true
         type: string
+      should_redeploy_operator:
+        required: true
+        type: boolean
 
 jobs:
   token-check:
@@ -44,6 +52,16 @@ jobs:
         if: github.event.inputs.deploy_token != env.deploy_token
         env:
           deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
+  deploy-operator-and-api:
+    needs: token-check
+    if: ${{ github.event.inputs.should_redeploy_operator != 'false' }}
+    uses: jina-ai/cloud-ops/.github/workflows/operator-manual-deploy-pipeline.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+      deploy_token: ${{ github.event.inputs.deploy_token }}
+      environment: ${{ github.event.inputs.environment }}
+      eks_region: ${{ github.event.inputs.eks_region }}
   build-credit-guard:
     needs: token-check
     runs-on: ubuntu-latest

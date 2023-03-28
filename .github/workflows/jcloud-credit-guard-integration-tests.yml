@@ -78,6 +78,7 @@ jobs:
       deploy_token: ${{ github.event.inputs.deploy_token }}
       environment: ${{ github.event.inputs.environment }}
       eks_region: ${{ github.event.inputs.eks_region }}
+      should_redeploy_operator: "false"
 
   deploy-operator-and-api:
     needs: token-check
