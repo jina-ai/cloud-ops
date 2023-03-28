@@ -32,7 +32,7 @@ jobs:
           deploy_token: ${{ secrets.JCLOUD_DEPLOY_TOKEN }}
   deploy-credit-guard:
     needs: token-check
-    uses: jina-ai/cloud-ops/.github/workflows/jcloud-credit-guard-integration-tests.yml@master
+    uses: jina-ai/cloud-ops/.github/workflows/jcloud-credit-guard-deploy.yml@master
     secrets: inherit
     with:
       branch: ${{ github.event.inputs.branch }}
