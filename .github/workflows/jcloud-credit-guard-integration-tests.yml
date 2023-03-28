@@ -111,6 +111,7 @@ jobs:
 
   run-tests:
     needs: [prep-testbed, set-env]
+    if: always()
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
