@@ -135,14 +135,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Cache Python Dependencies
-        uses: actions/cache@v2
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Set up Golang 1.18
         uses: actions/setup-go@v3
         with:
