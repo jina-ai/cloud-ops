@@ -90,10 +90,10 @@ jobs:
           if [[ $GIT_BRANCH == 'main' ]]; then
             TAG="latest"
           else
-            if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+            if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
               TAG="${{ env.GIT_BRANCH }}"
             else
-              TAG="${{ github.event.inputs.image_tag }}"
+              TAG="${{ github.event.inputs.branch }}"
             fi
           fi
           bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
@@ -146,10 +146,10 @@ jobs:
           if [[ $GIT_BRANCH == 'main' ]]; then
             TAG="latest"
           else
-            if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+            if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
               TAG="${{ env.GIT_BRANCH }}"
             else
-              TAG="${{ github.event.inputs.image_tag }}"
+              TAG="${{ github.event.inputs.branch }}"
             fi
           fi
           bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
@@ -212,14 +212,14 @@ jobs:
           -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
         else
-          if [[ "${{ github.event.inputs.image_tag }}" == "" ]]; then
+          if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
             bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
             -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ env.GIT_BRANCH }}
           else
             bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
             -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
-            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.image_tag }}
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
           fi
         fi
     - name: check if certificate exists
