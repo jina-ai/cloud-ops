@@ -1,18 +1,8 @@
-name: (jcloud) Notify Current Flows on Slack
+name: (jcloud) Reports App Specific Flows on Slack
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Pass the jina-operator branch
-        required: true
-        default: main
-      channel:
-        description: Pass the slack channel ID to send notifications to
-        required: true
-        default: C04SZ7AAWQZ
   schedule:
-    - cron: "30 17 * * 1-5"
+    - cron: "30 10 * * 1"
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -34,7 +24,7 @@ jobs:
           pip install -r requirements.txt
         working-directory: ./scripts/
       - name: Notify on Slack
-        run: python notify.py
+        run: python query.py
         working-directory: ./scripts/
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
