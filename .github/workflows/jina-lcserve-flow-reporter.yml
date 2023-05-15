@@ -1,13 +1,8 @@
 name: (jcloud) lc-serve App Flows on Slack
 
 on:
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Pass the jina-operator branch
-        required: true
-        default: main
-
+  schedule:
+    - cron: "0 5 * * * UTC"
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -35,4 +30,4 @@ jobs:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: 'U01A4S5NK2M'
+          SLACK_CHANNEL_ID: 'C050XLM6687'
