@@ -35,4 +35,4 @@ jobs:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: 'U03E7QSKVLL'
+          SLACK_CHANNEL_ID: 'U01A4S5NK2M'
