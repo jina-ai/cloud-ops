@@ -1,0 +1,38 @@
+name: (jcloud) lc-serve App Flows on Slack
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.events.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Prepare environment
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+        working-directory: ./scripts/
+      - name: Notify on Slack
+        run: python lcserve_credit_usage.py
+        working-directory: ./scripts/
+        env:
+          SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+          MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
+          SLACK_CHANNEL_ID: 'U03E7QSKVLL'
