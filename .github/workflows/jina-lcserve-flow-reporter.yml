@@ -3,6 +3,13 @@ name: (jcloud) lc-serve App Flows on Slack
 on:
   schedule:
     - cron: "0 5 * * *"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+
 jobs:
   notify:
     runs-on: ubuntu-latest
