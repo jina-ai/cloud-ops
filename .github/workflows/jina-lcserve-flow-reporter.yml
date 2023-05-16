@@ -2,7 +2,7 @@ name: (jcloud) lc-serve App Flows on Slack
 
 on:
   schedule:
-    - cron: "0 5 * * * UTC"
+    - cron: "0 5 * * *"
 jobs:
   notify:
     runs-on: ubuntu-latest
