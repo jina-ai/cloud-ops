@@ -181,6 +181,13 @@ jobs:
       - name: helm deploy
         run: |
           cd $GITHUB_WORKSPACE
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            kubectl get configmap jcloud-instances -n jcloud
+            if [[ $? -eq 0 ]]; then
+              kubectl delete configmap jcloud-instances -n jcloud
+            fi
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
           kubectl apply -f deployment/charts/jcloud-operator/crds/
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
             bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
