@@ -12,7 +12,7 @@ on:
         required: true
         default: C04SZ7AAWQZ
   schedule:
-    - cron: "30 17 * * 1-5"
+    - cron: "30 0 * * 1-5"
 jobs:
   notify:
     runs-on: ubuntu-latest
