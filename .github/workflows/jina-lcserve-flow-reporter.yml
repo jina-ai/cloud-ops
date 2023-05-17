@@ -2,13 +2,17 @@ name: (jcloud) lc-serve App Flows on Slack
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "30 17 * * 1-5"
   workflow_dispatch:
     inputs:
       branch:
         description: Pass the jina-operator branch
         required: true
         default: main
+      channel:
+        description: Pass the slack channel ID to send notifications to
+        required: true
+        default: C050XLM6687
 
 jobs:
   notify:
@@ -19,6 +23,22 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Setup EKS kubeconfig
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name jcloud-prod-eks-kcjpa
+
+      - name: Port-forward Prometheus
+        run: |
+          kubectl port-forward svc/prometheus-service 7070:9090 &
+          sleep 5 # give port-forward command some time to establish the connection
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
@@ -37,4 +57,4 @@ jobs:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: 'C050XLM6687'
+          SLACK_CHANNEL_ID: ${{ github.event.inputs.channel == '' && 'C050XLM6687' || github.event.inputs.channel }}
