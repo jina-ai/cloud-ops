@@ -37,7 +37,7 @@ jobs:
 
       - name: Port-forward Prometheus
         run: |
-          kubectl port-forward svc/prometheus-service 7070:9090 &
+          kubectl port-forward svc/prometheus-operated 7070:9090 -n monitor &
           sleep 5 # give port-forward command some time to establish the connection
 
       - name: Set up Python ${{ matrix.python-version }}
