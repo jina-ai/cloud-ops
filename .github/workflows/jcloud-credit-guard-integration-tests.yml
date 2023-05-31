@@ -165,20 +165,6 @@ jobs:
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
-      - name: Make sure API is healthy
-        run: |
-          for i in {1..300}
-          do
-            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
-            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
-              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
-              exit 0
-            fi
-            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
-            sleep 2
-          done
-          exit 1
-
       - name: Run E2E Integration Test Suites for Credit Guard
         run: |
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
