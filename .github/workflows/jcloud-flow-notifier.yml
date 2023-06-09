@@ -26,7 +26,7 @@ jobs:
       - name: Setup docsqa-cluster & port-forward Thanos
         run: |
           aws eks update-kubeconfig --region us-east-1 --name docsqa-cluster
-          kubectl port-forward service/thanos-query -n monitor 9090:9090
+          kubectl port-forward service/thanos-query -n monitor 9090:9090 &
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
