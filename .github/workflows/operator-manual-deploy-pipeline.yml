@@ -205,6 +205,7 @@ jobs:
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
         if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
           kubectl get configmap jcloud-instances -n jcloud
           if [[ $? -eq 0 ]]; then
@@ -212,7 +213,6 @@ jobs:
           fi
           kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
         fi
-        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
         kubectl apply -f deployment/charts/jcloud-operator/crds/
         if [[ $GIT_BRANCH == 'main' ]]; then
           bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
