@@ -430,7 +430,7 @@ jobs:
         env:
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.6.1
-          JCLOUD_OPERATOR_CONFIG : ${{ steps.operator_config.outputs }}
+          JCLOUD_OPERATOR_CONFIG : ${{ steps.operator_config.outputs.jcloud_config }}
         working-directory: ./operator
         timeout-minutes: 30
 
@@ -550,7 +550,7 @@ jobs:
           WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
           THIRD_USER_TOKEN: ${{ env._WOLF_NPRD_GENERAL_THIRD_USER_TOKEN }}
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-          JCLOUD_OPERATOR_CONFIG : ${{ steps.api_config.outputs }}
+          JCLOUD_OPERATOR_CONFIG : ${{ steps.api_config.outputs.jcloud_config }}
         working-directory: ./api
         timeout-minutes: 30
 
