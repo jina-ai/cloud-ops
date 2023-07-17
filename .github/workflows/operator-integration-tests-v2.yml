@@ -414,6 +414,15 @@ jobs:
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
+      - name: Setup yq
+        uses: chrisdickinson/setup-yq@latest
+
+      - name: Copy jcloud config
+        run: |
+          k8s get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
+          echo jcloud_config=$(realpath config.yml) >> $GITHUB_OUTPUT
+        id: operator_config
+
       - name: Run E2E Integration Test Suites for Operator
         run: |
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
@@ -421,6 +430,7 @@ jobs:
         env:
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.6.1
+          JCLOUD_OPERATOR_CONFIG : ${{ steps.operator_config.outputs }}
         working-directory: ./operator
         timeout-minutes: 30
 
@@ -502,7 +512,16 @@ jobs:
 
       - name: Update Cluster Config
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+      
+      - name: Setup yq
+        uses: chrisdickinson/setup-yq@latest
 
+      - name: Copy jcloud config
+        run: |
+          k8s get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
+          echo jcloud_config=$(realpath config.yml) >> $GITHUB_OUTPUT
+        id: api_config
+          
       - name: Make sure API is healthy
         run: |
           for i in {1..300}
@@ -531,6 +550,7 @@ jobs:
           WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
           THIRD_USER_TOKEN: ${{ env._WOLF_NPRD_GENERAL_THIRD_USER_TOKEN }}
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          JCLOUD_OPERATOR_CONFIG : ${{ steps.api_config.outputs }}
         working-directory: ./api
         timeout-minutes: 30
 
