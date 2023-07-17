@@ -416,6 +416,8 @@ jobs:
 
       - name: Setup yq
         uses: chrisdickinson/setup-yq@latest
+        with:
+          yq-version: 4.34.2
 
       - name: Copy jcloud config
         run: |
@@ -515,6 +517,8 @@ jobs:
       
       - name: Setup yq
         uses: chrisdickinson/setup-yq@latest
+        with:
+          yq-version: 4.34.2
 
       - name: Copy jcloud config
         run: |
