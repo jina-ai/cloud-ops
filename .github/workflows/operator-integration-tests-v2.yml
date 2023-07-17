@@ -419,7 +419,7 @@ jobs:
 
       - name: Copy jcloud config
         run: |
-          k8s get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
+          kubectl get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
           echo jcloud_config=$(realpath config.yml) >> $GITHUB_OUTPUT
         id: operator_config
 
@@ -518,7 +518,7 @@ jobs:
 
       - name: Copy jcloud config
         run: |
-          k8s get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
+          kubectl get configmap jcloud-operator-operator-config -n jcloud -o yaml | yq '.data' | tail -n +2 | sed -e 's/^ \{2\}//' > config.yml
           echo jcloud_config=$(realpath config.yml) >> $GITHUB_OUTPUT
         id: api_config
           
