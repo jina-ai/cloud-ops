@@ -396,6 +396,7 @@ jobs:
       - name: Install Jina
         run: |
           pip3 install jina
+          pip3 install docarray==0.21.1
 
       - name: Install Dependencies
         run: |
