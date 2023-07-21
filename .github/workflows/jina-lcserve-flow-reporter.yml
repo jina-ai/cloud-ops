@@ -31,10 +31,10 @@ jobs:
           pip install -r requirements.txt
         working-directory: ./scripts/
       - name: Notify on Slack
-        run: python lcserve_credit_usage.py
+        run: python xcserve_credit_usage.py
         working-directory: ./scripts/
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
           MONGO_URI: ${{ secrets.PROD_MONGO_URI }}
-          SLACK_CHANNEL_ID: 'C050XLM6687'
+          SLACK_CHANNEL_ID: 'C05HHJC601M'
