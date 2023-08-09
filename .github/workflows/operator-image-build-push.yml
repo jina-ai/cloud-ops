@@ -37,6 +37,9 @@ jobs:
       - name: Build Image
         id: build_image
         shell: bash
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_DEVBOT_TOKEN }}
+          DOCKER_USER: ${{ secrets.DOCKERHUB_DEVBOT_USER }}
         run: |
           cd $GITHUB_WORKSPACE
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
@@ -44,12 +47,12 @@ jobs:
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest operator/
           elif [[ ${{ github.event.client_payload.branch }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             TAG=`echo ${{ github.event.client_payload.branch }} | cut -d / -f 3`
-            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${TAG} operator/
+            bash ./deployment/scripts/docker-build-push.sh jinaai jcloud-operator:${TAG} operator/
           else
             echo "not build from main branch, quit!"
             exit 1
           fi
-  
+
   build-api-manager:
     needs: token-check
     runs-on: ubuntu-latest
@@ -72,6 +75,9 @@ jobs:
       - name: Build Image
         id: build_image
         shell: bash
+        env:
+          DOCKER_TOKEN: ${{ secrets.DOCKERHUB_DEVBOT_TOKEN }}
+          DOCKER_USER: ${{ secrets.DOCKERHUB_DEVBOT_USER }}
         run: |
           cd $GITHUB_WORKSPACE
           regex="refs/tags/(v[0-9]+.[0-9]+.[0-9]+)$"
@@ -79,9 +85,8 @@ jobs:
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
           elif [[ ${{ github.event.client_payload.branch }} =~ ^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             TAG=`echo ${{ github.event.client_payload.branch }} | cut -d / -f 3`
-            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${TAG} api/
+            bash ./deployment/scripts/docker-build-push.sh jinaai jcloud-api-manager:${TAG} api/
           else
             echo "not build from main branch, quit!"
             exit 1
           fi
-      
