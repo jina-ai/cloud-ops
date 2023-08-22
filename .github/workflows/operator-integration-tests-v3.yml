@@ -1,0 +1,819 @@
+name: (jc-operator) Integration Tests v2
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Pass the jina-operator branch
+        required: true
+        default: main
+      env:
+        type: choice
+        description: Choose the environment (i.e. which cluster to run the integration tests on)
+        required: true
+        options:
+          - CI
+          - dev
+      only_api_changed:
+        description: Only API related code changed?
+        type: boolean
+        default: false
+        required: false
+      skip_now_tests:
+        description: Skip now integration tests?
+        type: boolean
+        default: false
+        required: false
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+
+concurrency:
+  group: operator-e2e-tests-${{ github.event.inputs.env }}
+  cancel-in-progress: false
+
+jobs:
+  set-env:
+    runs-on: ubuntu-latest
+    outputs:
+      region: ${{ steps.output-region.outputs.region }}
+      cluster: ${{ steps.output-cluster.outputs.cluster }}
+      host: ${{ steps.output-host.outputs.host }}
+    steps:
+      - id: output-region
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "region=eu-west-3" >> $GITHUB_OUTPUT
+          else
+            echo "region=us-east-2" >> $GITHUB_OUTPUT
+          fi
+      - id: output-cluster
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "cluster=jcloud-CI-eks-episr" >> $GITHUB_OUTPUT
+          else
+            echo "cluster=jcloud-dev-eks-lpzje" >> $GITHUB_OUTPUT
+          fi
+      - id: output-host
+        run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            echo "host=api-ci-episr.wolf.jina.ai" >> $GITHUB_OUTPUT
+          else
+            echo "host=api-dev-lpzje.wolf.jina.ai" >> $GITHUB_OUTPUT
+          fi
+
+  notify-user:
+    runs-on: ubuntu-latest
+    steps:
+      - name: echo who triggered
+        run: |
+          echo -e "Who? ${{ github.actor }} \nWhat? ${{ github.event.inputs.branch }}"
+
+      - name: Notify who triggered the build
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: Where? :point_right: ${{ github.event.inputs.env }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\``,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+
+  build-operator:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for Operator
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/operator/config/scripts/setup" ]; then
+            cd $GITHUB_WORKSPACE/operator/config/scripts/setup
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:latest operator/
+          else
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-operator:${{ github.event.inputs.branch }} operator/
+          fi
+
+  build-api-manager:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+      - name: Run setup script for API
+        run: |
+          # cd is a hack to work with other branches (remove later)
+          if [ -d "$GITHUB_WORKSPACE/api/test/scripts" ]; then
+            cd $GITHUB_WORKSPACE/api/test/scripts
+            go mod tidy
+            go run setup.go
+          fi
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+      - name: Build Image
+        id: build_image
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:latest api/
+          else
+            bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
+          fi
+
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    if: ${{ steps.output-cluster.outputs.cluster == 'jcloud-CI-eks-episr' }}
+    env:
+      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
+      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-infra
+          ref: main
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform fmt -check -diff -write=false
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          git config --global url."https://api:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          terraform init
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform validate -no-color
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false
+
+  deployment:
+    needs: [build-api-manager, build-operator, set-env]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: configure aws credentials
+        if: ${{ steps.output-cluster.outputs.cluster == 'jcloud-CI-eks-episr' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: helm clean
+        if: ${{ steps.output-cluster.outputs.cluster != 'jcloud-CI-eks-episr' }}
+        run: |
+          aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
+          fi
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+      - name: Get remote state
+        if: ${{ steps.output-cluster.outputs.cluster == 'jcloud-CI-eks-episr' }}
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
+      - name: helm clean
+        if: ${{ steps.output-cluster.outputs.cluster == 'jcloud-CI-eks-episr' }}
+        run: |
+          aws eks update-kubeconfig --region us-east-2 --name jcloud-dev-eks-lpzje
+          sudo snap install yq
+          mkdir tls/
+          kubectl get secret wolf-dev-tls -n cert-manager -o yaml > tls/wolf-dev-tls.yaml
+          kubectl get secret wolf-tls -n cert-manager -o yaml  > tls/wolf-tls.yaml
+          kubectl get secret dev-tls -n cert-manager -o yaml  > tls/dev-tls.yaml
+          kubectl get secret docsqa-tls -n cert-manager -o yaml  > tls/docsqa-tls.yaml
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
+          fi
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+          kubectl create ns cert-manager
+          kubectl apply -f tls/
+      - name: helm deploy
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            kubectl get configmap jcloud-instances -n jcloud
+            if [[ $? -eq 0 ]]; then
+              kubectl delete configmap jcloud-instances -n jcloud
+            fi
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+          else
+            bash ./deployment/scripts/deploy.sh -r $${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+          fi
+
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+          GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+
+      - name: Wait until API is healthy
+        run: |
+          sleep 15
+          for i in {1..300}
+          do
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
+            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
+              exit 0
+            fi
+            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
+            sleep 1
+          done
+          exit 1
+
+  prep-testbed-operator:
+    needs: deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+        working-directory: ./operator
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  prep-testbed-api:
+    needs: deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - id: set-matrix
+        run: |
+          sudo apt-get install jq
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+        working-directory: ./api
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  prep-testbed-now:
+    needs: deployment
+    if: ${{ (github.event.inputs.skip_now_tests == 'false') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout now Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/now
+      - id: set-matrix
+        run: |
+          echo "::set-output name=matrix::$(find -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
+        working-directory: ./tests/integration/remote
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+
+  now-integration-tests:
+    needs: [prep-testbed-now, set-env]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-now.outputs.matrix)}}
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
+      - name: Setup Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Checkout now repo
+        uses: actions/checkout/@v3
+        with:
+          repository: jina-ai/now
+      - name: Prepare environment
+        run: |
+          sudo apt update && sudo apt install ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install wheel
+          pip install --no-cache-dir ".[full,test]"
+          pip install --no-cache-dir -U jcloud
+      - name: Add JCloud auth token
+        run: |
+          mkdir -p ~/.jina
+          touch ~/.jina/config.json
+          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
+          cat ~/.jina/config.json
+      - name: Run tests
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "tests/integration/remote/{}" | xargs)
+          pytest -v ${focus_files}
+        env:
+          JCLOUD_API: https://${{ needs.set-env.outputs.host }}
+          DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
+          HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}
+          DOCKER_USERNAME: ${{ env._WOLF_NPRD_GENERAL_DOCKER_USERNAME }}
+          JINA_DEV_BOT: ${{ env._WOLF_NPRD_GENERAL_JINA_DEV_BOT }}
+          JINA_OPTOUT_TELEMETRY: ${{ env._WOLF_NPRD_GENERAL_JINA_OPTOUT_TELEMETRY }}
+          NETLIFY_AUTH_TOKEN1: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_AUTH_TOKEN1 }}
+          NETLIFY_SITE_ID: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_SITE_ID }}
+          NOW_ANNLITE_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ANNLITE_EXECUTOR_SECRET }}
+          NOW_AUTH_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTH_EXECUTOR_SECRET }}
+          NOW_AUTOCOMPLETE_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTOCOMPLETE_SECRET }}
+          NOW_ELASTIC_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ELASTIC_EXECUTOR_SECRET }}
+          NOW_OCR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_OCR_EXECUTOR_SECRET }}
+          NOW_POSTPROCESSOR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_POSTPROCESSOR_EXECUTOR_SECRET }}
+          NOW_PREPROCESSOR_JCLOUD_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_JCLOUD_TOKEN }}
+          NOW_PREPROCESSOR_REPO: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO }}
+          NOW_PREPROCESSOR_REPO_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO_TOKEN }}
+          NOW_QDRANT_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_QDRANT_EXECUTOR_SECRET }}
+          NOW_STAGING_FLORIAN: ${{ env._WOLF_NPRD_GENERAL_NOW_STAGING_FLORIAN }}
+          PERSONAL_ACCESS_TOKEN: ${{ env._WOLF_NPRD_GENERAL_PERSONAL_ACCESS_TOKEN }}
+          TWINE_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_TWINE_PASSWORD }}
+          TWINE_USERNAME: ${{ env._WOLF_NPRD_GENERAL_TWINE_USERNAME }}
+          WOLF_EXAMPLES_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN }}
+          WOLF_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          JCLOUD_LOGLEVEL: DEBUG
+          JINA_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
+
+  operator:
+    needs: [prep-testbed-operator, set-env]
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install Jina
+        run: |
+          pip3 install jina
+          pip3 install docarray==0.21.1
+
+      - name: Install Dependencies
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+
+      - name: Run E2E Integration Test Suites for Operator
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
+          ginkgo ${focus_files} -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.6.1
+        working-directory: ./operator
+        timeout-minutes: 30
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}` (cluster: `${{ github.event.inputs.env }}`)
+          author_name: ":cloud: Operator Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+  api:
+    needs: [prep-testbed-api, set-env]
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install Dependencies
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./api
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+
+      - name: Make sure API is healthy
+        run: |
+          for i in {1..300}
+          do
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
+            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
+              exit 0
+            fi
+            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
+            sleep 2
+          done
+          exit 1
+
+      - name: Run E2E Integration Test Suites for API
+        run: |
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          ginkgo ${focus_files} -v --progress ./...
+        env:
+          API_HOST: https://${{ needs.set-env.outputs.host }}
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.5.0
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+          FIRST_USER_TOKEN: ${{ secrets.JC_CI_FIRST_USER_TOKEN }}
+          SECOND_USER_TOKEN: ${{ secrets.JC_CI_SECOND_USER_TOKEN }}
+          WOLF_M2M_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_M2M_TOKEN }}
+          THIRD_USER_TOKEN: ${{ env._WOLF_NPRD_GENERAL_THIRD_USER_TOKEN }}
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+        working-directory: ./api
+        timeout-minutes: 30
+
+      - if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          fields: eventName,job
+          text: |
+            :no_entry: `${{ matrix.test-path }}` failed for branch `${{ github.event.inputs.branch }}` (cluster: `${{ github.event.inputs.env }}`)
+          author_name: ":cloud: API Integration Tests"
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+          MATRIX_CONTEXT: ${{ toJson(matrix) }}
+
+  restart-tests:
+    needs:
+      - operator
+      - api
+      - set-env
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+
+      - name: Cache Go Modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Cache Python Dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Set up Golang 1.18
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install Dependencies
+        run: |
+          go install github.com/onsi/ginkgo/v2/ginkgo@v2.8.1
+          go get github.com/onsi/gomega/...
+          go mod tidy -v
+        working-directory: ./operator
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Update Cluster Config
+        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+
+      - name: Run E2E Integration Test Suites for Operator
+        run: |
+          ginkgo --focus-file controllers/test/restart/restart_test.go -v --progress ./...
+        env:
+          ACK_GINKGO_RC: true
+          ACK_GINKGO_DEPRECATIONS: 2.6.1
+        working-directory: ./operator
+        timeout-minutes: 30
+
+  compatibility-test:
+    needs:
+      - restart-tests
+    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
+    uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
+    secrets: inherit
+    with:
+      branch: ${{ github.event.inputs.branch }}
+      env: ${{ github.event.inputs.env }}
+
+  success-all-test:
+    needs:
+      - compatibility-test
+      - now-integration-tests
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: technote-space/workflow-conclusion-action@v2
+
+      - name: Notify success
+        if: env.WORKFLOW_CONCLUSION != 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: Where? :point_right: ${{ github.event.inputs.env }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :white_check_mark:`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+
+      - name: Notify failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: repo,author
+          custom_payload: |
+            {
+              attachments: [{
+                text: `:jcloud: Operator + API Tests \n :face_with_raised_eyebrow: Who? :point_right: ${{ github.actor }} \n :face_with_raised_eyebrow: Where? :point_right: ${{ github.event.inputs.env }} \n :face_with_raised_eyebrow: What? :point_right: \`${{ github.event.inputs.branch }}\` \n :question: Status? :x: `,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+
+      - name: Check Failure
+        if: env.WORKFLOW_CONCLUSION == 'failure'
+        run: |
+          if [[ ${{ steps.output-cluster.outputs.cluster }} == 'jcloud-CI-eks-episr' ]]; then
+            # wait for 60 mins before clean the cluster
+            sleep 3600 
+          else
+            exit 1
+          fi
+
+      - name: Success
+        if: ${{ success() }}
+        run: echo "All Done"
+
+  terraform-destroy:
+    needs:
+      - success-all-test
+    runs-on: ubuntu-latest
+    if: ${{ steps.output-cluster.outputs.cluster == 'jcloud-CI-eks-episr' }}
+    env:
+      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
+      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-infra
+          ref: main
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform fmt -check -diff -write=false
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          git config --global url."https://api:${{ secrets.BOT_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          terraform init
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform validate -no-color
+      - name: Clean flows
+        run: |
+          kubectl delete flow --all --all-namespaces
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false -var="enable_karpenter=false" \
+          -var="enable_efs=false" -var="enable_ebs=false" -var="enable_cert_manager=false" \
+          -var="enable_external_dns=false" -var="enable_knative=false" \
+          -var="enable_kong=false" -var="enable_linkerd=false"
+      - name: Terraform Destroy
+        id: destroy
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -destroy
