@@ -1,4 +1,4 @@
-name: (jc-operator) Integration Tests v2
+name: (jc-operator) Integration Tests v3
 
 on:
   workflow_dispatch:
@@ -24,6 +24,10 @@ on:
         type: boolean
         default: false
         required: false
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
 
 concurrency:
   group: operator-e2e-tests-${{ github.event.inputs.env }}
@@ -156,15 +160,67 @@ jobs:
             bash ./deployment/scripts/docker-build-push.sh 253352124568.dkr.ecr.us-east-2.amazonaws.com jcloud-api-manager:${{ github.event.inputs.branch }} api/
           fi
 
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.env == 'CI' }}
+    env:
+      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
+      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-infra
+          ref: main
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform fmt -check -diff -write=false
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          git config --global url."https://api:${{ secrets.JINA_DEV_BOT }}@github.com/".insteadOf "https://github.com/"
+          terraform init
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform validate -no-color
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false
+
   deployment:
     needs: [build-api-manager, build-operator, set-env]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'CI' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - name: configure aws credentials
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
           aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
@@ -172,8 +228,27 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: helm clean
+        if: ${{ github.event.inputs.env != 'CI' }}
         run: |
           aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
+          fi
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+      - name: Get remote state
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
+      - name: helm clean
+        if: ${{ github.event.inputs.env == 'CI' }}
+        run: |
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
           if helm list -n jcloud | grep -q jcloud-operator; then
             helm uninstall -n jcloud jcloud-operator
           fi
@@ -417,7 +492,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file controllers/test/e2e/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
@@ -625,15 +700,16 @@ jobs:
       branch: ${{ github.event.inputs.branch }}
       env: ${{ github.event.inputs.env }}
 
-  success-all-test:
+  notify-test:
     needs:
       - compatibility-test
       - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
+    outputs:
+      destroy: ${{ steps.check.outputs.destroy }}
     steps:
       - uses: technote-space/workflow-conclusion-action@v2
-
       - name: Notify success
         if: env.WORKFLOW_CONCLUSION != 'failure'
         uses: 8398a7/action-slack@v3
@@ -664,10 +740,86 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
 
+  terraform-destroy:
+    needs:
+      - notify-test
+    if: always()
+    runs-on: ubuntu-latest
+    env:
+      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
+      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+    steps:
       - name: Check Failure
+        id: check
         if: env.WORKFLOW_CONCLUSION == 'failure'
-        run: exit 1
-
+        run: |
+          echo "Failed, delete cluster in 3600s"
+          sleep 60
       - name: Success
         if: ${{ success() }}
-        run: echo "All Done"
+        run: echo "All Done, destroy cluster now"
+      - name: Skip
+        if: ${{ github.event.inputs.env != 'CI' }}
+        run: |
+          echo "skip non ci cluster"
+          exit 0
+
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-infra
+          ref: main
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.2.6
+      - name: Get remote state
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          echo ${{ needs.success-all-test.outputs.destroy }}
+          terraform fmt -check -diff -write=false
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          git config --global url."https://api:${{ secrets.JINA_DEV_BOT }}@github.com/".insteadOf "https://github.com/"
+          terraform init
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform validate -no-color
+      - name: Clean flows
+        run: |
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+          kubectl delete flow --all --all-namespaces || true
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false -var="enable_karpenter=false" \
+          -var="enable_efs=false" -var="enable_ebs=false" -var="enable_cert_manager=false" \
+          -var="enable_external_dns=false" -var="enable_knative=false" \
+          -var="enable_kong=false" -var="enable_linkerd=false"
+      - name: Terraform Destroy
+        id: destroy
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -destroy
