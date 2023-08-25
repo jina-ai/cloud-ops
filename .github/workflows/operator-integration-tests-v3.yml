@@ -58,7 +58,7 @@ jobs:
       - id: output-host
         run: |
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
-            echo "host=api-ci-episr.wolf.jina.ai" >> $GITHUB_OUTPUT
+            echo "host=api.ci.wolf.jina.ai" >> $GITHUB_OUTPUT
           else
             echo "host=api-dev-lpzje.wolf.jina.ai" >> $GITHUB_OUTPUT
           fi
@@ -203,9 +203,15 @@ jobs:
         working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
         run: |
           terraform apply -auto-approve -input=false
+      - name: Terraform Re-Apply
+        id: reapply
+        if: ${{ steps.apply.conclusion == 'failure' }}
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false
 
   deployment:
-    needs: [build-api-manager, build-operator, set-env]
+    needs: [build-api-manager, build-operator, set-env, terraform-deploy]
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
@@ -256,11 +262,18 @@ jobs:
       - name: helm deploy
         run: |
           cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            kubectl create ns jcloud || true
+            yq -i ".operator.config.operator.storage.efs=\"${{ steps.remote-state.outputs.efs_id }}\"" .github/ci/${{ github.event.inputs.env }}-values.yaml
+            kubectl create secret generic regcred \
+            --from-literal=.dockerconfigjson=\"${{ secrets.WOLF_DOCKER_AUTH }}\" \
+            --type=kubernetes.io/dockerconfigjson
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/SAN=*.ci.wolf.jina.ai/O=*.ci.wolf.jina.ai"
+            kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
           if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
-            kubectl get configmap jcloud-instances -n jcloud
-            if [[ $? -eq 0 ]]; then
-              kubectl delete configmap jcloud-instances -n jcloud
-            fi
+            kubectl delete configmap jcloud-instances -n jcloud || true
             kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
           fi
           kubectl apply -f deployment/charts/jcloud-operator/crds/
@@ -281,13 +294,56 @@ jobs:
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+      - name: helm deploy
+        if: ${{ github.event.inputs.env == 'CI' }}
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            kubectl create ns jcloud || true
+            yq -i ".operator.config.operator.storage.efs=\"${{ steps.remote-state.outputs.efs_id }}\"" .github/ci/${{ github.event.inputs.env }}-values.yaml
+            kubectl create secret generic regcred \
+            --from-literal==.dockerconfigjson=\"${{ secrets.WOLF_DOCKER_AUTH }}\" \
+            --type=kubernetes.io/dockerconfigjson
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/SAN=*.ci.wolf.jina.ai/O=*.ci.wolf.jina.ai"
+            kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            kubectl delete configmap jcloud-instances -n jcloud || true
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
+          REGISTRY="253352124568.dkr.ecr.us-east-2.amazonaws.com"
+          TAG=${{ github.event.inputs.branch }}
+          API_HOST=${{ needs.set-env.outputs.host }}
+          kubectl create secret docker-registry jcloud-ecr-secret \
+          --docker-server=${REGISTRY} \
+          --docker-username=AWS \
+          --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
+          -n jcloud
+          helm upgrade --install jcloud-operator . \
+          --set apimanager.image.repository=${REGISTRY}/jcloud-api-manager --set operator.image.repository=${REGISTRY}/jcloud-operator" \
+          --set apimanager.image.tag=${TAG} --set operator.image.tag=${TAG}" \
+          --set apimanager.ingress.hosts={${API_HOST}}" \
+          --set clusterid=${CLUSTER_NAME} \
+          --set "apimanager.image.pullSecrets={jcloud-ecr-secret}" \
+          --set "operator.image.pullSecrets={jcloud-ecr-secret}" \
+          -n jcloud
+
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+          GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
 
       - name: Wait until API is healthy
         run: |
           sleep 15
           for i in {1..300}
           do
-            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" https://${{ needs.set-env.outputs.host }}`
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" -k https://${{ needs.set-env.outputs.host }}`
             if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
               echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
               exit 0
@@ -742,19 +798,23 @@ jobs:
 
   terraform-destroy:
     needs:
-      - notify-test
+      - operator
+      - api
+      - compatibility-test
+      - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
+      - uses: technote-space/workflow-conclusion-action@v2
       - name: Check Failure
         id: check
         if: env.WORKFLOW_CONCLUSION == 'failure'
         run: |
           echo "Failed, delete cluster in 3600s"
-          sleep 60
+          sleep 3600
       - name: Success
         if: ${{ success() }}
         run: echo "All Done, destroy cluster now"
