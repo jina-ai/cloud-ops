@@ -353,7 +353,7 @@ jobs:
     needs: [prep-testbed-operator, set-env]
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 4
+      max-parallel: 10
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
@@ -441,7 +441,7 @@ jobs:
     needs: [prep-testbed-api, set-env]
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 4
+      max-parallel: 10
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
