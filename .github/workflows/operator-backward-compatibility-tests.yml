@@ -214,7 +214,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-path: [controllers/test/compatibility/baseline_flows_setup_test.go]
+        test-path: [test/compatibility/baseline_flows_setup_test.go]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -358,7 +358,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-path: [controllers/test/compatibility/backward_compatibility_test.go]
+        test-path: [test/compatibility/backward_compatibility_test.go]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
