@@ -14,6 +14,11 @@ on:
         options:
           - CI
           - dev
+      destroy_cluster:
+        description: Destroy CI cluster after test?
+        type: boolean
+        default: true
+        required: true
       only_api_changed:
         description: Only API related code changed?
         type: boolean
@@ -260,14 +265,16 @@ jobs:
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
+        if: ${{ github.event.inputs.env != 'CI' }}
         run: |
           cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
             kubectl create ns jcloud || true
             yq -i ".operator.config.operator.storage.efs=\"${{ steps.remote-state.outputs.efs_id }}\"" .github/ci/${{ github.event.inputs.env }}-values.yaml
+            kubectl delete secret regcred -n jcloud
             kubectl create secret generic regcred \
             --from-literal=.dockerconfigjson=\"${{ secrets.WOLF_DOCKER_AUTH }}\" \
-            --type=kubernetes.io/dockerconfigjson
+            --type=kubernetes.io/dockerconfigjson -n jcloud
             openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/SAN=*.ci.wolf.jina.ai/O=*.ci.wolf.jina.ai"
             kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
             sudo cp ci.crt /etc/ssl/certs/
@@ -301,10 +308,13 @@ jobs:
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
             kubectl create ns jcloud || true
             yq -i ".operator.config.operator.storage.efs=\"${{ steps.remote-state.outputs.efs_id }}\"" .github/ci/${{ github.event.inputs.env }}-values.yaml
+            kubectl delete secret regcred -n jcloud || true
+            echo "$WOLF_DOCKER_AUTH" > config.json
             kubectl create secret generic regcred \
-            --from-literal==.dockerconfigjson=\"${{ secrets.WOLF_DOCKER_AUTH }}\" \
-            --type=kubernetes.io/dockerconfigjson
+            --from-file=.dockerconfigjson=config.json \
+            --type=kubernetes.io/dockerconfigjson -n jcloud
             openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/SAN=*.ci.wolf.jina.ai/O=*.ci.wolf.jina.ai"
+            kubectl delete secret ci-wolf-tls -n jcloud || true
             kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
             sudo cp ci.crt /etc/ssl/certs/
           fi
@@ -315,24 +325,28 @@ jobs:
           kubectl apply -f deployment/charts/jcloud-operator/crds/
           REGISTRY="253352124568.dkr.ecr.us-east-2.amazonaws.com"
           TAG=${{ github.event.inputs.branch }}
-          API_HOST=${{ needs.set-env.outputs.host }}
+          API_HOST="api.ci.wolf.jina.ai"
+          kubectl delete secret jcloud-ecr-secret -n jcloud || true
           kubectl create secret docker-registry jcloud-ecr-secret \
           --docker-server=${REGISTRY} \
           --docker-username=AWS \
           --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
           -n jcloud
-          helm upgrade --install jcloud-operator . \
-          --set apimanager.image.repository=${REGISTRY}/jcloud-api-manager --set operator.image.repository=${REGISTRY}/jcloud-operator" \
-          --set apimanager.image.tag=${TAG} --set operator.image.tag=${TAG}" \
-          --set apimanager.ingress.hosts={${API_HOST}}" \
+          helm upgrade --install jcloud-operator deployment/charts/jcloud-operator/ \
+          --set apimanager.image.repository=${REGISTRY}/jcloud-api-manager --set operator.image.repository=${REGISTRY}/jcloud-operator \
+          --set apimanager.image.tag=${TAG} --set operator.image.tag=${TAG} \
+          --set apimanager.ingress.hosts={${API_HOST}} \
           --set clusterid=${CLUSTER_NAME} \
-          --set "apimanager.image.pullSecrets={jcloud-ecr-secret}" \
-          --set "operator.image.pullSecrets={jcloud-ecr-secret}" \
+          --set operator.config.operator.storage.efs.handler=${{ steps.remote-state.outputs.efs_id }} \
+          --set apimanager.image.pullSecrets={jcloud-ecr-secret} \
+          --set operator.image.pullSecrets={jcloud-ecr-secret} \
+          -f .github/ci/CI-values.yaml \
           -n jcloud
 
           kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
+          WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
@@ -808,22 +822,14 @@ jobs:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
-      - uses: technote-space/workflow-conclusion-action@v2
-      - name: Check Failure
-        id: check
-        if: env.WORKFLOW_CONCLUSION == 'failure'
-        run: |
-          echo "Failed, delete cluster in 3600s"
-          sleep 3600
       - name: Success
         if: ${{ success() }}
         run: echo "All Done, destroy cluster now"
       - name: Skip
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'CI' }} || ${{ github.event.inputs.destroy_cluster == 'false' }}
         run: |
-          echo "skip non ci cluster"
+          echo "skip destroy ci cluster"
           exit 0
-
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-infra
@@ -870,6 +876,11 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
           kubectl delete flow --all --all-namespaces || true
+          for i in $(aws ec2 describe-instances --filter "Name=tag:karpenter.sh/discovery,Values=${{ steps.remote-state.outputs.cluster_id }}" --query 'Reservations[].Instances[].InstanceId' --output text)
+          do
+            echo "terminate instance ${i}"
+            aws ec2 terminate-instances --instance-ids ${i}
+          done
       - name: Terraform Apply
         id: apply
         working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
@@ -880,6 +891,7 @@ jobs:
           -var="enable_kong=false" -var="enable_linkerd=false"
       - name: Terraform Destroy
         id: destroy
+        if: ${{ always() }}
         working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
         run: |
           terraform apply -auto-approve -destroy
