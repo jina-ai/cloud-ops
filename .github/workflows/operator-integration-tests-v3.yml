@@ -166,8 +166,8 @@ jobs:
           fi
 
   terraform-deploy:
-    runs-on: ubuntu-latest
     if: ${{ github.event.inputs.env == 'CI' }}
+    runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
@@ -215,19 +215,12 @@ jobs:
         run: |
           terraform apply -auto-approve -input=false
 
-  deployment:
+  deployment-ci:
     needs: [build-api-manager, build-operator, set-env, terraform-deploy]
+    if: ${{ github.event.inputs.env == 'CI' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'CI' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - name: configure aws credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
@@ -238,16 +231,7 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-      - name: helm clean
-        if: ${{ github.event.inputs.env != 'CI' }}
-        run: |
-          aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-          if helm list -n jcloud | grep -q jcloud-operator; then
-            helm uninstall -n jcloud jcloud-operator
-          fi
-          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -257,52 +241,13 @@ jobs:
             key=jcloud/ci/eks
             region=us-east-1
       - name: helm clean
-        if: ${{ github.event.inputs.env == 'CI' }}
         run: |
-          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           if helm list -n jcloud | grep -q jcloud-operator; then
             helm uninstall -n jcloud jcloud-operator
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
-        if: ${{ github.event.inputs.env != 'CI' }}
-        run: |
-          cd $GITHUB_WORKSPACE
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
-            kubectl create ns jcloud || true
-            yq -i ".operator.config.operator.storage.efs=\"${{ steps.remote-state.outputs.efs_id }}\"" .github/ci/${{ github.event.inputs.env }}-values.yaml
-            kubectl delete secret regcred -n jcloud
-            kubectl create secret generic regcred \
-            --from-literal=.dockerconfigjson=\"${{ secrets.WOLF_DOCKER_AUTH }}\" \
-            --type=kubernetes.io/dockerconfigjson -n jcloud
-            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/SAN=*.ci.wolf.jina.ai/O=*.ci.wolf.jina.ai"
-            kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
-            sudo cp ci.crt /etc/ssl/certs/
-          fi
-          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
-            kubectl delete configmap jcloud-instances -n jcloud || true
-            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
-          fi
-          kubectl apply -f deployment/charts/jcloud-operator/crds/
-          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
-            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
-            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
-          else
-            bash ./deployment/scripts/deploy.sh -r $${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
-            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
-            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
-          fi
-
-          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
-        env:
-          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-          LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-          GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
-          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
-      - name: helm deploy
-        if: ${{ github.event.inputs.env == 'CI' }}
         run: |
           cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
@@ -351,7 +296,69 @@ jobs:
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+      - name: Wait until API is healthy
+        run: |
+          sleep 15
+          for i in {1..300}
+          do
+            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" -k https://${{ needs.set-env.outputs.host }}`
+            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
+              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
+              exit 0
+            fi
+            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
+            sleep 1
+          done
+          exit 1
 
+  deployment:
+    needs: [build-api-manager, build-operator, set-env]
+    if: ${{ github.event.inputs.env != 'CI' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: helm clean
+        run: |
+          aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
+          fi
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+      - name: helm deploy
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            kubectl delete configmap jcloud-instances -n jcloud || true
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
+          if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
+            bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+          else
+            bash ./deployment/scripts/deploy.sh -r $${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+          fi
+
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
+        env:
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+          GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
       - name: Wait until API is healthy
         run: |
           sleep 15
@@ -816,7 +823,7 @@ jobs:
       - api
       - compatibility-test
       - now-integration-tests
-    if: always()
+    if: ${{ github.event.inputs.env == 'CI' }} && ${{ github.event.inputs.destroy_cluster == 'true' }}
     runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
@@ -825,11 +832,6 @@ jobs:
       - name: Success
         if: ${{ success() }}
         run: echo "All Done, destroy cluster now"
-      - name: Skip
-        if: ${{ github.event.inputs.env != 'CI' }} || ${{ github.event.inputs.destroy_cluster == 'false' }}
-        run: |
-          echo "skip destroy ci cluster"
-          exit 0
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-infra
@@ -846,7 +848,6 @@ jobs:
         with:
           terraform_version: 1.2.6
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -874,9 +875,9 @@ jobs:
           terraform validate -no-color
       - name: Clean flows
         run: |
-          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           kubectl delete flow --all --all-namespaces || true
-          for i in $(aws ec2 describe-instances --filter "Name=tag:karpenter.sh/discovery,Values=${{ steps.remote-state.outputs.cluster_id }}" --query 'Reservations[].Instances[].InstanceId' --output text)
+          for i in $(aws ec2 describe-instances --filter "Name=tag:karpenter.sh/discovery,Values=${{ steps.remote-state.outputs.cluster_name }}" --query 'Reservations[].Instances[].InstanceId' --output text)
           do
             echo "terminate instance ${i}"
             aws ec2 terminate-instances --instance-ids ${i}
@@ -894,4 +895,7 @@ jobs:
         if: ${{ always() }}
         working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
         run: |
+          if [[ ${{ github.event.inputs.destroy_cluster }} == 'false' || ${{ github.event.inputs.env }} != 'CI' ]]; then
+            exit 0
+          fi
           terraform apply -auto-approve -destroy
