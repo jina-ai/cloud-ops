@@ -190,7 +190,7 @@ jobs:
         echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
     - name: helm clean
       run: |
-        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
         if helm list -n jcloud | grep -q jcloud-operator; then
           helm uninstall -n jcloud jcloud-operator
         fi
@@ -205,7 +205,7 @@ jobs:
     - name: helm deploy
       run: |
         cd $GITHUB_WORKSPACE
-        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_id }}
+        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
         if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
           set +e
           kubectl get configmap jcloud-instances -n jcloud
@@ -217,16 +217,16 @@ jobs:
         set -e
         kubectl apply -f deployment/charts/jcloud-operator/crds/
         if [[ $GIT_BRANCH == 'main' ]]; then
-          bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+          bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
           -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
           --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
         else
           if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
-            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
             -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ env.GIT_BRANCH }}
           else
-            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_id }} \
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
             -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
           fi
