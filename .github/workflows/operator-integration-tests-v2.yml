@@ -353,7 +353,7 @@ jobs:
     needs: [prep-testbed-operator, set-env]
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 4
+      max-parallel: 10
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-operator.outputs.matrix)}}
@@ -441,7 +441,7 @@ jobs:
     needs: [prep-testbed-api, set-env]
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 4
+      max-parallel: 10
       fail-fast: false
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-api.outputs.matrix)}}
@@ -608,7 +608,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          ginkgo --focus-file controllers/test/restart/restart_test.go -v --progress ./...
+          ginkgo --focus-file test/restart/restart_test.go -v --progress ./...
         env:
           ACK_GINKGO_RC: true
           ACK_GINKGO_DEPRECATIONS: 2.6.1

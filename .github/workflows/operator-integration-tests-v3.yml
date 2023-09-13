@@ -168,70 +168,98 @@ jobs:
   terraform-deploy:
     if: ${{ github.event.inputs.env == 'CI' }}
     runs-on: ubuntu-latest
-    env:
-      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
-      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
-      - uses: actions/checkout@v3
+      - name: wait for dispatch finish
+        shell: bash
+        run: |
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ ! -z ${id} ]]; then
+            for i in {1..180}
+            do
+              unfinish_id=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+              https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+              |jq ".workflow_runs|sort_by(.id)[]|select(.status!=\"completed\")|.id")
+              echo "latest retrive workflow id ${id} status ${unfinish_id}, ${i}"
+              if [[ ${#a} -gt 0 ]]; then
+                echo "wait for pevious job to finish"
+                sleep 6
+                if [[ ${i} -eq 180 ]];then
+                  echo "wait timeout, quit"
+                  exit 0
+                fi
+              else
+                exit 0
+              fi
+            done
+          fi
+          exit 0
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        id: dispatch
         with:
-          repository: jina-ai/jina-infra
-          ref: main
           token: ${{ secrets.JINA_DEV_BOT }}
-      - name: configure aws credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
-          role-session-name: jinainfraapply
-          aws-region: us-east-1
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.2.6
-      - name: Terraform Format Check
-        id: fmt
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+          repository: jina-ai/jina-infra
+          event-type: jcloud-infra-deploy
+          client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "false"}'
+      - name: wait for dispatch finish
+        shell: bash
         run: |
-          terraform fmt -check -diff -write=false
-      - name: Terraform Init
-        id: init
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          git config --global url."https://api:${{ secrets.JINA_DEV_BOT }}@github.com/".insteadOf "https://github.com/"
-          terraform init
-      - name: Terraform Validate
-        id: validate
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          terraform validate -no-color
-      - name: Terraform Apply
-        id: apply
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          terraform apply -auto-approve -input=false
-      - name: Terraform Re-Apply
-        id: reapply
-        if: ${{ steps.apply.conclusion == 'failure' }}
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          terraform apply -auto-approve -input=false
+          sleep 3
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ $(expr $(date +%s) - $(data -d ${create_at} +%s)) -le 60 ]]; then
+            if [[ ! -z ${id} ]]; then
+              for i in {1..300}
+              do
+                conclusion=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+                https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+                |jq ".workflow_runs|sort_by(.id)[]"|jq -nr '[inputs][-1].conclusion')
+                echo "latest retrive workflow id ${id} conclusion ${conclusion}, ${i}"
+                if [[ ${conclusion} == "success" ]]; then
+                  exit 0
+                elif [[ ${conclusion} == "failure" ]]; then
+                  echo "job failure"
+                  exit 1
+                fi
+                sleep 6
+              done
+            fi
+          fi
+          failed to get dispatched job, please check the status of workflow jcloud-deploy.yml in jina-infra repo
+          exit 1
 
-  deployment-ci:
+  deployment:
     needs: [build-api-manager, build-operator, set-env, terraform-deploy]
-    if: ${{ github.event.inputs.env == 'CI' }}
+    if: |
+      always() && 
+      needs.build-api-manager.result == 'success' &&
+      needs.build-operator.result == 'success' &&
+      needs.set-env.result == 'success' &&
+      (needs.terraform-deploy.result == 'success' || needs.terraform-deploy.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: configure aws credentials
+        if: ${{ github.event.inputs.env == 'CI' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - uses: actions/checkout@v3
+        if: ${{ github.event.inputs.env == 'CI' }}
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: Get remote state
+        if: ${{ github.event.inputs.env == 'CI' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -241,6 +269,7 @@ jobs:
             key=jcloud/ci/eks
             region=us-east-1
       - name: helm clean
+        if: ${{ github.event.inputs.env == 'CI' }}
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           if helm list -n jcloud | grep -q jcloud-operator; then
@@ -248,6 +277,7 @@ jobs:
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
+        if: ${{ github.event.inputs.env == 'CI' }}
         run: |
           cd $GITHUB_WORKSPACE
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
@@ -278,10 +308,9 @@ jobs:
           --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
           -n jcloud
           helm upgrade --install jcloud-operator deployment/charts/jcloud-operator/ \
-          --set apimanager.image.repository=${REGISTRY}/jcloud-api-manager --set operator.image.repository=${REGISTRY}/jcloud-operator \
-          --set apimanager.image.tag=${TAG} --set operator.image.tag=${TAG} \
-          --set apimanager.ingress.hosts={${API_HOST}} \
-          --set clusterid=${CLUSTER_NAME} \
+          --set apimanager.image.repository=$REGISTRY/jcloud-api-manager --set operator.image.repository=$REGISTRY/jcloud-operator \
+          --set apimanager.image.tag=$TAG --set operator.image.tag=$TAG \
+          --set apimanager.ingress.hosts={$API_HOST} \
           --set operator.config.operator.storage.efs.handler=${{ steps.remote-state.outputs.efs_id }} \
           --set apimanager.image.pullSecrets={jcloud-ecr-secret} \
           --set operator.image.pullSecrets={jcloud-ecr-secret} \
@@ -296,38 +325,21 @@ jobs:
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
-      - name: Wait until API is healthy
-        run: |
-          sleep 15
-          for i in {1..300}
-          do
-            STATUS_CODE=`curl -s -o /dev/null -w "%{http_code}" -k https://${{ needs.set-env.outputs.host }}`
-            if [[ ${STATUS_CODE} -ge 200 ]] && [[ ${STATUS_CODE} -lt 300 ]]; then
-              echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, continue."
-              exit 0
-            fi
-            echo "API ${{ needs.set-env.outputs.host }} returns ${STATUS_CODE}, retry ${1}."
-            sleep 1
-          done
-          exit 1
-
-  deployment:
-    needs: [build-api-manager, build-operator, set-env]
-    if: ${{ github.event.inputs.env != 'CI' }}
-    runs-on: ubuntu-latest
-    steps:
       - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'CI' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - uses: actions/checkout@v3
+        if: ${{ github.event.inputs.env != 'CI' }}
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: helm clean
+        if: ${{ github.event.inputs.env != 'CI' }}
         run: |
           aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
           if helm list -n jcloud | grep -q jcloud-operator; then
@@ -335,6 +347,7 @@ jobs:
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
+        if: ${{ github.event.inputs.env != 'CI' }}
         run: |
           cd $GITHUB_WORKSPACE
           if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
@@ -377,6 +390,7 @@ jobs:
   prep-testbed-operator:
     needs: deployment
     runs-on: ubuntu-latest
+    if: always() && needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -395,6 +409,7 @@ jobs:
   prep-testbed-api:
     needs: deployment
     runs-on: ubuntu-latest
+    if: always() && needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -412,7 +427,7 @@ jobs:
 
   prep-testbed-now:
     needs: deployment
-    if: ${{ (github.event.inputs.skip_now_tests == 'false') }}
+    if: always() && needs.deployment.result == 'success' && github.event.inputs.skip_now_tests == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout now Repo
@@ -428,6 +443,7 @@ jobs:
 
   now-integration-tests:
     needs: [prep-testbed-now, set-env]
+    if: always() && needs.prep-testbed-now.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -503,6 +519,7 @@ jobs:
 
   operator:
     needs: [prep-testbed-operator, set-env]
+    if: always() && needs.prep-testbed-operator.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -591,6 +608,7 @@ jobs:
 
   api:
     needs: [prep-testbed-api, set-env]
+    if: always() && needs.prep-testbed-api.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -705,6 +723,7 @@ jobs:
       - api
       - set-env
     runs-on: ubuntu-latest
+    if: always() && needs.operator.result == 'success' && needs.api.result == 'success' && needs.set-env.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -770,7 +789,10 @@ jobs:
   compatibility-test:
     needs:
       - restart-tests
-    if: ${{ (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false') }}
+    if: |
+      always() && 
+      needs.restart-tests.result == 'success' && 
+      (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false')
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
     secrets: inherit
     with:
@@ -823,31 +845,21 @@ jobs:
       - api
       - compatibility-test
       - now-integration-tests
-    if: ${{ github.event.inputs.env == 'CI' }} && ${{ github.event.inputs.destroy_cluster == 'true' }}
+      - set-env
+    if: always()
     runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
-      - name: Success
-        if: ${{ success() }}
-        run: echo "All Done, destroy cluster now"
-      - uses: actions/checkout@v3
-        with:
-          repository: jina-ai/jina-infra
-          ref: main
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.2.6
       - name: Get remote state
+        if: ${{ github.event.inputs.env == 'CI' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -856,24 +868,11 @@ jobs:
             bucket=jina-infra-terraform-state
             key=jcloud/ci/eks
             region=us-east-1
-      - name: Terraform Format Check
-        id: fmt
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          echo ${{ needs.success-all-test.outputs.destroy }}
-          terraform fmt -check -diff -write=false
-      - name: Terraform Init
-        id: init
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          git config --global url."https://api:${{ secrets.JINA_DEV_BOT }}@github.com/".insteadOf "https://github.com/"
-          terraform init
-      - name: Terraform Validate
-        id: validate
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
-        run: |
-          terraform validate -no-color
       - name: Clean flows
+        if: |
+          github.event.inputs.env == 'CI' && 
+          github.event.inputs.destroy_cluster != 'false' && 
+          steps.remote-state.outputs.region != '' && steps.remote-state.outputs.cluster_name != ''
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           kubectl delete flow --all --all-namespaces || true
@@ -882,20 +881,79 @@ jobs:
             echo "terminate instance ${i}"
             aws ec2 terminate-instances --instance-ids ${i}
           done
-      - name: Terraform Apply
-        id: apply
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+      - name: Clean flows
+        if: ${{ github.event.inputs.env == 'dev' }}
         run: |
-          terraform apply -auto-approve -input=false -var="enable_karpenter=false" \
-          -var="enable_efs=false" -var="enable_ebs=false" -var="enable_cert_manager=false" \
-          -var="enable_external_dns=false" -var="enable_knative=false" \
-          -var="enable_kong=false" -var="enable_linkerd=false"
-      - name: Terraform Destroy
-        id: destroy
-        if: ${{ always() }}
-        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+          aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+          kubectl delete flow --all --all-namespaces || true
+      - name: wait for dispatch finish
+        shell: bash
+        if: |
+          github.event.inputs.env == 'CI' && 
+          github.event.inputs.destroy_cluster != 'false'
         run: |
-          if [[ ${{ github.event.inputs.destroy_cluster }} == 'false' || ${{ github.event.inputs.env }} != 'CI' ]]; then
-            exit 0
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ ! -z ${id} ]]; then
+            for i in {1..180}
+            do
+              unfinish_id=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+              https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+              |jq ".workflow_runs|sort_by(.id)[]|select(.status!=\"completed\")|.id")
+              echo "latest retrive workflow id ${id} status ${unfinish_id}, ${i}"
+              if [[ ${#a} -gt 0 ]]; then
+                echo "wait for pevious job to finish"
+                sleep 6
+                if [[ ${i} -eq 180 ]];then
+                  echo "wait timeout, quit"
+                  exit 0
+                fi
+              else
+                exit 0
+              fi
+            done
           fi
-          terraform apply -auto-approve -destroy
+          exit 0
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        if: |
+          github.event.inputs.env == 'CI' && 
+          github.event.inputs.destroy_cluster != 'false'
+        id: dispatch
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-infra
+          event-type: jcloud-infra-deploy
+          client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "true"}'
+      - name: wait for dispatch finish
+        shell: bash
+        if: |
+          github.event.inputs.env == 'CI' && 
+          github.event.inputs.destroy_cluster != 'false'
+        run: |
+          sleep 3
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ $(expr $(date +%s) - $(data -d ${create_at} +%s)) -le 60 ]]; then
+            if [[ -z ${url} ]]; then
+              for i in {1..300}
+              do
+                status=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+                https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+                |jq ".workflow_runs|sort_by(.id)[]"|jq -nr '[inputs][-1].status')
+                echo "latest retrive workflow id ${id} status ${status}, ${i}"
+                if [[ ${status} == "completed" ]]; then
+                  exit 0
+                fi
+                sleep 6
+              done
+            fi
+          fi
+          failed to get dispatched job, please check the status of workflow jcloud-deploy.yml in jina-infra repo
+          exit 1

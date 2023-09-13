@@ -83,10 +83,10 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-      - name: Set up Golang 1.18
+      - name: Set up Golang 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
       - name: Run setup script for Operator
         run: |
           # cd is a hack to work with other branches (remove later)
@@ -123,10 +123,10 @@ jobs:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
-      - name: Set up Golang 1.18
+      - name: Set up Golang 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
       - name: Run setup script for API
         run: |
           # cd is a hack to work with other branches (remove later)
@@ -156,7 +156,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
           repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
+          ref: main
           token: ${{ secrets.JINA_DEV_BOT }}
     - name: helm clean
       run: |
@@ -214,7 +214,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-path: [controllers/test/compatibility/baseline_flows_setup_test.go]
+        test-path: [test/compatibility/baseline_flows_setup_test.go]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -241,10 +241,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       
-      - name: Set up Golang 1.18
+      - name: Set up Golang 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
       
       - name: Set up Python 3.7
         uses: actions/setup-python@v2
@@ -358,7 +358,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test-path: [controllers/test/compatibility/backward_compatibility_test.go]
+        test-path: [test/compatibility/backward_compatibility_test.go]
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -385,10 +385,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       
-      - name: Set up Golang 1.18
+      - name: Set up Golang 1.19
         uses: actions/setup-go@v3
         with:
-          go-version: 1.18
+          go-version: 1.19
       
       - name: Set up Python 3.7
         uses: actions/setup-python@v2
