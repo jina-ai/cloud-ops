@@ -186,7 +186,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.2.6
+          terraform_version: 1.5.5
       - name: Terraform Format Check
         id: fmt
         working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
