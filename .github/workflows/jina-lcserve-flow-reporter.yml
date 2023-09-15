@@ -31,7 +31,7 @@ jobs:
           pip install -r requirements.txt
         working-directory: ./scripts/
       - name: Notify on Slack
-        run: python xcserve_credit_usage.py
+        run: python xserve_credit_usage.py
         working-directory: ./scripts/
         env:
           SLACK_TOKEN: ${{ secrets.FLOWS_NOTIFIER_SLACK_TOKEN }}
