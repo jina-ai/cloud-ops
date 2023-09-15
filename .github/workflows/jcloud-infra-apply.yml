@@ -50,12 +50,12 @@ jobs:
           aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
-            repository: jina-ai/jcloud-infra
-            ref: master
-            token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jcloud-infra
+          ref: master
+          token: ${{ secrets.JINA_DEV_BOT }}
       - uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.2.6
+          terraform_version: 1.5.5
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -73,10 +73,9 @@ jobs:
         run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform validate -no-color
       - name: Terraform Plan
         id: plan
-        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform plan -no-color -input=false  
+        run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform plan -no-color -input=false
       - name: Terraform Plan Status
         if: steps.plan.outcome == 'failure'
         run: exit 1
       - name: Terraform Apply
         run: cd $GITHUB_WORKSPACE/devops/$PROJECT/infra/$ENVIRONMENT && terraform apply -auto-approve -input=false
-

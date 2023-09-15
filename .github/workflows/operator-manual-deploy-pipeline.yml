@@ -12,8 +12,13 @@ on:
         default: ""
         required: true
       environment:
+        type: choice
         description: Deploy Environment
         required: true
+        options:
+          - CI
+          - dev
+          - prod
       eks_region:
         description: EKS Region
         default: "us-east-1"
@@ -32,6 +37,10 @@ on:
       eks_region:
         required: true
         type: string
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
 
 jobs:
   token-check:
@@ -156,112 +165,126 @@ jobs:
           image_fullname=`docker inspect --format='{{index .RepoDigests 0}}' 253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager:${TAG}`
           sha=`echo ${image_fullname}|cut -d @ -f 2`
           echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT
-  deployment:
-    needs: [build-api-manager, build-operator]
+  terraform-deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment }} == "CI" || ${{ github.event.inputs.environment }} == "dev" || ${{ github.event.inputs.environment }} == "tmp" || ${{ github.event.inputs.environment }} == "prod"
+    if: ${{ github.event.inputs.environment == 'CI' }}
+    env:
+      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
+      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-infra
+          ref: main
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-actioner-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.5
+      - name: Terraform Format Check
+        id: fmt
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform fmt -check -diff -write=false
+      - name: Terraform Init
+        id: init
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          git config --global url."https://api:${{ secrets.JINA_DEV_BOT }}@github.com/".insteadOf "https://github.com/"
+          terraform init
+      - name: Terraform Validate
+        id: validate
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform validate -no-color
+      - name: Terraform Apply
+        id: apply
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false
+      - name: Terraform Re-Apply
+        id: reapply
+        if: ${{ steps.apply.conclusion == 'failure' }}
+        working-directory: ${{ github.workspace }}/devops/jcloud/ci/eks
+        run: |
+          terraform apply -auto-approve -input=false
+  deployment-ci:
+    needs: [build-api-manager, build-operator, terraform-deploy]
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.environment }} == "CI"
     env:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
     steps:
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-        aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-    - uses: actions/checkout@v3
-      with:
-        repository: jina-ai/jina-operator
-        ref: ${{ github.event.inputs.branch }}
-        token: ${{ secrets.JINA_DEV_BOT }}
-    - name: Get remote state
-      uses: dflook/terraform-remote-state@v1
-      id: remote-state
-      with:
-        backend_type: s3
-        backend_config: |
-          bucket=jina-terraform-state
-          key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
-          region=us-east-2
-    - name: Set environment variables
-      run: |
-        # Short name for current branch. For PRs, use target branch (base ref)
-        GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
-        echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
-    - name: helm clean
-      run: |
-        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
-        if helm list -n jcloud | grep -q jcloud-operator; then
-          helm uninstall -n jcloud jcloud-operator
-        fi
-        kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
-      if: github.event.inputs.environment != 'prod'
-    - name: "Update Helm Charts Image sha"
-      run: |
-        sudo snap install yq
-        yq -i ".apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
-        yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
-        cat .github/ci/${{ github.event.inputs.environment }}-values.yaml
-    - name: helm deploy
-      run: |
-        cd $GITHUB_WORKSPACE
-        aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
-        if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
-          set +e
-          kubectl get configmap jcloud-instances -n jcloud
-          if [[ $? -eq 0 ]]; then
-            kubectl delete configmap jcloud-instances -n jcloud
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      - uses: actions/checkout@v3
+        with:
+          repository: jina-ai/jina-operator
+          ref: ${{ github.event.inputs.branch }}
+          token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Get remote state
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-terraform-state
+            key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
+            region=us-east-2
+      - name: Set environment variables
+        run: |
+          # Short name for current branch. For PRs, use target branch (base ref)
+          GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
+          echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+      - name: helm clean
+        run: |
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
+          if helm list -n jcloud | grep -q jcloud-operator; then
+            helm uninstall -n jcloud jcloud-operator
           fi
-          kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
-        fi
-        set -e
-        kubectl apply -f deployment/charts/jcloud-operator/crds/
-        if [[ $GIT_BRANCH == 'main' ]]; then
-          bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
-          -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
-          --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
-        else
-          if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
+          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
+        if: github.event.inputs.environment != 'prod'
+      - name: "Update Helm Charts Image sha"
+        run: |
+          sudo snap install yq
+          yq -i ".apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
+          yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
+          cat .github/ci/${{ github.event.inputs.environment }}-values.yaml
+      - name: helm deploy
+        run: |
+          cd $GITHUB_WORKSPACE
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            set +e
+            kubectl get configmap jcloud-instances -n jcloud
+            if [[ $? -eq 0 ]]; then
+              kubectl delete configmap jcloud-instances -n jcloud
+            fi
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
+          set -e
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
+          if [[ $GIT_BRANCH == 'main' ]]; then
             bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
             -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
-            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ env.GIT_BRANCH }}
+            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
           else
-            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
-            -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
-            --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
-          fi
-        fi
-    - name: check if certificate exists
-      id: check_cert
-      run: |
-        echo "cert=`kubectl get cert -n jcloud wolf-tls -o name`" >> $GITHUB_OUTPUT
-    - name: deploy certificate
-      if: steps.check_cert.outputs.cert == ''
-      run: |
-        cat <<EOF | kubectl apply -f -
-        apiVersion: cert-manager.io/v1
-        kind: Certificate
-        metadata:
-          name: wolf-tls
-          namespace: jcloud
-        spec:
-          dnsNames:
-          - '*.wolf.jina.ai'
-          issuerRef:
-            group: cert-manager.io
-            kind: ClusterIssuer
-            name: letsencrypt
-          secretName: wolf-tls
-          usages:
-          - digital signature
-          - key encipherment
-        EOF
-    - name: set env
-      run: |
-        if [[ ${{ github.event.inputs.environment }} != "prod" ]]; then
-          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
-          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
-        else
-          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ secrets.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
-          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ secrets.PROD_MONGO_URI }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
-        fi
+            if [[ "${{ github.event.inputs.branch }}" == "" ]]; then
+              bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
+              -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
+              --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
+            else
+              bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
+              -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
+              --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
+            fi
