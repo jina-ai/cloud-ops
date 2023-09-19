@@ -625,7 +625,9 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          sudo cp ci.crt /etc/ssl/certs/
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/flow/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
@@ -761,7 +763,9 @@ jobs:
 
       - name: Run E2E Integration Test Suites for API
         run: |
-          sudo cp ci.crt /etc/ssl/certs/
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
