@@ -312,6 +312,8 @@ jobs:
           --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
           -n jcloud
           helm upgrade --install jcloud-operator deployment/charts/jcloud-operator/ \
+          --set "operator.customResources.deployment=true" \
+          --set "operator.customResources.flow=false" \
           --set "apimanager.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager" \
           --set "operator.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator" \
           --set "apimanager.image.tag=${{ github.event.inputs.branch }}" \
@@ -326,7 +328,7 @@ jobs:
           -f .github/ci/CI-values.yaml \
           -n jcloud
 
-          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
@@ -410,7 +412,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh jinadeployment)"
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -429,7 +431,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh)"
+          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh deployment)"
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -628,7 +630,7 @@ jobs:
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/flow/{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/jinadeployment/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
           ACK_GINKGO_RC: true
@@ -766,7 +768,7 @@ jobs:
           if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/{}" | xargs)
+          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/deployment/{}" | xargs)
           ginkgo ${focus_files} -v --progress ./...
         env:
           API_HOST: https://${{ needs.set-env.outputs.host }}
