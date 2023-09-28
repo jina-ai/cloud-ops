@@ -288,6 +288,7 @@ jobs:
               -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
               --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
             fi
+          fi
       - name: set env
         run: |
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ secrets.JC_CI_MONGO_URI }}" LIST_USER_TOKEN="${{ secrets.LIST_USER_TOKEN }}" JCLOUD_M2M_TOKEN="${{ secrets.JCLOUD_M2M_TOKEN }}"
@@ -366,6 +367,7 @@ jobs:
               -f .github/ci/${{ github.event.inputs.environment }}-values.yaml \
               --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
             fi
+          fi
       - name: check if certificate exists
         id: check_cert
         if: ${{ github.event.inputs.environment }} == "dev" || ${{ github.event.inputs.environment }} == "prod"
