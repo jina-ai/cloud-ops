@@ -845,16 +845,40 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
+        if: ${{ github.event.inputs.env != 'CI' }}
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      - name: Get remote state
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
 
       - name: Update Cluster Config
+        if: ${{ github.event.inputs.env != 'CI' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
+      - name: Update CI Cluster Config
+        if: ${{ github.event.inputs.env == 'CI' }}
+        run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
+      - name: "Download Artifact"
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: actions/download-artifact@v3
+        with:
+          name: cert
+          path: ./operator
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
           ginkgo --focus-file controllers/test/restart/restart_test.go -v --progress ./...
         env:
           ACK_GINKGO_RC: true
