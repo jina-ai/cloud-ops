@@ -383,7 +383,7 @@ jobs:
           apiVersion: cert-manager.io/v1
           kind: Certificate
           metadata:
-            name: wolf-tls
+            name: $cert_name
             namespace: jcloud
           spec:
             dnsNames:
