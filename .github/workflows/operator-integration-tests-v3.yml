@@ -246,13 +246,13 @@ jobs:
           exit 1
 
   deployment:
-    needs: [build-api-manager, build-operator, set-env]
+    needs: [build-api-manager, build-operator, set-env, terraform-deploy]
     if: |
       always() &&
       needs.build-api-manager.result == 'success' &&
       needs.build-operator.result == 'success' &&
       needs.set-env.result == 'success' &&
-      (.terraform-deploy.result == 'success' || needs.terraform-deploy.result == 'skipped')
+      (needs.terraform-deploy.result == 'success' || needs.terraform-deploy.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
