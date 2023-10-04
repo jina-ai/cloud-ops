@@ -339,6 +339,7 @@ jobs:
           -n jcloud
 
           kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
@@ -379,6 +380,7 @@ jobs:
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
           fi
 
+          kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
