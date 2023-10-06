@@ -248,7 +248,7 @@ jobs:
   deployment:
     needs: [build-api-manager, build-operator, set-env, terraform-deploy]
     if: |
-      always() && 
+      always() &&
       needs.build-api-manager.result == 'success' &&
       needs.build-operator.result == 'success' &&
       needs.set-env.result == 'success' &&
@@ -339,6 +339,7 @@ jobs:
           -n jcloud
 
           kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/flow-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
@@ -379,7 +380,8 @@ jobs:
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
           fi
 
-          kubectl set env deploy/jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/flow-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
           kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
         env:
           MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
@@ -411,8 +413,7 @@ jobs:
   prep-testbed-deployment-operator:
     needs: deployment
     runs-on: ubuntu-latest
-    if: |-
-      always() &&
+    if: |
       needs.deployment.result == 'success' &&
       (github.event.inputs.only_api_changed == 'false') &&
       (github.event.inputs.only_flow_operator_changed == 'false')
@@ -434,7 +435,7 @@ jobs:
   prep-testbed-deployment-api:
     needs: deployment
     runs-on: ubuntu-latest
-    if: always() && needs.deployment.result == 'success'
+    if: needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -453,8 +454,7 @@ jobs:
   prep-testbed-flow-operator:
     needs: deployment
     runs-on: ubuntu-latest
-    if: |-
-      always() &&
+    if: |
       needs.deployment.result == 'success' &&
       (github.event.inputs.only_api_changed == 'false') &&
       (github.event.inputs.only_deployment_operator_changed == 'false')
@@ -476,7 +476,7 @@ jobs:
   prep-testbed-flow-api:
     needs: deployment
     runs-on: ubuntu-latest
-    if: always() && needs.deployment.result == 'success'
+    if: needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -494,7 +494,7 @@ jobs:
 
   prep-testbed-now:
     needs: deployment
-    if: always() && needs.deployment.result == 'success' && github.event.inputs.skip_now_tests == 'false'
+    if: needs.deployment.result == 'success' && github.event.inputs.skip_now_tests == 'false'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout now Repo
@@ -510,7 +510,7 @@ jobs:
 
   now-integration-tests:
     needs: [prep-testbed-now, set-env]
-    if: always() && needs.prep-testbed-now.result == 'success' && needs.set-env.result == 'success'
+    if: needs.prep-testbed-now.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -586,7 +586,7 @@ jobs:
 
   flow-operator:
     needs: [prep-testbed-flow-operator, set-env]
-    if: always() && needs.prep-testbed-flow-operator.result == 'success' && needs.set-env.result == 'success'
+    if: needs.prep-testbed-flow-operator.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -708,7 +708,7 @@ jobs:
 
   flow-api:
     needs: [prep-testbed-flow-api, set-env]
-    if: always() && needs.prep-testbed-flow-api.result == 'success' && needs.set-env.result == 'success'
+    if: needs.prep-testbed-flow-api.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
@@ -853,7 +853,7 @@ jobs:
 
   deployment-operator:
     needs: [prep-testbed-deployment-operator, set-env]
-    if: always() && needs.prep-testbed-deployment-operator.result == 'success' && needs.set-env.result == 'success'
+    if: needs.prep-testbed-deployment-operator.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -975,7 +975,7 @@ jobs:
 
   deployment-api:
     needs: [prep-testbed-deployment-api, set-env]
-    if: always() && needs.prep-testbed-deployment-api.result == 'success' && needs.set-env.result == 'success'
+    if: needs.prep-testbed-deployment-api.result == 'success' && needs.set-env.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
@@ -1124,7 +1124,7 @@ jobs:
       - flow-api
       - set-env
     runs-on: ubuntu-latest
-    if: always() && needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success'
+    if: needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -1215,7 +1215,6 @@ jobs:
     needs:
       - restart-tests
     if: |
-      always() && 
       needs.restart-tests.result == 'success' && 
       (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false')
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
@@ -1273,7 +1272,7 @@ jobs:
       - compatibility-test
       - now-integration-tests
       - set-env
-    if: always()
+    if: ${{ github.event.inputs.env == 'CI' }}
     runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
