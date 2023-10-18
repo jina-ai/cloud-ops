@@ -214,7 +214,7 @@ jobs:
           token: ${{ secrets.JINA_DEV_BOT }}
           repository: jina-ai/jina-infra
           event-type: jcloud-infra-deploy
-          client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "false"}'
+          client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "${{ github.event.inputs.destroy_cluster }}"}'
       - name: wait for dispatch finish
         shell: bash
         run: |
