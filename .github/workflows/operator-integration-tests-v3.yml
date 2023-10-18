@@ -1175,6 +1175,13 @@ jobs:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env == 'CI' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
       - name: Get remote state
         if: ${{ github.event.inputs.env == 'CI' }}
         uses: dflook/terraform-remote-state@v1
@@ -1270,7 +1277,6 @@ jobs:
       - deployment-operator
       - deployment-api
       - compatibility-test
-      - now-integration-tests
       - set-env
     if: ${{ github.event.inputs.env == 'CI' }}
     runs-on: ubuntu-latest
