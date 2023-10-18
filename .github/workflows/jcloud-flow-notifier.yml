@@ -11,8 +11,8 @@ on:
         description: Pass the slack channel ID to send notifications to
         required: true
         default: C04SZ7AAWQZ
-  schedule:
-    - cron: "30 0 * * 1-5"
+  # schedule:
+  #   - cron: "30 0 * * 1-5"
 jobs:
   notify:
     runs-on: ubuntu-latest
