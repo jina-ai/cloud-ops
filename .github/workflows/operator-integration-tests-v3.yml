@@ -1278,7 +1278,13 @@ jobs:
       - deployment-api
       - compatibility-test
       - set-env
-    if: ${{ github.event.inputs.env == 'CI' }}
+    if: |
+      always() &&
+      github.event.inputs.env == 'CI'
+      (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success') ||
+      (needs.deployment-operator.result == 'success' && needs.deployment-api.result == 'success') &&
+      needs.set-env.result == 'success' &&
+      (needs.terraform-deploy.result == 'success' || needs.terraform-deploy.result == 'skipped') 
     runs-on: ubuntu-latest
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
