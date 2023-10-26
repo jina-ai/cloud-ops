@@ -409,9 +409,7 @@ jobs:
     needs: deployment
     runs-on: ubuntu-latest
     if: |
-      needs.deployment.result == 'success' &&
-      (github.event.inputs.only_api_changed == 'false') &&
-      (github.event.inputs.only_flow_operator_changed == 'false')
+      needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
