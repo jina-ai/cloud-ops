@@ -243,7 +243,6 @@ jobs:
   deployment:
     needs: [build-api-manager, build-operator, set-env, terraform-deploy]
     if: |
-      always() &&
       needs.build-api-manager.result == 'success' &&
       needs.build-operator.result == 'success' &&
       needs.set-env.result == 'success' &&
@@ -409,7 +408,9 @@ jobs:
     needs: deployment
     runs-on: ubuntu-latest
     if: |
-      needs.deployment.result == 'success'
+      needs.deployment.result == 'success' &&
+      (github.event.inputs.only_api_changed == 'false') &&
+      (github.event.inputs.only_flow_operator_changed == 'false')
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -420,13 +421,13 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh jinadeployment)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh jinadeployment)" >> $GITHUB_OUTPUT
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   prep-testbed-deployment-api:
-    needs: [deployment, terraform-deploy]
+    needs: deployment
     runs-on: ubuntu-latest
     if: needs.deployment.result == 'success' && needs.terraform-deploy.result == 'skipped'
     steps:
@@ -439,7 +440,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh deployment)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh deployment)" >> $GITHUB_OUTPUT
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -461,7 +462,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh flow)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh flow)" >> $GITHUB_OUTPUT
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -480,7 +481,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh flow)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh flow)" >> $GITHUB_OUTPUT
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
