@@ -243,6 +243,7 @@ jobs:
   deployment:
     needs: [build-api-manager, build-operator, set-env, terraform-deploy]
     if: |
+      always() &&
       needs.build-api-manager.result == 'success' &&
       needs.build-operator.result == 'success' &&
       needs.set-env.result == 'success' &&
@@ -429,7 +430,7 @@ jobs:
   prep-testbed-deployment-api:
     needs: deployment
     runs-on: ubuntu-latest
-    if: needs.deployment.result == 'success' && needs.terraform-deploy.result == 'skipped'
+    if: ${{ needs.deployment.result == 'success' }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
