@@ -428,9 +428,9 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
   prep-testbed-deployment-api:
-    needs: deployment
+    needs: [deployment, terraform-deploy]
     runs-on: ubuntu-latest
-    if: needs.deployment.result == 'success'
+    if: needs.deployment.result == 'success' && needs.terraform-deploy.result == 'skipped'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
