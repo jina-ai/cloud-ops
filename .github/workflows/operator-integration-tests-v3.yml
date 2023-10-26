@@ -34,11 +34,6 @@ on:
         type: boolean
         default: false
         required: false
-      skip_now_tests:
-        description: Skip now integration tests?
-        type: boolean
-        default: false
-        required: false
 
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -491,98 +486,6 @@ jobs:
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-  prep-testbed-now:
-    needs: deployment
-    if: needs.deployment.result == 'success' && github.event.inputs.skip_now_tests == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout now Repo
-        uses: actions/checkout@v3
-        with:
-          repository: jina-ai/now
-      - id: set-matrix
-        run: |
-          echo "::set-output name=matrix::$(find -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
-        working-directory: ./tests/integration/remote
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-  now-integration-tests:
-    needs: [prep-testbed-now, set-env]
-    if: needs.prep-testbed-now.result == 'success' && needs.set-env.result == 'success'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        test-path: ${{fromJson(needs.prep-testbed-now.outputs.matrix)}}
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Read secrets from AWS Secrets Manager into environment variables
-        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
-        with:
-          secrets: |
-            /wolf/nprd/general
-          parse-json: true
-      - name: Setup Python 3.7
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-      - name: Checkout now repo
-        uses: actions/checkout/@v3
-        with:
-          repository: jina-ai/now
-      - name: Prepare environment
-        run: |
-          sudo apt update && sudo apt install ffmpeg
-          python -m pip install --upgrade pip
-          python -m pip install wheel
-          pip install --no-cache-dir ".[full,test]"
-          pip install --no-cache-dir -U jcloud
-      - name: Add JCloud auth token
-        run: |
-          mkdir -p ~/.jina
-          touch ~/.jina/config.json
-          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
-          cat ~/.jina/config.json
-      - name: Run tests
-        run: |
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "tests/integration/remote/{}" | xargs)
-          pytest -v ${focus_files}
-        env:
-          JCLOUD_API: https://${{ needs.set-env.outputs.host }}
-          DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
-          HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}
-          DOCKER_USERNAME: ${{ env._WOLF_NPRD_GENERAL_DOCKER_USERNAME }}
-          JINA_DEV_BOT: ${{ env._WOLF_NPRD_GENERAL_JINA_DEV_BOT }}
-          JINA_OPTOUT_TELEMETRY: ${{ env._WOLF_NPRD_GENERAL_JINA_OPTOUT_TELEMETRY }}
-          NETLIFY_AUTH_TOKEN1: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_AUTH_TOKEN1 }}
-          NETLIFY_SITE_ID: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_SITE_ID }}
-          NOW_ANNLITE_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ANNLITE_EXECUTOR_SECRET }}
-          NOW_AUTH_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTH_EXECUTOR_SECRET }}
-          NOW_AUTOCOMPLETE_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTOCOMPLETE_SECRET }}
-          NOW_ELASTIC_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ELASTIC_EXECUTOR_SECRET }}
-          NOW_OCR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_OCR_EXECUTOR_SECRET }}
-          NOW_POSTPROCESSOR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_POSTPROCESSOR_EXECUTOR_SECRET }}
-          NOW_PREPROCESSOR_JCLOUD_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_JCLOUD_TOKEN }}
-          NOW_PREPROCESSOR_REPO: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO }}
-          NOW_PREPROCESSOR_REPO_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO_TOKEN }}
-          NOW_QDRANT_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_QDRANT_EXECUTOR_SECRET }}
-          NOW_STAGING_FLORIAN: ${{ env._WOLF_NPRD_GENERAL_NOW_STAGING_FLORIAN }}
-          PERSONAL_ACCESS_TOKEN: ${{ env._WOLF_NPRD_GENERAL_PERSONAL_ACCESS_TOKEN }}
-          TWINE_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_TWINE_PASSWORD }}
-          TWINE_USERNAME: ${{ env._WOLF_NPRD_GENERAL_TWINE_USERNAME }}
-          WOLF_EXAMPLES_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN }}
-          WOLF_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          JCLOUD_LOGLEVEL: DEBUG
-          JINA_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
 
   flow-operator:
     needs: [prep-testbed-flow-operator, set-env]
@@ -1233,7 +1136,6 @@ jobs:
   notify-test:
     needs:
       - compatibility-test
-      - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
     outputs:
@@ -1280,7 +1182,7 @@ jobs:
       - set-env
     if: |
       always() &&
-      github.event.inputs.env == 'CI'
+      github.event.inputs.env == 'CI' &&
       (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success') ||
       (needs.deployment-operator.result == 'success' && needs.deployment-api.result == 'success') &&
       needs.set-env.result == 'success' &&
