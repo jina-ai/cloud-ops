@@ -273,7 +273,6 @@ jobs:
             helm uninstall -n jcloud jcloud-operator
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
-        if: github.event.inputs.environment != 'prod'
       - name: "Update Helm Charts Image sha"
         run: |
           sudo snap install yq
@@ -281,11 +280,11 @@ jobs:
           yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
           cat .github/ci/${{ github.event.inputs.environment }}-values.yaml
       - name: helm deploy
-        if: ${{ github.event.inputs.env == 'ci' }}
+        if: ${{ github.event.inputs.environment == 'ci' }}
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE
-          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
+          if [[ ${{ github.event.inputs.environment }} == 'ci' ]]; then
             kubectl create ns jcloud || true
             kubectl delete secret regcred -n jcloud || true
             echo "$WOLF_DOCKER_AUTH" > config.json
