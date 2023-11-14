@@ -168,75 +168,72 @@ jobs:
   terraform-deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.environment == 'ci' }}
-    env:
-      DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
-      AWS_CONFIG_FILE: ${{ github.workspace }}/profile/aws_config_actioner
-      steps:
-        - name: wait for dispatch finish
-          shell: bash
-          run: |
-            rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
-              https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
-              |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
-            id=$(echo $rs|jq ".id")
-            create_at=$(echo $rs|jq -r ".created_at")
-            if [[ ! -z ${id} ]]; then
-              for i in {1..180}
-              do
-                unfinish_id=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
-                https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
-                |jq ".workflow_runs|sort_by(.id)[]|select(.status!=\"completed\")|.id")
-                echo "latest retrive workflow id ${id} status ${unfinish_id}, ${i}"
-                if [[ ${#a} -gt 0 ]]; then
-                  echo "wait for pevious job to finish"
-                  sleep 6
-                  if [[ ${i} -eq 180 ]];then
-                    echo "wait timeout, quit"
-                    exit 0
-                  fi
-                else
+    steps:
+      - name: wait for dispatch finish
+        shell: bash
+        run: |
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ ! -z ${id} ]]; then
+            for i in {1..180}
+            do
+              unfinish_id=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+              https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+              |jq ".workflow_runs|sort_by(.id)[]|select(.status!=\"completed\")|.id")
+              echo "latest retrive workflow id ${id} status ${unfinish_id}, ${i}"
+              if [[ ${#a} -gt 0 ]]; then
+                echo "wait for pevious job to finish"
+                sleep 6
+                if [[ ${i} -eq 180 ]];then
+                  echo "wait timeout, quit"
                   exit 0
                 fi
+              else
+                exit 0
+              fi
+            done
+          fi
+          exit 0
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v2
+        id: dispatch
+        with:
+          token: ${{ secrets.JINA_DEV_BOT }}
+          repository: jina-ai/jina-infra
+          event-type: jcloud-infra-deploy
+          client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "false"}'
+      - name: wait for dispatch finish
+        shell: bash
+        run: |
+          sleep 3
+          rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+            https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
+            |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
+          id=$(echo $rs|jq ".id")
+          create_at=$(echo $rs|jq -r ".created_at")
+          if [[ $(expr $(date +%s) - $(data -d ${create_at} +%s)) -le 60 ]]; then
+            if [[ ! -z ${id} ]]; then
+              for i in {1..300}
+              do
+                conclusion=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
+                https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
+                |jq ".workflow_runs|sort_by(.id)[]"|jq -nr '[inputs][-1].conclusion')
+                echo "latest retrive workflow id ${id} conclusion ${conclusion}, ${i}"
+                if [[ ${conclusion} == "success" ]]; then
+                  exit 0
+                elif [[ ${conclusion} == "failure" ]]; then
+                  echo "job failure"
+                  exit 1
+                fi
+                sleep 6
               done
             fi
-            exit 0
-        - name: Repository Dispatch
-          uses: peter-evans/repository-dispatch@v2
-          id: dispatch
-          with:
-            token: ${{ secrets.JINA_DEV_BOT }}
-            repository: jina-ai/jina-infra
-            event-type: jcloud-infra-deploy
-            client-payload: '{"release_token": "${{ secrets.WOLF_INFRA_TOKEN }}", "env": "ci", "destroy_cluster": "false"}'
-        - name: wait for dispatch finish
-          shell: bash
-          run: |
-            sleep 3
-            rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
-              https://api.github.com/repos/jina-ai/jina-infra/actions/workflows \
-              |jq ".workflows |sort_by(.id)[]| .path=\".github/workflows/jcloud-deploy.yml\""|jq -n '[inputs][-1]')
-            id=$(echo $rs|jq ".id")
-            create_at=$(echo $rs|jq -r ".created_at")
-            if [[ $(expr $(date +%s) - $(data -d ${create_at} +%s)) -le 60 ]]; then
-              if [[ ! -z ${id} ]]; then
-                for i in {1..300}
-                do
-                  conclusion=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
-                  https://api.github.com/repos/jina-ai/jina-infra/actions/workflows/${id}/runs \
-                  |jq ".workflow_runs|sort_by(.id)[]"|jq -nr '[inputs][-1].conclusion')
-                  echo "latest retrive workflow id ${id} conclusion ${conclusion}, ${i}"
-                  if [[ ${conclusion} == "success" ]]; then
-                    exit 0
-                  elif [[ ${conclusion} == "failure" ]]; then
-                    echo "job failure"
-                    exit 1
-                  fi
-                  sleep 6
-                done
-              fi
-            fi
-            failed to get dispatched job, please check the status of workflow jcloud-deploy.yml in jina-infra repo
-            exit 1
+          fi
+          failed to get dispatched job, please check the status of workflow jcloud-deploy.yml in jina-infra repo
+          exit 1
   deployment-ci:
     needs: [build-api-manager, build-operator, terraform-deploy]
     runs-on: ubuntu-latest
