@@ -16,7 +16,7 @@ on:
         description: Deploy Environment
         required: true
         options:
-          - CI
+          - ci
           - dev
           - prod
       eks_region:
@@ -167,7 +167,7 @@ jobs:
           echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT
   terraform-deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'CI' }}
+    if: ${{ github.event.inputs.environment == 'ci' }}
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
@@ -217,7 +217,7 @@ jobs:
   deployment-ci:
     needs: [build-api-manager, build-operator, terraform-deploy]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment }} == "CI"
+    if: ${{ github.event.inputs.environment }} == "ci"
     env:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
     steps:
