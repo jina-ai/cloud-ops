@@ -16,7 +16,7 @@ on:
         description: Deploy Environment
         required: true
         options:
-          - CI
+          - ci
           - dev
           - prod
       eks_region:
@@ -167,10 +167,10 @@ jobs:
           echo "sha=${sha#sha256:}" >> $GITHUB_OUTPUT
   terraform-deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment == 'CI' }}
+    if: ${{ github.event.inputs.environment == 'ci' }}
     env:
       DIRECTORY: ${{ github.workspace }}/devops/jcloud/ci/eks
-      AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
+      AWS_CONFIG_FILE: ${{ github.workspace }}/profile/aws_config_actioner
     steps:
       - uses: actions/checkout@v3
         with:
@@ -217,30 +217,25 @@ jobs:
   deployment-ci:
     needs: [build-api-manager, build-operator, terraform-deploy]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.environment }} == "CI"
+    if: ${{ github.event.inputs.environment }} == "ci"
     env:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
     steps:
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
           aws-region: us-east-1
-      - uses: actions/checkout@v3
-        with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
-            bucket=jina-terraform-state
-            key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
-            region=us-east-2
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
       - name: Set environment variables
         run: |
           # Short name for current branch. For PRs, use target branch (base ref)
@@ -300,19 +295,38 @@ jobs:
     env:
       ENVIRONMENT: ${{ github.event.inputs.environment }}
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::317254068723:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Get remote state
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=jcloud/ci/eks
+            region=us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        if: ${{ github.event.inputs.environment ！= 'prod' }}
+        with:
+          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
+          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
+        if: ${{ github.event.inputs.environment ！= 'prod' }}
         id: remote-state
         with:
           backend_type: s3
@@ -325,6 +339,13 @@ jobs:
           # Short name for current branch. For PRs, use target branch (base ref)
           GIT_BRANCH=${GITHUB_BASE_REF:-${GITHUB_REF#refs/heads/}}
           echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::317254068723:role/jcloud-deploy-role
+          role-session-name: jcloud-deploy
+          aws-region: us-east-1
       - name: helm clean
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
