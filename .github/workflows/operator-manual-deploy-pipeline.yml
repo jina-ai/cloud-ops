@@ -280,60 +280,60 @@ jobs:
           yq -i ".apimanager.image.sha=\"${{needs.build-api-manager.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
           yq -i ".operator.image.sha=\"${{needs.build-operator.outputs.sha}}\"" .github/ci/${{ github.event.inputs.environment }}-values.yaml
           cat .github/ci/${{ github.event.inputs.environment }}-values.yaml
-          - name: helm deploy
-          if: ${{ github.event.inputs.env == 'CI' }}
-          shell: bash
-          run: |
-            cd $GITHUB_WORKSPACE
-            if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
-              kubectl create ns jcloud || true
-              kubectl delete secret regcred -n jcloud || true
-              echo "$WOLF_DOCKER_AUTH" > config.json
-              kubectl create secret generic regcred \
-              --from-file=.dockerconfigjson=config.json \
-              --type=kubernetes.io/dockerconfigjson -n jcloud
-              openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/O=*.ci.wolf.jina.ai/CN=*.ci.wolf.jina.ai" -addext "subjectAltName = DNS:*.ci.wolf.jina.ai"
-              kubectl delete secret ci-wolf-tls -n jcloud || true
-              kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
-              sudo cp ci.crt /etc/ssl/certs/
-            fi
-            if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
-              kubectl delete configmap jcloud-instances -n jcloud || true
-              kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
-            fi
-            kubectl apply -f deployment/charts/jcloud-operator/crds/
-            kubectl delete secret jcloud-ecr-secret -n jcloud || true
-            kubectl create secret docker-registry jcloud-ecr-secret \
-            --docker-server=253352124568.dkr.ecr.us-east-2.amazonaws.com \
-            --docker-username=AWS \
-            --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
-            -n jcloud
-            helm upgrade --install jcloud-operator deployment/charts/jcloud-operator/ \
-            --set "operator.customResources.deployment=true" \
-            --set "operator.customResources.flow=true" \
-            --set "apimanager.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager" \
-            --set "operator.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator" \
-            --set "apimanager.image.tag=${{ github.event.inputs.branch }}" \
-            --set "operator.image.tag=${{ github.event.inputs.branch }}" \
-            --set "apimanager.ingress.hosts[0]=api.ci.wolf.jina.ai" \
-            --set "operator.config.operator.storage.efs.handler=${{ steps.remote-state.outputs.efs_id }}" \
-            --set "apimanager.image.pullSecrets[0]=jcloud-ecr-secret" \
-            --set "operator.image.pullSecrets[0]=jcloud-ecr-secret" \
-            --set "apimanager.ingress.tls[0].secretName=ci-wolf-tls" \
-            --set "apimanager.ingress.tls[0].hosts[0]=*.ci.wolf.jina.ai" \
-            --set-file "operator.trustCA.ci\.crt=ci.crt"  \
-            -f .github/ci/CI-values.yaml \
-            -n jcloud
-  
-            kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-            kubectl set env deploy/flow-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
-            kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
-          env:
-            WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
-            MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
-            LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
-            GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
-            JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
+      - name: helm deploy
+        if: ${{ github.event.inputs.env == 'CI' }}
+        shell: bash
+        run: |
+          cd $GITHUB_WORKSPACE
+          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+            kubectl create ns jcloud || true
+            kubectl delete secret regcred -n jcloud || true
+            echo "$WOLF_DOCKER_AUTH" > config.json
+            kubectl create secret generic regcred \
+            --from-file=.dockerconfigjson=config.json \
+            --type=kubernetes.io/dockerconfigjson -n jcloud
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out ci.crt -subj "/O=*.ci.wolf.jina.ai/CN=*.ci.wolf.jina.ai" -addext "subjectAltName = DNS:*.ci.wolf.jina.ai"
+            kubectl delete secret ci-wolf-tls -n jcloud || true
+            kubectl create secret tls ci-wolf-tls --key key.pem --cert ci.crt -n jcloud
+            sudo cp ci.crt /etc/ssl/certs/
+          fi
+          if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
+            kubectl delete configmap jcloud-instances -n jcloud || true
+            kubectl create configmap jcloud-instances --from-file=instances.yml=$GITHUB_WORKSPACE/api/internals/instances/instances.yml -n jcloud
+          fi
+          kubectl apply -f deployment/charts/jcloud-operator/crds/
+          kubectl delete secret jcloud-ecr-secret -n jcloud || true
+          kubectl create secret docker-registry jcloud-ecr-secret \
+          --docker-server=253352124568.dkr.ecr.us-east-2.amazonaws.com \
+          --docker-username=AWS \
+          --docker-password=$(aws ecr get-login-password --region ${{ steps.remote-state.outputs.region }}) \
+          -n jcloud
+          helm upgrade --install jcloud-operator deployment/charts/jcloud-operator/ \
+          --set "operator.customResources.deployment=true" \
+          --set "operator.customResources.flow=true" \
+          --set "apimanager.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-api-manager" \
+          --set "operator.image.repository=253352124568.dkr.ecr.us-east-2.amazonaws.com/jcloud-operator" \
+          --set "apimanager.image.tag=${{ github.event.inputs.branch }}" \
+          --set "operator.image.tag=${{ github.event.inputs.branch }}" \
+          --set "apimanager.ingress.hosts[0]=api.ci.wolf.jina.ai" \
+          --set "operator.config.operator.storage.efs.handler=${{ steps.remote-state.outputs.efs_id }}" \
+          --set "apimanager.image.pullSecrets[0]=jcloud-ecr-secret" \
+          --set "operator.image.pullSecrets[0]=jcloud-ecr-secret" \
+          --set "apimanager.ingress.tls[0].secretName=ci-wolf-tls" \
+          --set "apimanager.ingress.tls[0].hosts[0]=*.ci.wolf.jina.ai" \
+          --set-file "operator.trustCA.ci\.crt=ci.crt"  \
+          -f .github/ci/CI-values.yaml \
+          -n jcloud
+
+          kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/flow-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
+          kubectl set env deploy/jcloud-operator-api-manager -n jcloud MONGO_URI="${{ env.MONGO_URI }}" LIST_USER_TOKEN="${{ env.LIST_USER_TOKEN }}" GRAFANA_AUTH_TOKEN="${{ env.GRAFANA_AUTH_TOKEN }}" JCLOUD_M2M_TOKEN="${{ env.JCLOUD_M2M_TOKEN }}"
+        env:
+          WOLF_DOCKER_AUTH: ${{ secrets.WOLF_DOCKER_AUTH }}
+          MONGO_URI: ${{ secrets.JC_CI_MONGO_URI }}
+          LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
+          GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
+          JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
   deployment:
     needs: [build-api-manager, build-operator]
     runs-on: ubuntu-latest
