@@ -459,7 +459,7 @@ jobs:
         with:
           backend_type: s3
           backend_config: |
-            bucket=jina-prod-infra-terraform-state
+            bucket=jcloud-prod-infra-terraform-state
             key=jcloud/prod/eks/us-east-1
             region=us-east-1
       - name: Set environment variables
