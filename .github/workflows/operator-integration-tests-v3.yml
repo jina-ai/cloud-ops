@@ -496,7 +496,7 @@ jobs:
   flow-operator:
     needs: [prep-testbed-flow-operator, set-env]
     if: |
-      always() &&
+      !cancelled() &&
       (needs.prep-testbed-flow-operator.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
@@ -620,7 +620,7 @@ jobs:
   flow-api:
     needs: [prep-testbed-flow-api, set-env]
     if: |
-      always() &&
+      !cancelled() &&
       (needs.prep-testbed-flow-api.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
@@ -767,7 +767,7 @@ jobs:
   deployment-operator:
     needs: [prep-testbed-deployment-operator, set-env]
     if: |
-      always() &&
+      !cancelled() &&
       (needs.prep-testbed-deployment-operator.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
@@ -891,7 +891,7 @@ jobs:
   deployment-api:
     needs: [prep-testbed-deployment-api, set-env]
     if: |
-      always() &&
+      !cancelled() &&
       (needs.prep-testbed-deployment-api.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
@@ -1042,7 +1042,7 @@ jobs:
       - set-env
     runs-on: ubuntu-latest
     if: |
-      always() &&
+      !cancelled() &&
       (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success')
     steps:
       - name: Checkout Repo
@@ -1141,7 +1141,7 @@ jobs:
     needs:
       - restart-tests
     if: |
-      always() &&
+      !cancelled() &&
       needs.restart-tests.result == 'success' && 
       (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false')
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
