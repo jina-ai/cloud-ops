@@ -12,7 +12,7 @@ on:
         description: Choose the environment (i.e. which cluster to run the integration tests on)
         required: true
         options:
-          - CI
+          - ci
           - dev
       destroy_cluster:
         description: Destroy CI cluster after test?
@@ -31,11 +31,6 @@ on:
         required: false
       only_deployment_operator_changed:
         description: Only Deployment Operator related code changed?
-        type: boolean
-        default: false
-        required: false
-      skip_now_tests:
-        description: Skip now integration tests?
         type: boolean
         default: false
         required: false
@@ -58,21 +53,21 @@ jobs:
     steps:
       - id: output-region
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             echo "region=eu-west-3" >> $GITHUB_OUTPUT
           else
             echo "region=us-east-2" >> $GITHUB_OUTPUT
           fi
       - id: output-cluster
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             echo "cluster=jcloud-CI-eks-episr" >> $GITHUB_OUTPUT
           else
             echo "cluster=jcloud-dev-eks-lpzje" >> $GITHUB_OUTPUT
           fi
       - id: output-host
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             echo "host=api.ci.wolf.jina.ai" >> $GITHUB_OUTPUT
           else
             echo "host=api-dev-lpzje.wolf.jina.ai" >> $GITHUB_OUTPUT
@@ -176,7 +171,7 @@ jobs:
           fi
 
   terraform-deploy:
-    if: ${{ github.event.inputs.env == 'CI' }}
+    if: ${{ github.event.inputs.env == 'ci' }}
     runs-on: ubuntu-latest
     steps:
       - name: wait for dispatch finish
@@ -256,20 +251,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - uses: actions/checkout@v3
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -279,14 +274,14 @@ jobs:
             key=jcloud/ci/eks
             region=us-east-1
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: helm clean
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           if helm list -n jcloud | grep -q jcloud-operator; then
@@ -294,11 +289,11 @@ jobs:
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         shell: bash
         run: |
           cd $GITHUB_WORKSPACE
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             kubectl create ns jcloud || true
             kubectl delete secret regcred -n jcloud || true
             echo "$WOLF_DOCKER_AUTH" > config.json
@@ -335,7 +330,7 @@ jobs:
           --set "apimanager.ingress.tls[0].secretName=ci-wolf-tls" \
           --set "apimanager.ingress.tls[0].hosts[0]=*.ci.wolf.jina.ai" \
           --set-file "operator.trustCA.ci\.crt=ci.crt"  \
-          -f .github/ci/CI-values.yaml \
+          -f .github/ci/ci-values.yaml \
           -n jcloud
 
           kubectl set env deploy/deployment-jcloud-operator -n jcloud MONGO_URI="${{ env.MONGO_URI }}"
@@ -348,13 +343,13 @@ jobs:
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
       - uses: actions/checkout@v3
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: helm clean
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: |
           aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
           if helm list -n jcloud | grep -q jcloud-operator; then
@@ -362,7 +357,7 @@ jobs:
           fi
           kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: |
           cd $GITHUB_WORKSPACE
           if [[ -f "$GITHUB_WORKSPACE/api/internals/instances/instances.yml" ]]; then
@@ -403,7 +398,7 @@ jobs:
           done
           exit 1
       - name: "Upload Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/upload-artifact@v3
         with:
           name: cert
@@ -414,6 +409,7 @@ jobs:
     needs: deployment
     runs-on: ubuntu-latest
     if: |
+      always() &&
       needs.deployment.result == 'success' &&
       (github.event.inputs.only_api_changed == 'false') &&
       (github.event.inputs.only_flow_operator_changed == 'false')
@@ -427,7 +423,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh jinadeployment)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh jinadeployment)" >> $GITHUB_OUTPUT
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -435,7 +431,9 @@ jobs:
   prep-testbed-deployment-api:
     needs: deployment
     runs-on: ubuntu-latest
-    if: needs.deployment.result == 'success'
+    if: |
+      always() &&
+      needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -446,7 +444,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh deployment)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh deployment)" >> $GITHUB_OUTPUT
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -455,6 +453,7 @@ jobs:
     needs: deployment
     runs-on: ubuntu-latest
     if: |
+      always() &&
       needs.deployment.result == 'success' &&
       (github.event.inputs.only_api_changed == 'false') &&
       (github.event.inputs.only_deployment_operator_changed == 'false')
@@ -468,7 +467,7 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh flow)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh flow)" >> $GITHUB_OUTPUT
         working-directory: ./operator
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -476,7 +475,9 @@ jobs:
   prep-testbed-flow-api:
     needs: deployment
     runs-on: ubuntu-latest
-    if: needs.deployment.result == 'success'
+    if: |
+      always() &&
+      needs.deployment.result == 'success'
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -487,106 +488,16 @@ jobs:
       - id: set-matrix
         run: |
           sudo apt-get install jq
-          echo "::set-output name=matrix::$(bash config/scripts/get-all-test-paths.sh flow)"
+          echo "matrix=$(bash config/scripts/get-all-test-paths.sh flow)" >> $GITHUB_OUTPUT
         working-directory: ./api
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
 
-  prep-testbed-now:
-    needs: deployment
-    if: needs.deployment.result == 'success' && github.event.inputs.skip_now_tests == 'false'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout now Repo
-        uses: actions/checkout@v3
-        with:
-          repository: jina-ai/now
-      - id: set-matrix
-        run: |
-          echo "::set-output name=matrix::$(find -type f -name 'test_*.py' | xargs -n1 basename | jq -R . | jq -cs)"
-        working-directory: ./tests/integration/remote
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-
-  now-integration-tests:
-    needs: [prep-testbed-now, set-env]
-    if: needs.prep-testbed-now.result == 'success' && needs.set-env.result == 'success'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        test-path: ${{fromJson(needs.prep-testbed-now.outputs.matrix)}}
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Read secrets from AWS Secrets Manager into environment variables
-        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
-        with:
-          secrets: |
-            /wolf/nprd/general
-          parse-json: true
-      - name: Setup Python 3.7
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.7
-      - name: Checkout now repo
-        uses: actions/checkout/@v3
-        with:
-          repository: jina-ai/now
-      - name: Prepare environment
-        run: |
-          sudo apt update && sudo apt install ffmpeg
-          python -m pip install --upgrade pip
-          python -m pip install wheel
-          pip install --no-cache-dir ".[full,test]"
-          pip install --no-cache-dir -U jcloud
-      - name: Add JCloud auth token
-        run: |
-          mkdir -p ~/.jina
-          touch ~/.jina/config.json
-          echo "{\"auth_token\": \"${_WOLF_NPRD_GENERAL_WOLF_TOKEN}\"}" > ~/.jina/config.json
-          cat ~/.jina/config.json
-      - name: Run tests
-        run: |
-          focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "tests/integration/remote/{}" | xargs)
-          pytest -v ${focus_files}
-        env:
-          JCLOUD_API: https://${{ needs.set-env.outputs.host }}
-          DOCKER_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_DOCKER_PASSWORD }}
-          HUBBLE_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_HUBBLE_AUTH_TOKEN }}
-          DOCKER_USERNAME: ${{ env._WOLF_NPRD_GENERAL_DOCKER_USERNAME }}
-          JINA_DEV_BOT: ${{ env._WOLF_NPRD_GENERAL_JINA_DEV_BOT }}
-          JINA_OPTOUT_TELEMETRY: ${{ env._WOLF_NPRD_GENERAL_JINA_OPTOUT_TELEMETRY }}
-          NETLIFY_AUTH_TOKEN1: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_AUTH_TOKEN1 }}
-          NETLIFY_SITE_ID: ${{ env._WOLF_NPRD_GENERAL_NETLIFY_SITE_ID }}
-          NOW_ANNLITE_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ANNLITE_EXECUTOR_SECRET }}
-          NOW_AUTH_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTH_EXECUTOR_SECRET }}
-          NOW_AUTOCOMPLETE_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_AUTOCOMPLETE_SECRET }}
-          NOW_ELASTIC_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_ELASTIC_EXECUTOR_SECRET }}
-          NOW_OCR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_OCR_EXECUTOR_SECRET }}
-          NOW_POSTPROCESSOR_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_POSTPROCESSOR_EXECUTOR_SECRET }}
-          NOW_PREPROCESSOR_JCLOUD_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_JCLOUD_TOKEN }}
-          NOW_PREPROCESSOR_REPO: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO }}
-          NOW_PREPROCESSOR_REPO_TOKEN: ${{ env._WOLF_NPRD_GENERAL_NOW_PREPROCESSOR_REPO_TOKEN }}
-          NOW_QDRANT_EXECUTOR_SECRET: ${{ env._WOLF_NPRD_GENERAL_NOW_QDRANT_EXECUTOR_SECRET }}
-          NOW_STAGING_FLORIAN: ${{ env._WOLF_NPRD_GENERAL_NOW_STAGING_FLORIAN }}
-          PERSONAL_ACCESS_TOKEN: ${{ env._WOLF_NPRD_GENERAL_PERSONAL_ACCESS_TOKEN }}
-          TWINE_PASSWORD: ${{ env._WOLF_NPRD_GENERAL_TWINE_PASSWORD }}
-          TWINE_USERNAME: ${{ env._WOLF_NPRD_GENERAL_TWINE_USERNAME }}
-          WOLF_EXAMPLES_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_EXAMPLES_TOKEN }}
-          WOLF_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          JCLOUD_LOGLEVEL: DEBUG
-          JINA_AUTH_TOKEN: ${{ env._WOLF_NPRD_GENERAL_WOLF_TOKEN }}
-
   flow-operator:
     needs: [prep-testbed-flow-operator, set-env]
-    if: needs.prep-testbed-flow-operator.result == 'success' && needs.set-env.result == 'success'
+    if: |
+      !cancelled() &&
+      (needs.prep-testbed-flow-operator.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -595,21 +506,21 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-flow-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -655,7 +566,7 @@ jobs:
           python-version: 3.7
 
       - name: "Download Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/download-artifact@v3
         with:
           name: cert
@@ -674,16 +585,16 @@ jobs:
         working-directory: ./operator
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Run E2E Integration Test Suites for Flow Operator
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/flow/{}" | xargs)
@@ -708,7 +619,9 @@ jobs:
 
   flow-api:
     needs: [prep-testbed-flow-api, set-env]
-    if: needs.prep-testbed-flow-api.result == 'success' && needs.set-env.result == 'success'
+    if: |
+      !cancelled() &&
+      (needs.prep-testbed-flow-api.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
@@ -758,7 +671,7 @@ jobs:
           python-version: 3.7
 
       - name: "Download Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/download-artifact@v3
         with:
           name: cert
@@ -779,7 +692,7 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -787,7 +700,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -798,11 +711,11 @@ jobs:
             region=us-east-1
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Make sure API is healthy
@@ -821,7 +734,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Flow API
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/flow/{}" | xargs)
@@ -853,7 +766,9 @@ jobs:
 
   deployment-operator:
     needs: [prep-testbed-deployment-operator, set-env]
-    if: needs.prep-testbed-deployment-operator.result == 'success' && needs.set-env.result == 'success'
+    if: |
+      !cancelled() &&
+      (needs.prep-testbed-deployment-operator.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 4
@@ -862,21 +777,21 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-deployment-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -922,7 +837,7 @@ jobs:
           python-version: 3.7
 
       - name: "Download Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/download-artifact@v3
         with:
           name: cert
@@ -941,16 +856,16 @@ jobs:
         working-directory: ./operator
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Run E2E Integration Test Suites for Deployment Operator
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/jinadeployment/{}" | xargs)
@@ -975,7 +890,9 @@ jobs:
 
   deployment-api:
     needs: [prep-testbed-deployment-api, set-env]
-    if: needs.prep-testbed-deployment-api.result == 'success' && needs.set-env.result == 'success'
+    if: |
+      !cancelled() &&
+      (needs.prep-testbed-deployment-api.result == 'success' && needs.set-env.result == 'success')
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 6
@@ -1025,7 +942,7 @@ jobs:
           python-version: 3.7
 
       - name: "Download Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/download-artifact@v3
         with:
           name: cert
@@ -1046,7 +963,7 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -1054,7 +971,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -1065,11 +982,11 @@ jobs:
             region=us-east-1
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Make sure API is healthy
@@ -1088,7 +1005,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Deployment API
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
           focus_files=$(echo ${{ matrix.test-path }} | xargs -n1 | xargs -I{} echo "--focus-file test/e2e/deployment/{}" | xargs)
@@ -1124,7 +1041,9 @@ jobs:
       - flow-api
       - set-env
     runs-on: ubuntu-latest
-    if: needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success'
+    if: |
+      !cancelled() &&
+      (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success')
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -1170,20 +1089,20 @@ jobs:
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -1194,13 +1113,13 @@ jobs:
             region=us-east-1
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
       - name: "Download Artifact"
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: actions/download-artifact@v3
         with:
           name: cert
@@ -1208,7 +1127,7 @@ jobs:
 
       - name: Run E2E Integration Test Suites for Operator
         run: |
-          if [[ ${{ github.event.inputs.env }} == 'CI' ]]; then
+          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             sudo cp ci.crt /etc/ssl/certs/
           fi
           ginkgo --focus-file controllers/test/restart/restart_test.go -v --progress ./...
@@ -1222,6 +1141,7 @@ jobs:
     needs:
       - restart-tests
     if: |
+      !cancelled() &&
       needs.restart-tests.result == 'success' && 
       (github.event.inputs.branch != 'main') && (github.event.inputs.only_api_changed == 'false')
     uses: jina-ai/cloud-ops/.github/workflows/operator-backward-compatibility-tests.yml@master
@@ -1233,7 +1153,6 @@ jobs:
   notify-test:
     needs:
       - compatibility-test
-      - now-integration-tests
     if: always()
     runs-on: ubuntu-latest
     outputs:
@@ -1280,7 +1199,7 @@ jobs:
       - set-env
     if: |
       always() &&
-      github.event.inputs.env == 'CI'
+      github.event.inputs.env == 'ci' &&
       (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success') ||
       (needs.deployment-operator.result == 'success' && needs.deployment-api.result == 'success') &&
       needs.set-env.result == 'success' &&
@@ -1291,14 +1210,14 @@ jobs:
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
       - name: configure aws credentials
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'CI' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
@@ -1308,7 +1227,7 @@ jobs:
             key=jcloud/ci/eks
             region=us-east-1
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'CI' }}
+        if: ${{ github.event.inputs.env != 'ci' }}
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
@@ -1316,7 +1235,7 @@ jobs:
           aws-region: us-east-1
       - name: Clean flows and JinaDeployments
         if: |
-          github.event.inputs.env == 'CI' && 
+          github.event.inputs.env == 'ci' && 
           github.event.inputs.destroy_cluster != 'false' && 
           steps.remote-state.outputs.region != '' && steps.remote-state.outputs.cluster_name != ''
         run: |
@@ -1338,7 +1257,7 @@ jobs:
       - name: wait for dispatch finish
         shell: bash
         if: |
-          github.event.inputs.env == 'CI' && 
+          github.event.inputs.env == 'ci' && 
           github.event.inputs.destroy_cluster != 'false'
         run: |
           rs=$(curl -H "Authorization: token ${{ secrets.JINA_DEV_BOT }}" \
@@ -1369,7 +1288,7 @@ jobs:
       - name: Repository Dispatch
         uses: peter-evans/repository-dispatch@v2
         if: |
-          github.event.inputs.env == 'CI' && 
+          github.event.inputs.env == 'ci' && 
           github.event.inputs.destroy_cluster != 'false'
         id: dispatch
         with:
@@ -1380,7 +1299,7 @@ jobs:
       - name: wait for dispatch finish
         shell: bash
         if: |
-          github.event.inputs.env == 'CI' && 
+          github.event.inputs.env == 'ci' && 
           github.event.inputs.destroy_cluster != 'false'
         run: |
           sleep 3
