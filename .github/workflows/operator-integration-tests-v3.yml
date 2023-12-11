@@ -684,13 +684,6 @@ jobs:
           go mod tidy -v
         working-directory: ./api
 
-      - name: Read secrets from AWS Secrets Manager into environment variables
-        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
-        with:
-          secrets: |
-            /wolf/nprd/general
-          parse-json: true
-
       - name: Configure AWS Credentials
         if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
@@ -698,6 +691,13 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
+      
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
 
       - name: Get remote state
         if: ${{ github.event.inputs.env == 'ci' }}
@@ -900,12 +900,6 @@ jobs:
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-deployment-api.outputs.matrix)}}
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
@@ -955,13 +949,6 @@ jobs:
           go mod tidy -v
         working-directory: ./api
 
-      - name: Read secrets from AWS Secrets Manager into environment variables
-        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
-        with:
-          secrets: |
-            /wolf/nprd/general
-          parse-json: true
-
       - name: Configure AWS Credentials
         if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
@@ -969,6 +956,13 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
+
+      - name: Read secrets from AWS Secrets Manager into environment variables
+        uses: abhilash1in/aws-secrets-manager-action@v2.1.0
+        with:
+          secrets: |
+            /wolf/nprd/general
+          parse-json: true
 
       - name: Get remote state
         if: ${{ github.event.inputs.env == 'ci' }}
