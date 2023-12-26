@@ -326,10 +326,18 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v3
+        if: ${{ github.event.inputs.environment == 'dev' }}
         with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        if: ${{ github.event.inputs.environment == 'prod' }}
+        with:
+          role-to-assume: arn:aws:iam::317254068723:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
@@ -347,11 +355,20 @@ jobs:
           echo "GIT_BRANCH=$GIT_BRANCH" >> $GITHUB_ENV
       - name: Configure AWS Credentials
         if: ${{ github.event.inputs.environment == 'prod' }}
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: arn:aws:iam::317254068723:role/jcloud-deploy-role
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-deploy-role
           role-session-name: jcloud-deploy
           aws-region: us-east-1
+          unset-current-credentials: true
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.environment == 'dev' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::317254068723:role/jcloud-admin-role
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: helm clean
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
