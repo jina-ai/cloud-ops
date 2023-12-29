@@ -328,7 +328,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: arn:aws:iam::253352124568:role/github-reader-jina-infra
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
@@ -348,7 +348,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: arn:aws:iam::253352124568:role/jcloud-admin-role
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role
           role-session-name: jcloud-deploy
           aws-region: us-east-2
           unset-current-credentials: true
