@@ -481,28 +481,27 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-flow-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Configure AWS Credentials
         if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -656,12 +655,20 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
 
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -734,11 +741,19 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-deployment-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
+      if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -900,12 +915,20 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
 
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -1018,11 +1041,19 @@ jobs:
         working-directory: ./operator
 
       - name: Configure AWS Credentials
+      if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
