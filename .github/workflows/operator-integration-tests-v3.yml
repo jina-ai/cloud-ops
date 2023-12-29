@@ -55,7 +55,7 @@ jobs:
           if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             echo "state_key=jcloud/ci/eks" >> $GITHUB_OUTPUT
           else
-            echo "state_key=jcloud/dev/eks/us-east-2" >> $GITHUB_OUTPUT
+            echo "state_key=jcloud/dev/jcloud/eks/us-east-2" >> $GITHUB_OUTPUT
           fi
       - id: output-host
         run: |

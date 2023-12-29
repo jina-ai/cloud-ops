@@ -338,7 +338,7 @@ jobs:
           backend_type: s3
           backend_config: |
             bucket=jina-terraform-state
-            key=jcloud/${{ github.event.inputs.environment }}/eks/${{ github.event.inputs.eks_region }}
+            key=jcloud/${{ github.event.inputs.environment }}/jcloud/eks/${{ github.event.inputs.eks_region }}
             region=us-east-2
       - name: Set environment variables
         run: |
