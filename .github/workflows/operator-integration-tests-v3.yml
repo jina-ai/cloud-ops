@@ -993,10 +993,10 @@ jobs:
       - flow-operator
       - flow-api
       - set-env
-    runs-on: ubuntu-latest
     if: |
       !cancelled() &&
       (needs.flow-operator.result == 'success' && needs.flow-api.result == 'success' && needs.set-env.result == 'success')
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -1041,7 +1041,7 @@ jobs:
         working-directory: ./operator
 
       - name: Configure AWS Credentials
-      if: ${{ github.event.inputs.env == 'ci' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
