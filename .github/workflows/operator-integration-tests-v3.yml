@@ -47,30 +47,22 @@ jobs:
   set-env:
     runs-on: ubuntu-latest
     outputs:
-      region: ${{ steps.output-region.outputs.region }}
-      cluster: ${{ steps.output-cluster.outputs.cluster }}
+      state_key: ${{ steps.output-region.outputs.state_key }}
       host: ${{ steps.output-host.outputs.host }}
     steps:
       - id: output-region
         run: |
           if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
-            echo "region=eu-west-3" >> $GITHUB_OUTPUT
+            echo "state_key=jcloud/ci/eks" >> $GITHUB_OUTPUT
           else
-            echo "region=us-east-2" >> $GITHUB_OUTPUT
-          fi
-      - id: output-cluster
-        run: |
-          if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
-            echo "cluster=jcloud-CI-eks-episr" >> $GITHUB_OUTPUT
-          else
-            echo "cluster=jcloud-dev-eks-lpzje" >> $GITHUB_OUTPUT
+            echo "state_key=jcloud/dev/eks/us-east-2" >> $GITHUB_OUTPUT
           fi
       - id: output-host
         run: |
           if [[ ${{ github.event.inputs.env }} == 'ci' ]]; then
             echo "host=api.ci.wolf.jina.ai" >> $GITHUB_OUTPUT
           else
-            echo "host=api-dev-lpzje.wolf.jina.ai" >> $GITHUB_OUTPUT
+            echo "host=api.dev.wolf.jina.ai" >> $GITHUB_OUTPUT
           fi
 
   notify-user:
@@ -251,37 +243,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v3
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - uses: actions/checkout@v3
-        if: ${{ github.event.inputs.env == 'ci' }}
         with:
           repository: jina-ai/jina-operator
           ref: ${{ github.event.inputs.branch }}
           token: ${{ secrets.JINA_DEV_BOT }}
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID  }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - name: helm clean
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: |
           aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
           if helm list -n jcloud | grep -q jcloud-operator; then
@@ -342,20 +323,6 @@ jobs:
           LIST_USER_TOKEN: ${{ secrets.LIST_USER_TOKEN }}
           GRAFANA_AUTH_TOKEN: ${{ secrets.GRAFANA_AUTH_TOKEN }}
           JCLOUD_M2M_TOKEN: ${{ secrets.JCLOUD_M2M_TOKEN }}
-      - uses: actions/checkout@v3
-        if: ${{ github.event.inputs.env != 'ci' }}
-        with:
-          repository: jina-ai/jina-operator
-          ref: ${{ github.event.inputs.branch }}
-          token: ${{ secrets.JINA_DEV_BOT }}
-      - name: helm clean
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: |
-          aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-          if helm list -n jcloud | grep -q jcloud-operator; then
-            helm uninstall -n jcloud jcloud-operator
-          fi
-          kubectl delete -f $GITHUB_WORKSPACE/deployment/charts/jcloud-operator/crds/ || true
       - name: helm deploy
         if: ${{ github.event.inputs.env != 'ci' }}
         run: |
@@ -366,11 +333,11 @@ jobs:
           fi
           kubectl apply -f deployment/charts/jcloud-operator/crds/
           if [[ ${{ github.event.inputs.branch }} == 'main' ]]; then
-            bash ./deployment/scripts/deploy.sh -r ${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
             -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag latest
           else
-            bash ./deployment/scripts/deploy.sh -r $${{ needs.set-env.outputs.region }} -n ${{ needs.set-env.outputs.cluster }} \
+            bash ./deployment/scripts/deploy.sh -r ${{ steps.remote-state.outputs.region }} -n ${{ steps.remote-state.outputs.cluster_name }} \
             -f .github/ci/${{ github.event.inputs.env }}-values.yaml --api-host ${{ needs.set-env.outputs.host }} \
             --registry 253352124568.dkr.ecr.us-east-2.amazonaws.com --tag ${{ github.event.inputs.branch }}
           fi
@@ -585,11 +552,6 @@ jobs:
         working-directory: ./operator
 
       - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-
-      - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Run E2E Integration Test Suites for Flow Operator
@@ -629,12 +591,6 @@ jobs:
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-flow-api.outputs.matrix)}}
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
@@ -692,7 +648,6 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -700,23 +655,17 @@ jobs:
           aws-region: us-east-1
 
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
-
-      - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Make sure API is healthy
         run: |
@@ -777,28 +726,19 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-deployment-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -855,12 +795,7 @@ jobs:
           go mod tidy -v
         working-directory: ./operator
 
-      - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
-
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
       - name: Run E2E Integration Test Suites for Deployment Operator
@@ -900,12 +835,6 @@ jobs:
       matrix:
         test-path: ${{fromJson(needs.prep-testbed-deployment-api.outputs.matrix)}}
     steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
       - uses: actions/checkout@v3
         with:
           repository: jina-ai/jina-operator
@@ -963,7 +892,6 @@ jobs:
           parse-json: true
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -971,23 +899,17 @@ jobs:
           aws-region: us-east-1
 
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
 
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
-
-      - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
 
       - name: Make sure API is healthy
         run: |
@@ -1088,35 +1010,22 @@ jobs:
         working-directory: ./operator
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        if: ${{ github.event.inputs.env != 'ci' }}
-        with:
-          aws-access-key-id: ${{ secrets.WOLF_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.WOLF_AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
       - name: Get remote state
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: dflook/terraform-remote-state@v1
         id: remote-state
         with:
           backend_type: s3
           backend_config: |
             bucket=jina-infra-terraform-state
-            key=jcloud/ci/eks
+            key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
 
-      - name: Update Cluster Config
-        if: ${{ github.event.inputs.env != 'ci' }}
-        run: aws eks update-kubeconfig --region ${{ needs.set-env.outputs.region }} --name ${{ needs.set-env.outputs.cluster }}
       - name: Update CI Cluster Config
-        if: ${{ github.event.inputs.env == 'ci' }}
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
       - name: "Download Artifact"
         if: ${{ github.event.inputs.env == 'ci' }}
