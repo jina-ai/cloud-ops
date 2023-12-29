@@ -487,13 +487,6 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
-          role-session-name: jcloud-deploy
-          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -503,6 +496,14 @@ jobs:
             bucket=jina-infra-terraform-state
             key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
@@ -661,14 +662,6 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
-          role-session-name: jcloud-deploy
-          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -678,7 +671,14 @@ jobs:
             bucket=jina-infra-terraform-state
             key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
-
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: Update CI Cluster Config
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
@@ -747,13 +747,6 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
-          role-session-name: jcloud-deploy
-          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -763,6 +756,14 @@ jobs:
             bucket=jina-infra-terraform-state
             key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
@@ -921,14 +922,6 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
-          role-session-name: jcloud-deploy
-          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -938,7 +931,14 @@ jobs:
             bucket=jina-infra-terraform-state
             key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
-
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: Update CI Cluster Config
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
 
@@ -1047,13 +1047,6 @@ jobs:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
           role-session-name: jinainfraapply
           aws-region: us-east-1
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env != 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v3
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
-          role-session-name: jcloud-deploy
-          aws-region: us-east-2
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -1063,7 +1056,14 @@ jobs:
             bucket=jina-infra-terraform-state
             key=${{ needs.set-env.outputs.state_key }}
             region=us-east-1
-
+      - name: Configure AWS Credentials
+        if: ${{ github.event.inputs.env != 'ci' }}
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
+          role-session-name: jcloud-deploy
+          aws-region: us-east-2
+          unset-current-credentials: true
       - name: Update CI Cluster Config
         run: aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
       - name: "Download Artifact"
