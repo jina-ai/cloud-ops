@@ -1128,6 +1128,33 @@ jobs:
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.WOLF_SLACK_NIGHTLY_TESTS_WEBHOOK }}
+  clean:
+    needs:
+      - notify-test
+    if: |
+      always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
+      - name: Get remote state
+        uses: dflook/terraform-remote-state@v1
+        id: remote-state
+        with:
+          backend_type: s3
+          backend_config: |
+            bucket=jina-infra-terraform-state
+            key=${{ needs.set-env.outputs.state_key }}
+            region=us-east-1
+      - name: Clean flows and JinaDeployments
+        run: |
+          aws eks update-kubeconfig --region ${{ steps.remote-state.outputs.region }} --name ${{ steps.remote-state.outputs.cluster_name }}
+          kubectl delete flow --all --all-namespaces || true
+          kubectl delete jd --all --all-namespaces || true
 
   terraform-destroy:
     needs:
