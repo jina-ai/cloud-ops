@@ -348,7 +348,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v3
         with:
-          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role
+          role-to-assume: arn:aws:iam::458227521111:role/jcloud-admin-role-mbrew
           role-session-name: jcloud-deploy
           aws-region: us-east-2
           unset-current-credentials: true
