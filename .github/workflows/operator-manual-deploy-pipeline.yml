@@ -339,7 +339,7 @@ jobs:
           backend_config: |
             bucket=jina-infra-terraform-state
             key=jcloud/${{ github.event.inputs.environment }}/jcloud/eks/${{ github.event.inputs.eks_region }}
-            region=us-east-2
+            region=us-east-1
       - name: Set environment variables
         run: |
           # Short name for current branch. For PRs, use target branch (base ref)
