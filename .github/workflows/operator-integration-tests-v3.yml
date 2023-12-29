@@ -741,7 +741,7 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-deployment-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-      if: ${{ github.event.inputs.env == 'ci' }}
+        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
