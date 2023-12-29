@@ -481,7 +481,6 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-flow-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -647,21 +646,18 @@ jobs:
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./api
-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
       - name: Read secrets from AWS Secrets Manager into environment variables
         uses: abhilash1in/aws-secrets-manager-action@v2.1.0
         with:
           secrets: |
             /wolf/nprd/general
           parse-json: true
-
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
-          role-session-name: jinainfraapply
-          aws-region: us-east-1
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -741,7 +737,6 @@ jobs:
         test-path: ${{fromJson(needs.prep-testbed-deployment-operator.outputs.matrix)}}
     steps:
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -907,7 +902,12 @@ jobs:
           go get github.com/onsi/gomega/...
           go mod tidy -v
         working-directory: ./api
-
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
+          role-session-name: jinainfraapply
+          aws-region: us-east-1
       - name: Read secrets from AWS Secrets Manager into environment variables
         uses: abhilash1in/aws-secrets-manager-action@v2.1.0
         with:
@@ -915,13 +915,6 @@ jobs:
             /wolf/nprd/general
           parse-json: true
 
-      - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
-          role-session-name: jinainfraapply
-          aws-region: us-east-1
       - name: Get remote state
         uses: dflook/terraform-remote-state@v1
         id: remote-state
@@ -1041,7 +1034,6 @@ jobs:
         working-directory: ./operator
 
       - name: Configure AWS Credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
@@ -1158,7 +1150,6 @@ jobs:
       AWS_CONFIG_FILE: ${{ github.workspace }}/devops/jina/dev/init/aws_config_actioner
     steps:
       - name: configure aws credentials
-        if: ${{ github.event.inputs.env == 'ci' }}
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::458227521111:role/github-reader-jina-infra
